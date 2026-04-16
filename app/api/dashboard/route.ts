@@ -15,10 +15,10 @@ export async function GET(request: Request) {
     prisma.spesa.findMany({ where: { anno: anno - 1, ...(azienda ? { azienda } : {}) } }),
   ])
 
-  const totaleFatture = fatture.reduce((s, f) => s + f.importo, 0)
-  const totaleFatturePagate = fatture.filter(f => f.pagato).reduce((s, f) => s + f.importo, 0)
-  const totaleFattureInAttesa = fatture.filter(f => !f.pagato).reduce((s, f) => s + f.importo, 0)
-  const totaleSpese = spese.reduce((s, e) => s + e.importo, 0)
+  const totaleFatture = fatture.reduce((s: number, f) => s + f.importo, 0)
+  const totaleFatturePagate = fatture.filter(f => f.pagato).reduce((s: number, f) => s + f.importo, 0)
+  const totaleFattureInAttesa = fatture.filter(f => !f.pagato).reduce((s: number, f) => s + f.importo, 0)
+  const totaleSpese = spese.reduce((s: number, e) => s + e.importo, 0)
   const bilancio = totaleFatture - totaleSpese
 
   // Scadenze imminenti (fatture non pagate con scadenza nei prossimi 7 giorni o scadute)
@@ -36,10 +36,10 @@ export async function GET(request: Request) {
   // Monthly data
   const mesi = Array.from({ length: 12 }, (_, i) => {
     const mese = i + 1
-    const entrate = fatture.filter(f => f.mese === mese).reduce((s, f) => s + f.importo, 0)
-    const uscite = spese.filter(e => e.mese === mese).reduce((s, e) => s + e.importo, 0)
-    const entratePrec = fattureAnnoPrec.filter(f => f.mese === mese).reduce((s, f) => s + f.importo, 0)
-    const uscitePrec = speseAnnoPrec.filter(e => e.mese === mese).reduce((s, e) => s + e.importo, 0)
+    const entrate = fatture.filter(f => f.mese === mese).reduce((s: number, f) => s + f.importo, 0)
+    const uscite = spese.filter(e => e.mese === mese).reduce((s: number, e) => s + e.importo, 0)
+    const entratePrec = fattureAnnoPrec.filter(f => f.mese === mese).reduce((s: number, f) => s + f.importo, 0)
+    const uscitePrec = speseAnnoPrec.filter(e => e.mese === mese).reduce((s: number, e) => s + e.importo, 0)
     return { mese, entrate, uscite, entratePrec, uscitePrec }
   })
 
@@ -57,8 +57,8 @@ export async function GET(request: Request) {
   })
 
   // Trend anno su anno
-  const totFatturePrec = fattureAnnoPrec.reduce((s, f) => s + f.importo, 0)
-  const totSpesePrec = speseAnnoPrec.reduce((s, e) => s + e.importo, 0)
+  const totFatturePrec = fattureAnnoPrec.reduce((s: number, f) => s + f.importo, 0)
+  const totSpesePrec = speseAnnoPrec.reduce((s: number, e) => s + e.importo, 0)
 
   return NextResponse.json({
     totaleFatture,
