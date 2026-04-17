@@ -8,6 +8,8 @@ import {
   CreditCard,
   BarChart3,
   Users,
+  Truck,
+  UserCog,
   Bell,
   Home,
   Menu,
@@ -15,6 +17,7 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useState } from 'react'
+import CompanyInfoModal from './CompanyInfoModal'
 
 const BRAND = '#e8308a'
 
@@ -24,12 +27,15 @@ const navItems = [
   { href: '/finance/spese', label: 'Spese', icon: CreditCard },
   { href: '/finance/bilancio', label: 'Bilancio', icon: BarChart3 },
   { href: '/finance/clienti', label: 'Clienti', icon: Users },
+  { href: '/finance/fornitori', label: 'Fornitori', icon: Truck },
+  { href: '/finance/dipendenti', label: 'Dipendenti', icon: UserCog },
   { href: '/finance/scadenze', label: 'Scadenze', icon: Bell },
 ]
 
 export default function Sidebar() {
   const pathname = usePathname()
   const [open, setOpen] = useState(false)
+  const [infoOpen, setInfoOpen] = useState(false)
 
   return (
     <>
@@ -67,23 +73,28 @@ export default function Sidebar() {
         </button>
 
         <div className="px-6 py-5 border-b border-[#222222]">
-          <div className="flex items-center gap-3 mb-3">
+          <div className="flex justify-start mb-5">
             <div
-              className="rounded-full bg-white flex items-center justify-center shrink-0"
-              style={{ width: 52, height: 52 }}
+              className="rounded-full bg-white flex items-center justify-center"
+              style={{ width: 80, height: 80 }}
             >
               <img
                 src="/logo anda.png"
                 alt="Anda logo"
-                style={{ width: 40, height: 40, objectFit: 'contain' }}
+                style={{ width: 84, height: 84, objectFit: 'contain' }}
               />
             </div>
-            <div>
-              <p className="text-xs font-medium leading-tight" style={{ color: '#ffffff' }}>Anda Agencia de</p>
-              <p className="text-xs font-medium leading-tight" style={{ color: '#ffffff' }}>Publicidad SL</p>
-            </div>
           </div>
-          <div className="pt-3 border-t border-[#222222]">
+          <button
+            onClick={() => setInfoOpen(true)}
+            className="block w-full cursor-pointer hover:opacity-80 transition-opacity mb-4"
+            style={{ textAlign: 'left' }}
+            aria-label="Mostra dati aziendali"
+          >
+            <p className="text-xs font-medium leading-tight" style={{ color: '#ffffff' }}>Anda Agencia de</p>
+            <p className="text-xs font-medium leading-tight" style={{ color: '#ffffff' }}>Publicidad SL</p>
+          </button>
+          <div className="py-3 border-t border-[#222222]" style={{ textAlign: 'left' }}>
             <p className="text-xs font-medium" style={{ color: BRAND }}>CFO Dashboard</p>
             <p className="text-xs" style={{ color: '#888888' }}>Leonardo Mestre</p>
           </div>
@@ -142,6 +153,8 @@ export default function Sidebar() {
           </p>
         </div>
       </aside>
+
+      <CompanyInfoModal open={infoOpen} onClose={() => setInfoOpen(false)} />
     </>
   )
 }

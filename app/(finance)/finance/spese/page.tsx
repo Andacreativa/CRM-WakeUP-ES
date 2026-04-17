@@ -8,16 +8,19 @@ import { useAnno } from '@/lib/anno-context'
 import { exportExcel, exportPDF, speseToExcel } from '@/lib/export'
 
 interface Spesa {
-  id: number; azienda: string; aziendaNota: string | null; fornitore: string; categoria: string
+  id: number; azienda: string; aziendaNota: string | null; fornitore: string; fornitoreId: number | null; categoria: string
   descrizione: string | null; note: string | null; ricevutaPath: string | null
   mese: number; anno: number; importo: number
 }
 
+interface Fornitore { id: number; nome: string; paese: string }
+
 const MESI_NUMS = Array.from({ length: 12 }, (_, i) => i + 1)
-const emptyForm = { azienda: AZIENDE[0], aziendaNota: '', fornitore: '', categoria: CATEGORIE_SPESA[0], descrizione: '', note: '', mese: new Date().getMonth() + 1, anno: 2025, importo: '', ricevutaPath: '' }
+const emptyForm = { azienda: AZIENDE[0], aziendaNota: '', fornitore: '', fornitoreId: '' as string | number, categoria: CATEGORIE_SPESA[0], descrizione: '', note: '', mese: new Date().getMonth() + 1, anno: 2025, importo: '', ricevutaPath: '' }
 
 export default function SpesePage() {
   const [spese, setSpese] = useState<Spesa[]>([])
+  const [fornitori, setFornitori] = useState<Fornitore[]>([])
   const [showForm, setShowForm] = useState(false)
   const [editing, setEditing] = useState<Spesa | null>(null)
   const [form, setForm] = useState({ ...emptyForm })
@@ -32,16 +35,29 @@ export default function SpesePage() {
   const load = async () => {
     const params = new URLSearchParams({ anno: String(anno) })
     if (azienda) params.set('azienda', azienda)
-    const data = (await (await fetch(`/api/spese?${params}`)).json()) as any
-    setSpese(Array.isArray(data) ? data : [])
+    const [s, f] = await Promise.all([
+      (await fetch(`/api/spese?${params}`)).json() as Promise<any>,
+      (await fetch('/api/fornitori')).json() as Promise<any>,
+    ])
+    setSpese(Array.isArray(s) ? s : [])
+    setFornitori(Array.isArray(f) ? f : [])
   }
   useEffect(() => { load() }, [anno, azienda])
 
   const openNew = () => { setEditing(null); setForm({ ...emptyForm, anno }); setShowForm(true) }
   const openEdit = (s: Spesa) => {
     setEditing(s)
-    setForm({ azienda: s.azienda, aziendaNota: s.aziendaNota || '', fornitore: s.fornitore, categoria: s.categoria, descrizione: s.descrizione || '', note: s.note || '', mese: s.mese, anno: s.anno, importo: String(s.importo), ricevutaPath: s.ricevutaPath || '' })
+    setForm({ azienda: s.azienda, aziendaNota: s.aziendaNota || '', fornitore: s.fornitore, fornitoreId: s.fornitoreId ?? '', categoria: s.categoria, descrizione: s.descrizione || '', note: s.note || '', mese: s.mese, anno: s.anno, importo: String(s.importo), ricevutaPath: s.ricevutaPath || '' })
     setShowForm(true)
+  }
+
+  const applyFornitore = (id: string) => {
+    if (!id) {
+      setForm(f => ({ ...f, fornitoreId: '', fornitore: '' }))
+      return
+    }
+    const fnt = (fornitori ?? []).find(x => x.id === parseInt(id))
+    if (fnt) setForm(f => ({ ...f, fornitoreId: fnt.id, fornitore: fnt.nome }))
   }
 
   const uploadRicevuta = async (file: File) => {
@@ -54,7 +70,7 @@ export default function SpesePage() {
 
   const save = async () => {
     if (!form.fornitore || !form.importo) return
-    const payload = { ...form, importo: parseFloat(form.importo), aziendaNota: form.azienda === 'Altro' ? form.aziendaNota : null }
+    const payload = { ...form, importo: parseFloat(form.importo), fornitoreId: form.fornitoreId || null, aziendaNota: form.azienda === 'Altro' ? form.aziendaNota : null }
     if (editing) await fetch(`/api/spese/${editing.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
     else await fetch('/api/spese', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
     setShowForm(false); load()
@@ -221,10 +237,21 @@ export default function SpesePage() {
                   />
                 )}
               </div>
+              <div>
+                <label className="text-xs font-medium text-gray-600 block mb-1">Da anagrafica fornitori</label>
+                <select
+                  value={form.fornitoreId || ''}
+                  onChange={e => applyFornitore(e.target.value)}
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-300 text-gray-700"
+                >
+                  <option value="">— Seleziona dall'anagrafica (opzionale) —</option>
+                  {fornitori.map(fn => <option key={fn.id} value={fn.id}>{fn.nome}</option>)}
+                </select>
+              </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="text-xs font-medium text-gray-600 block mb-1">Fornitore *</label>
-                  <input type="text" value={form.fornitore} onChange={e => setForm(f => ({ ...f, fornitore: e.target.value }))}
+                  <input type="text" value={form.fornitore} onChange={e => setForm(f => ({ ...f, fornitore: e.target.value, fornitoreId: '' }))}
                     placeholder="Es. Google" className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-300" />
                 </div>
                 <div>

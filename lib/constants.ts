@@ -51,8 +51,15 @@ export const CATEGORIE_COLORI: Record<string, string> = {
 
 export const BRAND = '#e8308a'
 
-export function fmt(n: number) {
-  return new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' }).format(n)
+// Formato europeo: punto separatore migliaia, virgola decimale, sempre 2 decimali (es. "3.250,00 €")
+// Implementazione manuale per evitare problemi con dati locali ICU ridotti su Node.
+export function fmt(n: number | null | undefined): string {
+  const value = Number(n) || 0
+  const negative = value < 0
+  const abs = Math.abs(value)
+  const [intPart, decPart] = abs.toFixed(2).split('.')
+  const intWithSep = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, '.')
+  return `${negative ? '-' : ''}${intWithSep},${decPart} €`
 }
 
 // Genera anni in ordine decrescente a partire dall'anno corrente

@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { Plus, X, Trash2, Phone, ChevronRight, Euro, Building2, Mail, MessageSquare, Send, FileText } from 'lucide-react'
+import { fmt } from '@/lib/constants'
 
 interface AppuntoCall {
   id: number
@@ -59,9 +60,6 @@ const STAGES = [
 ]
 
 const BRAND = '#db291b'
-
-const fmt = (v: number) =>
-  new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(v)
 
 const emptyForm = { nome: '', azienda: '', email: '', telefono: '', valore: '', note: '', stage: 'nuovo' }
 

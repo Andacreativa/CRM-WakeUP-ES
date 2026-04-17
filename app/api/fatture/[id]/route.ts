@@ -14,6 +14,8 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
       ...(body.mese !== undefined && { mese: body.mese }),
       ...(body.anno !== undefined && { anno: body.anno }),
       ...(body.importo !== undefined && { importo: parseFloat(body.importo) }),
+      ...(body.tipoIva !== undefined && { tipoIva: body.tipoIva }),
+      ...(body.iva !== undefined && { iva: Number(body.iva) }),
       ...(body.pagato !== undefined && { pagato: body.pagato }),
       ...(body.scadenza !== undefined && { scadenza: body.scadenza ? new Date(body.scadenza) : null }),
     },

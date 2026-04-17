@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 
 export async function GET(request: Request) {
+  try {
   const { searchParams } = new URL(request.url)
   const anno = parseInt(searchParams.get('anno') || '2025')
   const azienda = searchParams.get('azienda') || undefined
@@ -76,4 +77,43 @@ export async function GET(request: Request) {
       speseAnnoPrec: totSpesePrec,
     },
   })
+  } catch (err) {
+    // Log dettagliato lato server: type, message, stack, raw
+    console.error('[GET /api/dashboard] type:', typeof err)
+    console.error('[GET /api/dashboard] constructor:', (err as object)?.constructor?.name)
+    console.error('[GET /api/dashboard] raw:', err)
+    if (err instanceof Error) {
+      console.error('[GET /api/dashboard] message:', err.message)
+      console.error('[GET /api/dashboard] stack:', err.stack)
+    }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const e = err as any
+    const errorMsg = [
+      e?.name,
+      e?.code,
+      e?.errorCode,
+      e?.message,
+      e?.meta ? JSON.stringify(e.meta) : null,
+      e?.cause ? String(e.cause) : null,
+    ].filter(Boolean).join(' | ') || (() => {
+      try { return JSON.stringify(err, Object.getOwnPropertyNames(err as object)) }
+      catch { return String(err) }
+    })()
+    return NextResponse.json({
+      totaleFatture: 0,
+      totaleFatturePagate: 0,
+      totaleFattureInAttesa: 0,
+      totaleSpese: 0,
+      bilancio: 0,
+      clienti: 0,
+      mesi: Array.from({ length: 12 }, (_, i) => ({
+        mese: i + 1, entrate: 0, uscite: 0, entratePrec: 0, uscitePrec: 0,
+      })),
+      categorieSpese: [],
+      ultimeFatture: [],
+      scadenzeAlert: [],
+      trend: { fattureAnnoPrec: 0, speseAnnoPrec: 0 },
+      error: errorMsg,
+    }, { status: 500 })
+  }
 }

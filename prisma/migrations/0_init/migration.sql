@@ -1,3 +1,7 @@
+
+-- CreateSchema
+CREATE SCHEMA IF NOT EXISTS "public";
+
 -- CreateTable
 CREATE TABLE "Cliente" (
     "id" SERIAL NOT NULL,
@@ -65,6 +69,32 @@ CREATE TABLE "Contatto" (
 );
 
 -- CreateTable
+CREATE TABLE "Lead" (
+    "id" SERIAL NOT NULL,
+    "nome" TEXT NOT NULL,
+    "azienda" TEXT,
+    "email" TEXT,
+    "telefono" TEXT,
+    "valore" DOUBLE PRECISION,
+    "stage" TEXT NOT NULL DEFAULT 'nuovo',
+    "note" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "Lead_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "AppuntoCall" (
+    "id" SERIAL NOT NULL,
+    "leadId" INTEGER NOT NULL,
+    "testo" TEXT NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "AppuntoCall_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
 CREATE TABLE "Preventivo" (
     "id" SERIAL NOT NULL,
     "numero" TEXT NOT NULL,
@@ -77,6 +107,8 @@ CREATE TABLE "Preventivo" (
     "iva" DOUBLE PRECISION NOT NULL DEFAULT 21,
     "subtotale" DOUBLE PRECISION NOT NULL DEFAULT 0,
     "totale" DOUBLE PRECISION NOT NULL DEFAULT 0,
+    "feeCommerciale" DOUBLE PRECISION NOT NULL DEFAULT 0,
+    "leadId" INTEGER,
     "status" TEXT NOT NULL DEFAULT 'attesa',
     "note" TEXT,
     "condizioni" TEXT,
@@ -88,3 +120,10 @@ CREATE TABLE "Preventivo" (
 
 -- AddForeignKey
 ALTER TABLE "Fattura" ADD CONSTRAINT "Fattura_clienteId_fkey" FOREIGN KEY ("clienteId") REFERENCES "Cliente"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "AppuntoCall" ADD CONSTRAINT "AppuntoCall_leadId_fkey" FOREIGN KEY ("leadId") REFERENCES "Lead"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Preventivo" ADD CONSTRAINT "Preventivo_leadId_fkey" FOREIGN KEY ("leadId") REFERENCES "Lead"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+

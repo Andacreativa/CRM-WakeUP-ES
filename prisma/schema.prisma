@@ -13,7 +13,10 @@ model Cliente {
   email       String?
   telefono    String?
   partitaIva  String?
-  indirizzo   String?
+  via         String?
+  cap         String?
+  citta       String?
+  provincia   String?
   note        String?
   createdAt   DateTime  @default(now())
   fatture     Fattura[]
@@ -29,6 +32,8 @@ model Fattura {
   mese        Int
   anno        Int      @default(2025)
   importo     Float
+  tipoIva     String   @default("iva")
+  iva         Float    @default(21)
   pagato      Boolean  @default(false)
   scadenza    DateTime?
   createdAt   DateTime @default(now())
@@ -39,6 +44,7 @@ model Spesa {
   azienda      String   @default("Spagna")
   aziendaNota  String?
   fornitore    String
+  fornitoreId  Int?
   categoria    String
   descrizione  String?
   note         String?
@@ -47,6 +53,57 @@ model Spesa {
   anno         Int      @default(2025)
   importo      Float
   createdAt    DateTime @default(now())
+}
+
+model Fornitore {
+  id          Int      @id @default(autoincrement())
+  nome        String
+  paese       String   @default("Italia")
+  email       String?
+  telefono    String?
+  partitaIva  String?
+  via         String?
+  cap         String?
+  citta       String?
+  provincia   String?
+  note        String?
+  createdAt   DateTime @default(now())
+}
+
+model Dipendente {
+  id               Int       @id @default(autoincrement())
+  nome             String
+  cognome          String?
+  ruolo            String?
+  dataNascita      DateTime?
+  dni              String?
+  nie              String?
+  via              String?
+  cap              String?
+  citta            String?
+  provincia        String?
+  paese            String?   @default("Spagna")
+  telefono         String?
+  email            String?
+  iban             String?
+  nettoBustaPaga   Float     @default(0)
+  irpf             Float     @default(0)
+  seguridadSocial  Float     @default(0)
+  createdAt        DateTime  @default(now())
+  pagamenti        PagamentoDipendente[]
+}
+
+model PagamentoDipendente {
+  id            Int        @id @default(autoincrement())
+  dipendenteId  Int
+  dipendente    Dipendente @relation(fields: [dipendenteId], references: [id], onDelete: Cascade)
+  anno          Int
+  mese          Int
+  tipo          String     // 'stipendio' | 'seguridad'
+  spesaId       Int?
+  createdAt     DateTime   @default(now())
+
+  @@unique([dipendenteId, anno, mese, tipo])
 }
 
 model Contatto {

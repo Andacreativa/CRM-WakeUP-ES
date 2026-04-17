@@ -10,6 +10,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
       ...(body.azienda !== undefined && { azienda: body.azienda }),
       ...(body.aziendaNota !== undefined && { aziendaNota: body.aziendaNota }),
       ...(body.fornitore !== undefined && { fornitore: body.fornitore }),
+      ...(body.fornitoreId !== undefined && { fornitoreId: body.fornitoreId ? Number(body.fornitoreId) : null }),
       ...(body.categoria !== undefined && { categoria: body.categoria }),
       ...(body.descrizione !== undefined && { descrizione: body.descrizione }),
       ...(body.note !== undefined && { note: body.note }),

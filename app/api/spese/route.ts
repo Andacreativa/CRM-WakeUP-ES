@@ -21,6 +21,7 @@ export async function POST(request: Request) {
       azienda: body.azienda || 'Spagna',
       aziendaNota: body.aziendaNota || null,
       fornitore: body.fornitore,
+      fornitoreId: body.fornitoreId ? Number(body.fornitoreId) : null,
       categoria: body.categoria,
       descrizione: body.descrizione || null,
       note: body.note || null,

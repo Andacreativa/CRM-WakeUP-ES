@@ -81,15 +81,25 @@ export default function BilancioPage() {
       <div className="grid grid-cols-3 gap-4">
         <div className="glass-card rounded-2xl p-5">
           <p className="text-xs text-gray-500 uppercase tracking-wide">Totale Entrate</p>
-          <p className="text-2xl font-bold mt-1" style={{ color: '#e8308a' }}>{fmt(fattureTotale)}</p>
+          <p className="text-2xl font-bold text-emerald-600 mt-1">{fmt(fattureTotale)}</p>
         </div>
         <div className="glass-card rounded-2xl p-5">
           <p className="text-xs text-gray-500 uppercase tracking-wide">Totale Uscite</p>
           <p className="text-2xl font-bold text-red-500 mt-1">{fmt(speseTotale)}</p>
         </div>
-        <div className={`glass-card rounded-2xl p-5 ${bilancioTotale >= 0 ? 'bg-emerald-50/60' : 'bg-red-50/60'}`}>
+        <div
+          className={`glass-card rounded-2xl p-5 ${
+            bilancioTotale > 0 ? 'bg-emerald-50/60' : bilancioTotale < 0 ? 'bg-red-50/60' : ''
+          }`}
+        >
           <p className="text-xs text-gray-500 uppercase tracking-wide">Bilancio Netto</p>
-          <p className={`text-2xl font-bold mt-1 ${bilancioTotale >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>{fmt(bilancioTotale)}</p>
+          <p
+            className={`text-2xl font-bold mt-1 ${
+              bilancioTotale > 0 ? 'text-emerald-600' : bilancioTotale < 0 ? 'text-red-600' : 'text-gray-500'
+            }`}
+          >
+            {fmt(bilancioTotale)}
+          </p>
         </div>
       </div>
 

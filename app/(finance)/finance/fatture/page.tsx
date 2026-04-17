@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { Plus, Pencil, Trash2, Check, X, Download, FileSpreadsheet } from 'lucide-react'
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts'
 import { fmt, MESI, AZIENDE, AZIENDA_COLORI } from '@/lib/constants'
 import FiltriBar from '@/components/FiltriBar'
 import { useAnno } from '@/lib/anno-context'
@@ -12,11 +13,23 @@ interface Fattura {
   id: number; clienteId: number; cliente: Cliente
   azienda: string; aziendaNota: string | null; descrizione: string | null
   mese: number; anno: number; importo: number
+  tipoIva: string; iva: number
   pagato: boolean; scadenza: string | null
 }
 
+type TipoIva = 'igic_exenta' | 'igic7'
+const TIPO_IVA_OPTIONS: { value: TipoIva; label: string }[] = [
+  { value: 'igic_exenta', label: 'IGC Exenta' },
+  { value: 'igic7', label: 'IGC 7%' },
+]
+
 const MESI_NUMS = Array.from({ length: 12 }, (_, i) => i + 1)
-const emptyForm = { clienteId: '', azienda: AZIENDE[0], aziendaNota: '', descrizione: '', mese: new Date().getMonth() + 1, anno: 2025, importo: '', pagato: false, scadenza: '' }
+const emptyForm = {
+  clienteId: '', azienda: AZIENDE[0], aziendaNota: '', descrizione: '',
+  mese: new Date().getMonth() + 1, anno: 2025, importo: '',
+  tipoIva: 'igic_exenta' as TipoIva,
+  pagato: false, scadenza: '',
+}
 
 export default function FatturePage() {
   const [fatture, setFatture] = useState<Fattura[]>([])
@@ -45,12 +58,18 @@ export default function FatturePage() {
   const openNew = () => { setEditing(null); setForm({ ...emptyForm, anno }); setShowForm(true) }
   const openEdit = (f: Fattura) => {
     setEditing(f)
-    setForm({ clienteId: String(f.clienteId), azienda: f.azienda, aziendaNota: f.aziendaNota || '', descrizione: f.descrizione || '', mese: f.mese, anno: f.anno, importo: String(f.importo), pagato: f.pagato, scadenza: f.scadenza ? f.scadenza.slice(0, 10) : '' })
+    setForm({
+      clienteId: String(f.clienteId), azienda: f.azienda, aziendaNota: f.aziendaNota || '',
+      descrizione: f.descrizione || '', mese: f.mese, anno: f.anno, importo: String(f.importo),
+      tipoIva: (f.tipoIva === 'igic7' ? 'igic7' : 'igic_exenta') as TipoIva,
+      pagato: f.pagato, scadenza: f.scadenza ? f.scadenza.slice(0, 10) : '',
+    })
     setShowForm(true)
   }
   const save = async () => {
     if (!form.clienteId || !form.importo) return
-    const payload = { ...form, clienteId: parseInt(form.clienteId), importo: parseFloat(form.importo), scadenza: form.scadenza || null, aziendaNota: form.azienda === 'Altro' ? form.aziendaNota : null }
+    const ivaPct = form.tipoIva === 'igic7' ? 7 : 0
+    const payload = { ...form, clienteId: parseInt(form.clienteId), importo: parseFloat(form.importo), iva: ivaPct, scadenza: form.scadenza || null, aziendaNota: form.azienda === 'Altro' ? form.aziendaNota : null }
     if (editing) await fetch(`/api/fatture/${editing.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
     else await fetch('/api/fatture', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
     setShowForm(false); load()
@@ -189,6 +208,60 @@ export default function FatturePage() {
         </table>
       </div>
 
+      {/* Grafico Spagna vs Italia (solo pagate) — sotto la tabella */}
+      <div className="glass-card rounded-2xl p-5">
+        {(() => {
+          const pagateAll = (fatture ?? []).filter(f => f?.pagato)
+          const totSpagna = pagateAll.filter(f => f.azienda === 'Spagna').reduce((s: number, f) => s + (f?.importo ?? 0), 0)
+          const totItalia = pagateAll.filter(f => f.azienda === 'Italia').reduce((s: number, f) => s + (f?.importo ?? 0), 0)
+          const totale = totSpagna + totItalia
+          if (totale === 0) {
+            return <p className="text-xs text-gray-400 text-center py-8">Nessuna fattura pagata</p>
+          }
+          const pctSpagna = (totSpagna / totale) * 100
+          const pctItalia = (totItalia / totale) * 100
+          const data = [
+            { name: 'Spagna', value: totSpagna, color: '#ef4444', pct: pctSpagna },
+            { name: 'Italia', value: totItalia, color: '#22c55e', pct: pctItalia },
+          ]
+          return (
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-center">
+              <div className="lg:col-span-2">
+                <ResponsiveContainer width="100%" height={130}>
+                  <BarChart data={data} layout="vertical" margin={{ top: 5, right: 20, bottom: 5, left: 10 }}>
+                    <XAxis type="number" hide />
+                    <YAxis type="category" dataKey="name" tick={{ fontSize: 12, fill: '#475569', fontWeight: 600 }} axisLine={false} tickLine={false} width={70} />
+                    <Tooltip formatter={(v) => fmt(Number(v))} cursor={{ fill: 'rgba(0,0,0,0.04)' }} />
+                    <Bar dataKey="value" radius={[0, 6, 6, 0]} barSize={28}>
+                      {data.map((d, i) => (
+                        // eslint-disable-next-line @typescript-eslint/no-deprecated
+                        <Cell key={i} fill={d.color} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+              <div className="space-y-2">
+                <div className="grid grid-cols-[1fr_auto_auto] gap-3 items-center text-sm">
+                  <span className="flex items-center gap-2 font-semibold text-gray-700">
+                    <span className="w-3 h-3 rounded-sm" style={{ background: '#ef4444' }} />Spagna
+                  </span>
+                  <span className="font-semibold text-gray-900 text-right">{fmt(totSpagna)}</span>
+                  <span className="text-gray-500 tabular-nums w-14 text-right">{pctSpagna.toFixed(1)}%</span>
+                </div>
+                <div className="grid grid-cols-[1fr_auto_auto] gap-3 items-center text-sm">
+                  <span className="flex items-center gap-2 font-semibold text-gray-700">
+                    <span className="w-3 h-3 rounded-sm" style={{ background: '#22c55e' }} />Italia
+                  </span>
+                  <span className="font-semibold text-gray-900 text-right">{fmt(totItalia)}</span>
+                  <span className="text-gray-500 tabular-nums w-14 text-right">{pctItalia.toFixed(1)}%</span>
+                </div>
+              </div>
+            </div>
+          )
+        })()}
+      </div>
+
       {/* Modal */}
       {showForm && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
@@ -242,6 +315,57 @@ export default function FatturePage() {
                     placeholder="0.00" className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-300" />
                 </div>
               </div>
+              {/* Tipo Imposta */}
+              <div>
+                <label className="text-xs font-medium text-gray-600 block mb-1">Tipo Imposta</label>
+                <div className="flex gap-2">
+                  {TIPO_IVA_OPTIONS.map(o => {
+                    const active = form.tipoIva === o.value
+                    return (
+                      <button
+                        key={o.value}
+                        onClick={() => setForm(f => ({ ...f, tipoIva: o.value }))}
+                        className="flex-1 text-sm py-2 rounded-lg border font-semibold transition-all"
+                        style={active
+                          ? { background: '#fce7f3', color: '#be185d', borderColor: '#f9a8d4' }
+                          : { background: '#fff', borderColor: '#e2e8f0', color: '#94a3b8' }}
+                      >
+                        {o.label}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+
+              {/* Riepilogo */}
+              {(() => {
+                const sub = parseFloat(form.importo) || 0
+                const pct = form.tipoIva === 'igic7' ? 7 : 0
+                const imposta = sub * pct / 100
+                const tot = sub + imposta
+                const label = form.tipoIva === 'igic7' ? 'IGC 7%' : 'IGC Exenta'
+                return (
+                  <div className="bg-gray-50 rounded-lg p-3 space-y-1 text-sm">
+                    <div className="flex justify-between text-gray-600">
+                      <span>Subtotale</span>
+                      <span className="font-medium">{fmt(sub)}</span>
+                    </div>
+                    <div className="flex justify-between text-gray-600">
+                      <span>{label}</span>
+                      <span className="font-medium">{fmt(imposta)}</span>
+                    </div>
+                    <div className="flex justify-between font-bold text-gray-900 border-t border-gray-200 pt-1">
+                      <span>TOTALE</span>
+                      <span>{fmt(tot)}</span>
+                    </div>
+                    <div className="flex justify-between text-emerald-700 pt-1">
+                      <span>Guadagno netto</span>
+                      <span className="font-semibold">{fmt(sub)}</span>
+                    </div>
+                  </div>
+                )
+              })()}
+
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="text-xs font-medium text-gray-600 block mb-1">Descrizione</label>

@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation'
 import { LayoutDashboard, Users, FileText, Home, Menu, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useState } from 'react'
+import CompanyInfoModal from './CompanyInfoModal'
 
 const BRAND = '#db291b'
 
@@ -17,6 +18,7 @@ const navItems = [
 export default function SalesSidebar() {
   const pathname = usePathname()
   const [open, setOpen] = useState(false)
+  const [infoOpen, setInfoOpen] = useState(false)
 
   return (
     <>
@@ -54,23 +56,28 @@ export default function SalesSidebar() {
         </button>
 
         <div className="px-6 py-5 border-b border-[#222222]">
-          <div className="flex items-center gap-3 mb-3">
+          <div className="flex justify-start mb-5">
             <div
-              className="rounded-full bg-white flex items-center justify-center shrink-0"
-              style={{ width: 52, height: 52 }}
+              className="rounded-full bg-white flex items-center justify-center"
+              style={{ width: 80, height: 80 }}
             >
               <img
                 src="/WAKE UP! labs - LOGO.png"
                 alt="Wake Up Labs"
-                style={{ width: 40, height: 40, objectFit: 'contain' }}
+                style={{ width: 72, height: 72, objectFit: 'contain' }}
               />
             </div>
-            <div>
-              <p className="text-xs font-medium leading-tight" style={{ color: '#ffffff' }}>Anda Agencia de</p>
-              <p className="text-xs font-medium leading-tight" style={{ color: '#ffffff' }}>Publicidad SL</p>
-            </div>
           </div>
-          <div className="pt-3 border-t border-[#222222]">
+          <button
+            onClick={() => setInfoOpen(true)}
+            className="block w-full cursor-pointer hover:opacity-80 transition-opacity mb-4"
+            style={{ textAlign: 'left' }}
+            aria-label="Mostra dati aziendali"
+          >
+            <p className="text-xs font-medium leading-tight" style={{ color: '#ffffff' }}>Anda Agencia de</p>
+            <p className="text-xs font-medium leading-tight" style={{ color: '#ffffff' }}>Publicidad SL</p>
+          </button>
+          <div className="py-3 border-t border-[#222222]" style={{ textAlign: 'left' }}>
             <p className="text-xs font-medium" style={{ color: BRAND }}>CEO Dashboard</p>
             <p className="text-xs" style={{ color: '#888888' }}>Lorenzo Vanghetti</p>
           </div>
@@ -129,6 +136,8 @@ export default function SalesSidebar() {
           </p>
         </div>
       </aside>
+
+      <CompanyInfoModal open={infoOpen} onClose={() => setInfoOpen(false)} />
     </>
   )
 }

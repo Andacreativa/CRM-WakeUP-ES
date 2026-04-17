@@ -29,10 +29,21 @@ export default function Dashboard() {
   useEffect(() => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const run = async () => {
-      const params = new URLSearchParams({ anno: String(anno) })
-      if (azienda) params.set('azienda', azienda)
-      const d = (await (await fetch(`/api/dashboard?${params}`)).json()) as any
-      if (d && Array.isArray(d.mesi)) setData(d)
+      try {
+        const params = new URLSearchParams({ anno: String(anno) })
+        if (azienda) params.set('azienda', azienda)
+        const res = await fetch(`/api/dashboard?${params}`)
+        const text = await res.text()
+        if (!res.ok || !text) {
+          console.error('[dashboard] fetch failed', res.status, text)
+          return
+        }
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const d = JSON.parse(text) as any
+        if (d && Array.isArray(d.mesi)) setData(d)
+      } catch (e) {
+        console.error('[dashboard] parse error', e)
+      }
     }
     run()
   }, [anno, azienda])
@@ -114,8 +125,8 @@ export default function Dashboard() {
             <AreaChart data={chartMesi}>
               <defs>
                 <linearGradient id="gEnt" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#e8308a" stopOpacity={0.15} />
-                  <stop offset="95%" stopColor="#e8308a" stopOpacity={0} />
+                  <stop offset="5%" stopColor="#10b981" stopOpacity={0.15} />
+                  <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
                 </linearGradient>
                 <linearGradient id="gUsc" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="5%" stopColor="#ef4444" stopOpacity={0.15} />
@@ -127,9 +138,9 @@ export default function Dashboard() {
               <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} tickFormatter={v => `€${(v / 1000).toFixed(0)}k`} />
               <Tooltip formatter={(v) => fmt(Number(v))} />
               <Legend />
-              <Area type="monotone" dataKey="Entrate" stroke="#e8308a" strokeWidth={2} fill="url(#gEnt)" />
+              <Area type="monotone" dataKey="Entrate" stroke="#10b981" strokeWidth={2} fill="url(#gEnt)" />
               <Area type="monotone" dataKey="Uscite" stroke="#ef4444" strokeWidth={2} fill="url(#gUsc)" />
-              <Area type="monotone" dataKey={`Entrate ${anno - 1}`} stroke="#e8308a" strokeWidth={1} strokeDasharray="4 4" fill="none" />
+              <Area type="monotone" dataKey={`Entrate ${anno - 1}`} stroke="#94a3b8" strokeWidth={1} strokeDasharray="4 4" fill="none" />
             </AreaChart>
           </ResponsiveContainer>
         </div>
