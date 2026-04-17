@@ -39,6 +39,17 @@ model Fattura {
   createdAt   DateTime @default(now())
 }
 
+model SpesaFissa {
+  id            Int      @id @default(autoincrement())
+  tipo          String
+  cadenza       String
+  dataPagamento String
+  costo         Float    @default(0)
+  costoMensile  Float    @default(0)
+  ordine        Int      @default(0)
+  createdAt     DateTime @default(now())
+}
+
 model Spesa {
   id           Int      @id @default(autoincrement())
   azienda      String   @default("Spagna")
@@ -113,7 +124,10 @@ model Contatto {
   email      String?
   telefono   String?
   partitaIva String?
-  indirizzo  String?
+  via        String?
+  cap        String?
+  citta      String?
+  provincia  String?
   note       String?
   status     String   @default("lead")
   createdAt  DateTime @default(now())

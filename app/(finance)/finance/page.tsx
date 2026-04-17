@@ -179,8 +179,8 @@ export default function Dashboard() {
               <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} tickFormatter={v => `€${(v / 1000).toFixed(0)}k`} />
               <Tooltip formatter={(v) => fmt(Number(v))} />
               <Legend />
-              <Bar dataKey="Entrate" fill="#e8308a" radius={[4, 4, 0, 0]} />
-              <Bar dataKey="Uscite" fill="#fca5a5" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="Entrate" fill="#10b981" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="Uscite" fill="#ef4444" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </div>

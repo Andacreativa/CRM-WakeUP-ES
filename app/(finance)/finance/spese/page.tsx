@@ -6,6 +6,7 @@ import { fmt, MESI, CATEGORIE_SPESA, CATEGORIE_COLORI, AZIENDE, AZIENDA_COLORI }
 import FiltriBar from '@/components/FiltriBar'
 import { useAnno } from '@/lib/anno-context'
 import { exportExcel, exportPDF, speseToExcel } from '@/lib/export'
+import SpeseFisse from '@/components/SpeseFisse'
 
 interface Spesa {
   id: number; azienda: string; aziendaNota: string | null; fornitore: string; fornitoreId: number | null; categoria: string
@@ -205,6 +206,9 @@ export default function SpesePage() {
           </tbody>
         </table>
       </div>
+
+      {/* Spese Fisse */}
+      <SpeseFisse />
 
       {/* Modal */}
       {showForm && (

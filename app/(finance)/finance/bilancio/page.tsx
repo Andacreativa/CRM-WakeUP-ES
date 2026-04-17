@@ -113,8 +113,8 @@ export default function BilancioPage() {
             <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} tickFormatter={v => `€${(v / 1000).toFixed(0)}k`} />
             <Tooltip formatter={(v) => fmt(Number(v))} />
             <Legend />
-            <Bar dataKey="Entrate" fill="#e8308a" radius={[4, 4, 0, 0]} />
-            <Bar dataKey="Uscite" fill="#fca5a5" radius={[4, 4, 0, 0]} />
+            <Bar dataKey="Entrate" fill="#10b981" radius={[4, 4, 0, 0]} />
+            <Bar dataKey="Uscite" fill="#ef4444" radius={[4, 4, 0, 0]} />
           </BarChart>
         </ResponsiveContainer>
       </div>
@@ -153,7 +153,7 @@ export default function BilancioPage() {
             {dati.map(d => (
               <tr key={d.mese} className="border-b border-gray-50 hover:bg-gray-50 transition-colors">
                 <td className="px-6 py-3 text-sm font-medium text-gray-800">{MESI[d.mese - 1]}</td>
-                <td className="px-6 py-3 text-sm font-semibold text-right" style={{ color: d.entrate > 0 ? '#e8308a' : '#94a3b8' }}>{d.entrate > 0 ? fmt(d.entrate) : '—'}</td>
+                <td className="px-6 py-3 text-sm font-semibold text-right" style={{ color: d.entrate > 0 ? '#10b981' : '#94a3b8' }}>{d.entrate > 0 ? fmt(d.entrate) : '—'}</td>
                 <td className="px-6 py-3 text-sm font-semibold text-red-500 text-right">{d.uscite > 0 ? fmt(d.uscite) : '—'}</td>
                 <td className={`px-6 py-3 text-sm font-bold text-right ${d.bilancio >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
                   {d.entrate === 0 && d.uscite === 0 ? '—' : fmt(d.bilancio)}
@@ -162,7 +162,7 @@ export default function BilancioPage() {
             ))}
             <tr className="bg-gray-50 font-bold border-t-2 border-gray-200">
               <td className="px-6 py-3 text-sm text-gray-800">TOTALE ANNO</td>
-              <td className="px-6 py-3 text-sm text-right" style={{ color: '#e8308a' }}>{fmt(fattureTotale)}</td>
+              <td className="px-6 py-3 text-sm text-right text-emerald-600">{fmt(fattureTotale)}</td>
               <td className="px-6 py-3 text-sm text-red-500 text-right">{fmt(speseTotale)}</td>
               <td className={`px-6 py-3 text-sm text-right ${bilancioTotale >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>{fmt(bilancioTotale)}</td>
             </tr>

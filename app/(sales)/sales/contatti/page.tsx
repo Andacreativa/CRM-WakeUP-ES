@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { Plus, Pencil, Trash2, Mail, Phone, MapPin, FileText } from 'lucide-react'
-import { PAESI } from '@/lib/constants'
+import AddressFields, { formatAddress } from '@/components/AddressFields'
 
 interface Contatto {
   id: number
@@ -11,7 +11,10 @@ interface Contatto {
   email: string | null
   telefono: string | null
   partitaIva: string | null
-  indirizzo: string | null
+  via: string | null
+  cap: string | null
+  citta: string | null
+  provincia: string | null
   note: string | null
   status: string
 }
@@ -31,7 +34,9 @@ const paesiFlag: Record<string, string> = {
 
 const emptyForm = {
   nome: '', paese: 'Italia', email: '', telefono: '',
-  partitaIva: '', indirizzo: '', note: '', status: 'lead',
+  partitaIva: '',
+  via: '', cap: '', citta: '', provincia: '',
+  note: '', status: 'lead',
 }
 
 const BRAND = '#db291b'
@@ -57,7 +62,9 @@ export default function ContattiPage() {
     setForm({
       nome: c.nome, paese: c.paese,
       email: c.email || '', telefono: c.telefono || '',
-      partitaIva: c.partitaIva || '', indirizzo: c.indirizzo || '',
+      partitaIva: c.partitaIva || '',
+      via: c.via || '', cap: c.cap || '',
+      citta: c.citta || '', provincia: c.provincia || '',
       note: c.note || '', status: c.status,
     })
     setShowForm(true)
@@ -197,9 +204,10 @@ export default function ContattiPage() {
                       <Phone className="w-3.5 h-3.5 text-gray-400" />{c.telefono}
                     </div>
                   )}
-                  {c.indirizzo && (
-                    <div className="flex items-center gap-2 text-xs text-gray-500">
-                      <MapPin className="w-3.5 h-3.5 text-gray-400" />{c.indirizzo}
+                  {(c.via || c.cap || c.citta || c.provincia) && (
+                    <div className="flex items-start gap-2 text-xs text-gray-500">
+                      <MapPin className="w-3.5 h-3.5 text-gray-400 mt-0.5 shrink-0" />
+                      <span>{formatAddress({ via: c.via ?? '', cap: c.cap ?? '', citta: c.citta ?? '', provincia: c.provincia ?? '', paese: c.paese })}</span>
                     </div>
                   )}
                   {c.partitaIva && (
@@ -260,18 +268,6 @@ export default function ContattiPage() {
                   />
                 </div>
                 <div>
-                  <label className="text-xs font-medium text-gray-600 block mb-1">Paese</label>
-                  <select
-                    value={form.paese}
-                    onChange={e => setForm(f => ({ ...f, paese: e.target.value }))}
-                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-300"
-                  >
-                    {PAESI.map(p => (
-                      <option key={p} value={p}>{paesiFlag[p] || '🌍'} {p}</option>
-                    ))}
-                  </select>
-                </div>
-                <div>
                   <label className="text-xs font-medium text-gray-600 block mb-1">Partita IVA</label>
                   <input
                     type="text"
@@ -291,7 +287,7 @@ export default function ContattiPage() {
                     className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-300"
                   />
                 </div>
-                <div>
+                <div className="col-span-2">
                   <label className="text-xs font-medium text-gray-600 block mb-1">Telefono</label>
                   <input
                     type="tel"
@@ -302,13 +298,11 @@ export default function ContattiPage() {
                   />
                 </div>
                 <div className="col-span-2">
-                  <label className="text-xs font-medium text-gray-600 block mb-1">Indirizzo</label>
-                  <input
-                    type="text"
-                    value={form.indirizzo}
-                    onChange={e => setForm(f => ({ ...f, indirizzo: e.target.value }))}
-                    placeholder="Via Roma 1, Milano"
-                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-300"
+                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Indirizzo</p>
+                  <AddressFields
+                    value={{ via: form.via, cap: form.cap, citta: form.citta, provincia: form.provincia, paese: form.paese }}
+                    onChange={a => setForm(f => ({ ...f, via: a.via, cap: a.cap, citta: a.citta, provincia: a.provincia, paese: a.paese }))}
+                    inputClass="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-300"
                   />
                 </div>
                 <div className="col-span-2">
