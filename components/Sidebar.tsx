@@ -12,11 +12,13 @@ import {
   UserCog,
   Bell,
   Home,
+  LogOut,
   Menu,
   X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import CompanyInfoModal from "./CompanyInfoModal";
 
 const BRAND = "#e8308a";
@@ -38,8 +40,15 @@ const navGroups = [
 
 export default function Sidebar() {
   const pathname = usePathname();
+  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [infoOpen, setInfoOpen] = useState(false);
+
+  const logout = async () => {
+    await fetch("/api/auth/logout", { method: "POST" });
+    router.replace("/login");
+    router.refresh();
+  };
 
   return (
     <>
@@ -164,7 +173,7 @@ export default function Sidebar() {
           ))}
         </nav>
 
-        <div className="px-3 pt-2 border-t border-[#222222]">
+        <div className="px-3 pt-2 border-t border-[#222222] space-y-1">
           <Link
             href="/"
             onClick={() => setOpen(false)}
@@ -182,6 +191,22 @@ export default function Sidebar() {
             <Home size={18} className="shrink-0" />
             Home
           </Link>
+          <button
+            onClick={logout}
+            className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-150"
+            style={{ color: "#555555" }}
+            onMouseEnter={(e) => {
+              (e.currentTarget as HTMLElement).style.color = "#ef4444";
+              (e.currentTarget as HTMLElement).style.background = "#1a1a1a";
+            }}
+            onMouseLeave={(e) => {
+              (e.currentTarget as HTMLElement).style.color = "#555555";
+              (e.currentTarget as HTMLElement).style.background = "transparent";
+            }}
+          >
+            <LogOut size={18} className="shrink-0" />
+            Logout
+          </button>
         </div>
 
         <div className="px-6 py-4">

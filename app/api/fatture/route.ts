@@ -39,14 +39,13 @@ export async function POST(request: Request) {
       iva,
       pagato: body.pagato || false,
       metodo: body.metodo || null,
+      commerciale: body.commerciale || null,
       scadenza: body.scadenza ? new Date(body.scadenza) : null,
     },
     include: { cliente: true },
   });
 
-  const isFinn =
-    fattura.azienda === "Altro" &&
-    (fattura.aziendaNota ?? "").toLowerCase().includes("finn");
+  const isFinn = (fattura.commerciale ?? "").toLowerCase().includes("finn");
   if (isFinn) {
     const quota15 = Math.round(fattura.importo * 0.15 * 100) / 100;
     const quota85 = Math.round(fattura.importo * 0.85 * 100) / 100;

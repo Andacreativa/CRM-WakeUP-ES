@@ -199,16 +199,21 @@ export default function ClientiPage() {
         <table className="w-full">
           <thead>
             <tr className="border-b border-gray-100 bg-gray-50">
-              {["Paese", "Cliente", "Fatturato", "Incassato", "Da incassare", ""].map(
-                (h) => (
-                  <th
-                    key={h}
-                    className={`text-xs font-semibold text-gray-500 uppercase tracking-wide px-4 py-3 ${["Fatturato", "Incassato", "Da incassare"].includes(h) ? "text-right" : "text-left"}`}
-                  >
-                    {h}
-                  </th>
-                ),
-              )}
+              {[
+                "Paese",
+                "Cliente",
+                "Fatturato",
+                "Incassato",
+                "Da incassare",
+                "",
+              ].map((h) => (
+                <th
+                  key={h}
+                  className={`text-xs font-semibold text-gray-500 uppercase tracking-wide px-4 py-3 ${["Fatturato", "Incassato", "Da incassare"].includes(h) ? "text-right" : "text-left"}`}
+                >
+                  {h}
+                </th>
+              ))}
             </tr>
           </thead>
           <tbody className="zebra">
@@ -246,10 +251,16 @@ export default function ClientiPage() {
                   <td className="px-4 py-3 text-sm font-semibold text-gray-900 text-right">
                     {fmt(s.totale)}
                   </td>
-                  <td className="px-4 py-3 text-sm font-semibold text-right" style={{ color: "#22c55e" }}>
+                  <td
+                    className="px-4 py-3 text-sm font-semibold text-right"
+                    style={{ color: "#22c55e" }}
+                  >
                     {fmt(s.incassato)}
                   </td>
-                  <td className="px-4 py-3 text-sm font-semibold text-right" style={{ color: "#f59e0b" }}>
+                  <td
+                    className="px-4 py-3 text-sm font-semibold text-right"
+                    style={{ color: "#f59e0b" }}
+                  >
                     {fmt(s.daIncassare)}
                   </td>
                   <td className="px-4 py-3">
@@ -499,12 +510,21 @@ function ClienteDetailModal({
     setCopied(label);
     setTimeout(() => setCopied(null), 1500);
   };
-  const Field = ({ label, value }: { label: string; value: string | null | undefined }) => (
+  const Field = ({
+    label,
+    value,
+  }: {
+    label: string;
+    value: string | null | undefined;
+  }) => (
     <div className="grid grid-cols-[140px_1fr_28px] gap-2 items-start py-2 border-b border-gray-100 last:border-0">
       <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide pt-0.5">
         {label}
       </span>
-      <span className="text-sm text-gray-800 break-words" style={{ textAlign: "left" }}>
+      <span
+        className="text-sm text-gray-800 break-words"
+        style={{ textAlign: "left" }}
+      >
         {value || <span className="text-gray-300">—</span>}
       </span>
       {value ? (
@@ -540,7 +560,9 @@ function ClienteDetailModal({
               <span className="text-2xl">
                 {PAESE_FLAG[cliente.paese] || "🌍"}
               </span>
-              <h2 className="text-lg font-bold text-gray-900">{cliente.nome}</h2>
+              <h2 className="text-lg font-bold text-gray-900">
+                {cliente.nome}
+              </h2>
             </div>
             <p className="text-xs text-gray-500 mt-0.5">{cliente.paese}</p>
           </div>
@@ -558,7 +580,9 @@ function ClienteDetailModal({
             <p className="text-[10px] text-gray-500 uppercase tracking-wide">
               Fatturato
             </p>
-            <p className="text-sm font-bold text-gray-900">{fmt(stats.totale)}</p>
+            <p className="text-sm font-bold text-gray-900">
+              {fmt(stats.totale)}
+            </p>
           </div>
           <div>
             <p className="text-[10px] text-gray-500 uppercase tracking-wide">

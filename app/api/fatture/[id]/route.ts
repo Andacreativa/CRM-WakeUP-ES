@@ -27,6 +27,9 @@ export async function PATCH(
       ...(body.iva !== undefined && { iva: Number(body.iva) }),
       ...(body.pagato !== undefined && { pagato: body.pagato }),
       ...(body.metodo !== undefined && { metodo: body.metodo || null }),
+      ...(body.commerciale !== undefined && {
+        commerciale: body.commerciale || null,
+      }),
       ...(body.scadenza !== undefined && {
         scadenza: body.scadenza ? new Date(body.scadenza) : null,
       }),

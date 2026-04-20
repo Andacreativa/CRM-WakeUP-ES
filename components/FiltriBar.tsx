@@ -11,6 +11,8 @@ interface Props {
   showAzienda?: boolean;
   showAnno?: boolean;
   altroLabel?: string;
+  // Nascondi opzioni specifiche dal pill (es. ["Altro"])
+  hideOptions?: string[];
 }
 
 const PILL_COLORS: Record<string, string> = {
@@ -44,6 +46,7 @@ export default function FiltriBar({
   showAzienda = true,
   showAnno = true,
   altroLabel,
+  hideOptions,
 }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const btnRefs = useRef<(HTMLButtonElement | null)[]>([]);
@@ -53,9 +56,13 @@ export default function FiltriBar({
     "": "Tutte",
     Altro: altroLabel ?? DEFAULT_ALTRO_LABEL,
   };
+  const hide = new Set(hideOptions ?? []);
   const OPTIONS = [
     { val: "", label: "Tutte" },
-    ...AZIENDE.map((a) => ({ val: a, label: labelMap[a] ?? a })),
+    ...AZIENDE.filter((a) => !hide.has(a)).map((a) => ({
+      val: a,
+      label: labelMap[a] ?? a,
+    })),
   ];
 
   const activeIndex = OPTIONS.findIndex((o) => o.val === azienda);

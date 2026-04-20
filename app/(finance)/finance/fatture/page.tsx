@@ -52,6 +52,7 @@ interface Fattura {
   iva: number;
   pagato: boolean;
   metodo: string | null;
+  commerciale: string | null;
   scadenza: string | null;
 }
 
@@ -67,6 +68,7 @@ const emptyForm = {
   azienda: AZIENDE[0],
   aziendaNota: "",
   descrizione: "",
+  commerciale: "",
   mese: new Date().getMonth() + 1,
   anno: 2025,
   importo: "",
@@ -117,6 +119,7 @@ export default function FatturePage() {
       azienda: f.azienda,
       aziendaNota: f.aziendaNota || "",
       descrizione: f.descrizione || "",
+      commerciale: f.commerciale || "",
       mese: f.mese,
       anno: f.anno,
       importo: String(f.importo),
@@ -209,7 +212,7 @@ export default function FatturePage() {
             azienda={azienda}
             onAnno={setAnno}
             onAzienda={setAzienda}
-            altroLabel="Altri Ingressi"
+            hideOptions={["Altro"]}
           />
           <PageSizeSelect pageSize={pageSize} onChange={setPageSize} />
           <button
@@ -298,12 +301,11 @@ export default function FatturePage() {
         </div>
       </div>
 
-      {/* Tabella fatture — nascosta quando filtro = Altri Ingressi */}
-      {azienda !== "Altro" && (
-        <div className="glass-card rounded-2xl overflow-hidden">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-gray-100 bg-gray-50">
+      {/* Tabella fatture */}
+      <div className="glass-card rounded-2xl overflow-hidden">
+        <table className="w-full">
+          <thead>
+            <tr className="border-b border-gray-100 bg-gray-50">
                 {[
                   "Numero",
                   "Cliente",
@@ -426,11 +428,10 @@ export default function FatturePage() {
                   </td>
                 </tr>
               ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-      {azienda !== "Altro" && filtered.length > 0 && (
+          </tbody>
+        </table>
+      </div>
+      {filtered.length > 0 && (
         <PageNav
           total={filtered.length}
           page={page}
@@ -441,15 +442,10 @@ export default function FatturePage() {
       )}
 
       {/* Tabella Altri Ingressi — stesso formato delle fatture */}
-      <AltriIngressi
-        anno={anno}
-        azienda={azienda === "Altro" ? "" : azienda}
-        onChanged={load}
-      />
+      <AltriIngressi anno={anno} azienda={azienda} onChanged={load} />
 
-      {/* Grafico Spagna vs Italia (solo pagate) — nascosto quando filtro = Altri Ingressi */}
-      {azienda !== "Altro" && (
-        <div className="glass-card rounded-2xl p-5">
+      {/* Grafico Spagna vs Italia (solo pagate) */}
+      <div className="glass-card rounded-2xl p-5">
           {(() => {
             const pagateAll = (fatture ?? []).filter((f) => f?.pagato);
             const totSpagna = pagateAll
@@ -552,8 +548,7 @@ export default function FatturePage() {
               </div>
             );
           })()}
-        </div>
-      )}
+      </div>
 
       {/* Modal */}
       {showForm && (
@@ -758,6 +753,20 @@ export default function FatturePage() {
                     onChange={(e) =>
                       setForm((f) => ({ ...f, scadenza: e.target.value }))
                     }
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-300"
+                  />
+                </div>
+                <div className="col-span-2">
+                  <label className="text-xs font-medium text-gray-600 block mb-1">
+                    Commerciale
+                  </label>
+                  <input
+                    type="text"
+                    value={form.commerciale}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, commerciale: e.target.value }))
+                    }
+                    placeholder='Opzionale. Scrivi "Finn" per attivare lo split automatico 15%/85%'
                     className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-300"
                   />
                 </div>
