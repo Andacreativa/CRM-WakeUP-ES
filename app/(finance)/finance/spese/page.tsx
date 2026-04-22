@@ -8,6 +8,9 @@ import {
   Download,
   FileSpreadsheet,
   Paperclip,
+  Camera,
+  Upload,
+  X,
 } from "lucide-react";
 import {
   fmt,
@@ -75,6 +78,7 @@ export default function SpesePage() {
   const fileRef = useRef<HTMLInputElement>(null);
   const [pageSize, setPageSize] = useState(10);
   const [page, setPage] = useState(1);
+  const [showEstrai, setShowEstrai] = useState(false);
 
   const load = async () => {
     const params = new URLSearchParams({ anno: String(anno) });
@@ -93,6 +97,44 @@ export default function SpesePage() {
   const openNew = () => {
     setEditing(null);
     setForm({ ...emptyForm, anno });
+    setShowForm(true);
+  };
+  const openNewFromExtract = (data: {
+    fornitore?: string | null;
+    categoria?: string | null;
+    importo?: number | null;
+    data?: string | null;
+  }) => {
+    setEditing(null);
+    const today = new Date();
+    let mese = today.getMonth() + 1;
+    let annoEstr = anno;
+    if (data.data) {
+      const m = data.data.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+      if (m) {
+        mese = parseInt(m[2], 10);
+        annoEstr = parseInt(m[3], 10);
+      }
+    }
+    const categoria =
+      data.categoria && CATEGORIE_SPESA.includes(data.categoria)
+        ? data.categoria
+        : CATEGORIE_SPESA[0];
+    const match = data.fornitore
+      ? fornitori.find(
+          (f) => f.nome.toLowerCase() === data.fornitore!.toLowerCase(),
+        )
+      : null;
+    setForm({
+      ...emptyForm,
+      fornitore: data.fornitore || "",
+      fornitoreId: match?.id ?? "",
+      categoria,
+      mese,
+      anno: annoEstr,
+      importo: data.importo != null ? String(data.importo) : "",
+    });
+    setShowEstrai(false);
     setShowForm(true);
   };
   const openEdit = (s: Spesa) => {
@@ -221,6 +263,12 @@ export default function SpesePage() {
             className="flex items-center gap-1.5 border border-gray-200 text-gray-600 text-sm font-medium px-3 py-2 rounded-xl hover:bg-gray-50"
           >
             <Download className="w-4 h-4 text-red-500" /> PDF
+          </button>
+          <button
+            onClick={() => setShowEstrai(true)}
+            className="flex items-center gap-1.5 border border-gray-200 text-gray-600 text-sm font-medium px-3 py-2 rounded-xl hover:bg-gray-50"
+          >
+            <Camera className="w-4 h-4 text-pink-600" /> Carica da foto/PDF
           </button>
           <button
             onClick={openNew}
@@ -634,6 +682,12 @@ export default function SpesePage() {
           </div>
         </div>
       )}
+
+      <EstraiRicevutaModal
+        open={showEstrai}
+        onClose={() => setShowEstrai(false)}
+        onExtracted={openNewFromExtract}
+      />
     </div>
   );
 }
@@ -717,6 +771,138 @@ function FornitoreAutocomplete({
           )}
         </div>
       )}
+    </div>
+  );
+}
+
+// ─── Estrai Ricevuta Modal ──────────────────────────────────────────────────
+// Drag&drop o click → upload a /api/extract-ricevuta → Claude estrae fornitore,
+// categoria, importo, data → precompila form Nuova Spesa.
+function EstraiRicevutaModal({
+  open,
+  onClose,
+  onExtracted,
+}: {
+  open: boolean;
+  onClose: () => void;
+  onExtracted: (data: {
+    fornitore?: string | null;
+    categoria?: string | null;
+    importo?: number | null;
+    data?: string | null;
+  }) => void;
+}) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [dragOver, setDragOver] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [fileName, setFileName] = useState<string | null>(null);
+
+  if (!open) return null;
+
+  const handleFile = async (file: File) => {
+    setError(null);
+    setFileName(file.name);
+    setLoading(true);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      const res = await fetch("/api/extract-ricevuta", {
+        method: "POST",
+        body: fd,
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error || `Errore server (${res.status})`);
+        return;
+      }
+      onExtracted(data);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Errore upload");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const onDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setDragOver(false);
+    const f = e.dataTransfer.files?.[0];
+    if (f) handleFile(f);
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+      <div className="glass-modal rounded-2xl w-full max-w-md p-6 space-y-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-bold text-gray-900">
+            Carica scontrino / fattura
+          </h2>
+          <button
+            onClick={onClose}
+            className="p-1.5 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100"
+            aria-label="Chiudi"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        {!loading && (
+          <>
+            <div
+              onDragOver={(e) => {
+                e.preventDefault();
+                setDragOver(true);
+              }}
+              onDragLeave={() => setDragOver(false)}
+              onDrop={onDrop}
+              onClick={() => inputRef.current?.click()}
+              className={`border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-colors ${
+                dragOver
+                  ? "border-pink-400 bg-pink-50"
+                  : "border-gray-300 hover:border-pink-300 hover:bg-gray-50"
+              }`}
+            >
+              <Upload className="w-10 h-10 text-gray-400 mx-auto mb-3" />
+              <p className="text-sm font-medium text-gray-700">
+                Trascina foto o PDF qui
+              </p>
+              <p className="text-xs text-gray-500 mt-1">
+                oppure clicca per selezionare (.jpg, .png, .pdf)
+              </p>
+              <input
+                ref={inputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp,application/pdf"
+                onChange={(e) => {
+                  const f = e.target.files?.[0];
+                  if (f) handleFile(f);
+                }}
+                className="hidden"
+              />
+            </div>
+            <p className="text-xs text-gray-400 text-center">
+              I dati estratti verranno precompilati nel form, poi potrai
+              modificarli prima di salvare.
+            </p>
+            {error && (
+              <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+                {error}
+              </div>
+            )}
+          </>
+        )}
+
+        {loading && (
+          <div className="py-8 text-center space-y-2">
+            <div className="inline-flex items-center gap-2 text-sm text-gray-600">
+              <Camera className="w-5 h-5 text-pink-600 animate-pulse" />
+              Estrazione dati in corso...
+            </div>
+            {fileName && <p className="text-xs text-gray-400">{fileName}</p>}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

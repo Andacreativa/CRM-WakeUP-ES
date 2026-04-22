@@ -31,6 +31,7 @@ export async function POST(request: Request) {
         dataNascita: body.dataNascita ? new Date(body.dataNascita) : null,
         dni: body.dni || null,
         nie: body.nie || null,
+        numSS: body.numSS || null,
         via: body.via || null,
         cap: body.cap || null,
         citta: body.citta || null,

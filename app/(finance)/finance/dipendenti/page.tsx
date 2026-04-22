@@ -24,6 +24,7 @@ interface Dipendente {
   dataNascita: string | null;
   dni: string | null;
   nie: string | null;
+  numSS: string | null;
   via: string | null;
   cap: string | null;
   citta: string | null;
@@ -47,6 +48,7 @@ const emptyForm = {
   dataNascita: "",
   dni: "",
   nie: "",
+  numSS: "",
   via: "",
   cap: "",
   citta: "",
@@ -67,7 +69,7 @@ export default function DipendentiPage() {
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<Dipendente | null>(null);
   const [form, setForm] = useState({ ...emptyForm });
-  const { anno, setAnno } = useAnno();
+  const { anno } = useAnno();
   const [busy, setBusy] = useState<string | null>(null);
   const [infoDip, setInfoDip] = useState<Dipendente | null>(null);
   const [uploadingFoto, setUploadingFoto] = useState(false);
@@ -114,6 +116,7 @@ export default function DipendentiPage() {
       dataNascita: d.dataNascita ? d.dataNascita.slice(0, 10) : "",
       dni: d.dni ?? "",
       nie: d.nie ?? "",
+      numSS: d.numSS ?? "",
       via: d.via ?? "",
       cap: d.cap ?? "",
       citta: d.citta ?? "",
@@ -151,6 +154,7 @@ export default function DipendentiPage() {
       },
       { label: "DNI", value: d.dni },
       { label: "NIE", value: d.nie },
+      { label: "N° Seguridad Social", value: d.numSS },
       { label: "Via", value: d.via },
       { label: "CAP", value: d.cap },
       { label: "Città", value: d.citta },
@@ -227,22 +231,6 @@ export default function DipendentiPage() {
           </p>
         </div>
         <div className="flex items-center gap-3">
-          <select
-            value={anno}
-            onChange={(e) => setAnno(parseInt(e.target.value))}
-            className="text-sm font-semibold px-3 py-1.5 rounded-xl border-none outline-none cursor-pointer"
-            style={{ background: "#e8308a", color: "#ffffff" }}
-          >
-            {[2026, 2025, 2024, 2023, 2022].map((a) => (
-              <option
-                key={a}
-                value={a}
-                style={{ background: "#fff", color: "#1a1d2e" }}
-              >
-                {a}
-              </option>
-            ))}
-          </select>
           <button
             onClick={openNew}
             className="glass-btn-primary flex items-center gap-2 text-white text-sm font-medium px-4 py-2.5 rounded-xl"
@@ -622,6 +610,20 @@ export default function DipendentiPage() {
                       setForm((f) => ({ ...f, nie: e.target.value }))
                     }
                     placeholder="X1234567L"
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-300"
+                  />
+                </div>
+                <div className="col-span-2">
+                  <label className="text-xs font-medium text-gray-600 block mb-1">
+                    N° Seguridad Social
+                  </label>
+                  <input
+                    type="text"
+                    value={form.numSS}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, numSS: e.target.value }))
+                    }
+                    placeholder="Es. 281234567890"
                     className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-300"
                   />
                 </div>

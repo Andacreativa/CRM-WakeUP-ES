@@ -36,16 +36,44 @@ export async function exportExcel(
 }
 
 // ── PDF ────────────────────────────────────────────────────────────────────
+async function loadImage(src: string): Promise<HTMLImageElement | null> {
+  try {
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    img.src = src;
+    await new Promise<void>((resolve, reject) => {
+      img.onload = () => resolve();
+      img.onerror = () => reject(new Error("img load failed"));
+    });
+    return img;
+  } catch {
+    return null;
+  }
+}
+
 export async function exportPDF(
   title: string,
   columns: string[],
   rows: (string | number)[][],
   filename: string,
+  options?: { logoPath?: string; footerText?: string },
 ) {
   const { default: jsPDF } = await import("jspdf");
   const { default: autoTable } = await import("jspdf-autotable");
 
   const doc = new jsPDF({ orientation: "landscape" });
+
+  // Logo opzionale (top-right)
+  if (options?.logoPath) {
+    const img = await loadImage(options.logoPath);
+    if (img) {
+      const height = 22;
+      const ratio = img.naturalWidth / img.naturalHeight;
+      const width = height * ratio;
+      const pageWidth = doc.internal.pageSize.getWidth();
+      doc.addImage(img, "PNG", pageWidth - width - 14, 8, width, height);
+    }
+  }
 
   // Header
   doc.setFontSize(16);
@@ -70,6 +98,15 @@ export async function exportPDF(
     },
     alternateRowStyles: { fillColor: [253, 242, 248] },
   });
+
+  if (options?.footerText) {
+    const finalY =
+      (doc as unknown as { lastAutoTable?: { finalY: number } }).lastAutoTable
+        ?.finalY ?? 35;
+    doc.setFontSize(11);
+    doc.setTextColor(30);
+    doc.text(options.footerText, 14, finalY + 10);
+  }
 
   doc.save(`${filename}.pdf`);
 }

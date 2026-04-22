@@ -187,6 +187,7 @@ export default function FornitoriPage() {
             onAnno={() => {}}
             onAzienda={setPaeseFiltro}
             showAnno={false}
+            hideOptions={["Altro"]}
           />
           <PageSizeSelect pageSize={pageSize} onChange={setPageSize} />
           <button

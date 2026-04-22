@@ -19,6 +19,7 @@ export async function PATCH(
         }),
         ...(body.dni !== undefined && { dni: body.dni || null }),
         ...(body.nie !== undefined && { nie: body.nie || null }),
+        ...(body.numSS !== undefined && { numSS: body.numSS || null }),
         ...(body.via !== undefined && { via: body.via || null }),
         ...(body.cap !== undefined && { cap: body.cap || null }),
         ...(body.citta !== undefined && { citta: body.citta || null }),

@@ -173,6 +173,7 @@ export default function ClientiPage() {
             onAnno={() => {}}
             onAzienda={setPaeseFiltro}
             showAnno={false}
+            hideOptions={["Altro"]}
           />
           <PageSizeSelect pageSize={pageSize} onChange={setPageSize} />
           <button

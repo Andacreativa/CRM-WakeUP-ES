@@ -114,6 +114,7 @@ model Dipendente {
   dataNascita      DateTime?
   dni              String?
   nie              String?
+  numSS            String?
   via              String?
   cap              String?
   citta            String?

@@ -250,12 +250,16 @@ export default function FatturePage() {
           </button>
           <button
             onClick={() => {
+              const filtroLabel = azienda || "Tutte";
               const { cols, rows, title } = fattureToPDF(
                 filtered,
                 MESI,
-                `Fatture ${anno}`,
+                `Fatture ${anno} — ${filtroLabel}`,
               );
-              exportPDF(title, cols, rows, `fatture_${anno}`);
+              exportPDF(title, cols, rows, `fatture_${anno}`, {
+                logoPath: "/logo anda.png",
+                footerText: `Totale fatture: ${rows.length}`,
+              });
             }}
             className="flex items-center gap-1.5 border border-gray-200 text-gray-600 text-sm font-medium px-3 py-2 rounded-xl hover:bg-gray-50 transition-colors"
           >
