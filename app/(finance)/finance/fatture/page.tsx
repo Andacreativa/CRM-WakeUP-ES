@@ -256,9 +256,13 @@ export default function FatturePage() {
                 MESI,
                 `Fatture ${anno} — ${filtroLabel}`,
               );
+              const totImporto = filtered.reduce(
+                (s, f) => s + (f?.importo ?? 0),
+                0,
+              );
               exportPDF(title, cols, rows, `fatture_${anno}`, {
                 logoPath: "/logo anda.png",
-                footerText: `Totale fatture: ${rows.length}`,
+                footerText: `Totale fatture: ${rows.length}     Totale importo: ${fmt(totImporto)}`,
               });
             }}
             className="flex items-center gap-1.5 border border-gray-200 text-gray-600 text-sm font-medium px-3 py-2 rounded-xl hover:bg-gray-50 transition-colors"
