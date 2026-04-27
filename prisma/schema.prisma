@@ -42,8 +42,8 @@ model Fattura {
   commerciale   String?
   scadenza      DateTime?
   createdAt     DateTime       @default(now())
-  altroIngresso AltroIngresso?
-  spesa         Spesa?
+  altriIngressi AltroIngresso[]
+  spese         Spesa[]
 }
 
 model AltroIngresso {
@@ -57,7 +57,7 @@ model AltroIngresso {
   importo     Float
   incassato   Boolean   @default(false)
   dataIncasso DateTime?
-  fatturaId   Int?      @unique
+  fatturaId   Int?
   fattura     Fattura?  @relation(fields: [fatturaId], references: [id], onDelete: Cascade)
   createdAt   DateTime  @default(now())
 }
@@ -86,7 +86,7 @@ model Spesa {
   mese         Int
   anno         Int      @default(2025)
   importo      Float
-  fatturaId    Int?     @unique
+  fatturaId    Int?
   fattura      Fattura? @relation(fields: [fatturaId], references: [id], onDelete: Cascade)
   createdAt    DateTime @default(now())
 }

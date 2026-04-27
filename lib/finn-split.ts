@@ -1,6 +1,6 @@
 import type { PrismaClient } from "@prisma/client";
 
-interface FinnFattura {
+interface SplitFattura {
   id: number;
   importo: number;
   mese: number;
@@ -9,17 +9,37 @@ interface FinnFattura {
   cliente?: { nome: string } | null;
 }
 
+export type SplitType = "finn" | "anda" | null;
+
 const round2 = (n: number) => Math.round(n * 100) / 100;
 
+export const getSplitType = (
+  commerciale: string | null | undefined,
+): SplitType => {
+  const c = (commerciale ?? "").toLowerCase().trim();
+  if (c.includes("finn")) return "finn";
+  if (c.includes("anda")) return "anda";
+  return null;
+};
+
 export const isFinnCommerciale = (commerciale: string | null | undefined) =>
-  (commerciale ?? "").toLowerCase().includes("finn");
+  getSplitType(commerciale) === "finn";
 
 export const isFinnRitenuta = (a: {
   fonte?: string | null;
   descrizione?: string | null;
 }) => a.fonte === "Finn" && a.descrizione === "Ritenuta spese gestione Anda";
 
-export async function applyFinnSplit(prisma: PrismaClient, f: FinnFattura) {
+export async function applySplit(
+  prisma: PrismaClient,
+  f: SplitFattura,
+  type: SplitType,
+) {
+  if (type === "finn") return applyFinnSplit(prisma, f);
+  if (type === "anda") return applyAndaSplit(prisma, f);
+}
+
+export async function applyFinnSplit(prisma: PrismaClient, f: SplitFattura) {
   const quota15 = round2(f.importo * 0.15);
   const quota85 = round2(f.importo * 0.85);
   const clienteNome = f.cliente?.nome ?? null;
@@ -53,7 +73,38 @@ export async function applyFinnSplit(prisma: PrismaClient, f: FinnFattura) {
   });
 }
 
-export async function deleteFinnSplitForFattura(
+export async function applyAndaSplit(prisma: PrismaClient, f: SplitFattura) {
+  const halfShare = round2(f.importo * 0.425);
+  const clienteNome = f.cliente?.nome ?? null;
+
+  await prisma.spesa.create({
+    data: {
+      azienda: "Spagna",
+      fornitore: "Leonardo Mestre",
+      categoria: "Soci",
+      descrizione: clienteNome,
+      mese: f.mese,
+      anno: f.anno,
+      importo: halfShare,
+      fatturaId: f.id,
+    },
+  });
+
+  await prisma.spesa.create({
+    data: {
+      azienda: "Spagna",
+      fornitore: "Lorenzo Vanghetti",
+      categoria: "Soci",
+      descrizione: clienteNome,
+      mese: f.mese,
+      anno: f.anno,
+      importo: halfShare,
+      fatturaId: f.id,
+    },
+  });
+}
+
+export async function deleteSplitForFattura(
   prisma: PrismaClient,
   fatturaId: number,
 ) {
@@ -65,6 +116,9 @@ export async function deleteFinnSplitForFattura(
   });
   return { altri: altri.count, spese: spese.count };
 }
+
+// Alias retro-compatibile
+export const deleteFinnSplitForFattura = deleteSplitForFattura;
 
 export async function deleteAllFinnSplits(prisma: PrismaClient) {
   const altri = await prisma.altroIngresso.deleteMany({

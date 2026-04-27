@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { applyFinnSplit, isFinnCommerciale } from "@/lib/finn-split";
+import { applySplit, getSplitType } from "@/lib/finn-split";
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -45,8 +45,9 @@ export async function POST(request: Request) {
     include: { cliente: true },
   });
 
-  if (isFinnCommerciale(fattura.commerciale) && fattura.pagato) {
-    await applyFinnSplit(prisma, fattura);
+  const splitType = getSplitType(fattura.commerciale);
+  if (splitType && fattura.pagato) {
+    await applySplit(prisma, fattura, splitType);
   }
 
   return NextResponse.json(fattura);
