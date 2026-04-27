@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Plus, Pencil, Trash2, Download, X, Check } from "lucide-react";
-import { fmt, AZIENDE, AZIENDA_COLORI } from "@/lib/constants";
+import { fmt } from "@/lib/constants";
 import { exportPreventivoPDF, VocePreventivoData } from "@/lib/export";
 
 interface Preventivo {
@@ -68,8 +68,11 @@ const statusStyle = (s: string) =>
 
 const BRAND = "#db291b";
 
-const DEFAULT_CONDIZIONI =
-  "Pagamento: 50% alla firma, saldo entro 30 giorni. Incluse 2 revisioni per asset prodotto. Revisioni aggiuntive a € 80/ora. Validità offerta: 30 giorni dalla data di emissione. Lingua contratto: Italiano.";
+const DEFAULT_CONDIZIONI = `Saldo fattura entro 30 giorni dalla data di emissione.
+Inclusa 1 revisione per asset prodotto.
+Revisioni aggiuntive a € 80/ora.
+Validità offerta: 30 giorni dalla data di emissione.
+Lingua contratto: Italiano.`;
 
 const newVoce = (): Voce => ({
   id: Math.random().toString(36).slice(2),
@@ -84,8 +87,8 @@ const emptyForm = {
   nomeCliente: "",
   emailCliente: "",
   aziendaCliente: "",
-  azienda: AZIENDE[0],
-  iva: 21,
+  azienda: "Anda",
+  iva: 0,
   feeCommerciale: 0,
   status: "attesa",
   note: "",
@@ -215,6 +218,7 @@ export default function PreventiviPage() {
       nomeCliente: p.nomeCliente,
       emailCliente: p.emailCliente,
       aziendaCliente: p.aziendaCliente,
+      azienda: p.azienda,
       oggetto: p.oggetto,
       voci: p.voci,
       iva: p.iva,
@@ -490,20 +494,24 @@ export default function PreventiviPage() {
                   Azienda *
                 </label>
                 <div className="flex gap-2">
-                  {AZIENDE.map((a) => {
-                    const col = AZIENDA_COLORI[a];
-                    const active = form.azienda === a;
+                  {[
+                    { val: "Anda", color: "#E91E8C", iva: 0 },
+                    { val: "Wake Up", color: "#DB291B", iva: 22 },
+                  ].map(({ val, color, iva }) => {
+                    const active = form.azienda === val;
                     return (
                       <button
-                        key={a}
-                        onClick={() => setForm((f) => ({ ...f, azienda: a }))}
+                        key={val}
+                        onClick={() =>
+                          setForm((f) => ({ ...f, azienda: val, iva }))
+                        }
                         className="flex-1 text-sm py-2 rounded-lg border font-semibold transition-all"
                         style={
                           active
                             ? {
-                                background: col.bg,
-                                color: col.text,
-                                borderColor: col.border,
+                                background: color,
+                                color: "#fff",
+                                borderColor: color,
                               }
                             : {
                                 background: "#fff",
@@ -512,7 +520,7 @@ export default function PreventiviPage() {
                               }
                         }
                       >
-                        {a}
+                        {val}
                       </button>
                     );
                   })}

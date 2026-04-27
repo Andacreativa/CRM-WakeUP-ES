@@ -13,6 +13,7 @@ export interface PreventivoPDFData {
   nomeCliente: string;
   emailCliente?: string | null;
   aziendaCliente?: string | null;
+  azienda?: string | null; // "Anda" | "Wake Up"
   oggetto: string;
   voci: string; // JSON string
   iva: number;
@@ -169,7 +170,11 @@ export async function exportPreventivoPDF(p: PreventivoPDFData) {
     MR = 14;
   const CW = W - ML - MR; // 182mm
 
-  const RED: [number, number, number] = [219, 41, 27];
+  const isAnda = p.azienda === "Anda";
+  const ACCENT: [number, number, number] = isAnda
+    ? [233, 30, 140] // #E91E8C
+    : [219, 41, 27]; // rosso Wake Up
+
   const DARK: [number, number, number] = [20, 20, 20];
   const CARD: [number, number, number] = [38, 38, 38];
   const WHITE: [number, number, number] = [255, 255, 255];
@@ -178,7 +183,7 @@ export async function exportPreventivoPDF(p: PreventivoPDFData) {
 
   // ── PAGE 1: COVER ──────────────────────────────────────────────────────
 
-  // Dark background
+  // Sfondo scuro
   doc.setFillColor(...DARK);
   doc.rect(0, 0, W, H, "F");
 
@@ -194,8 +199,8 @@ export async function exportPreventivoPDF(p: PreventivoPDFData) {
   doc.setTextColor(...LGRAY);
   doc.text("Marketing Digital & Comunicación Internacional", ML, 57);
 
-  // Divider line in red
-  doc.setDrawColor(...RED);
+  // Divider line accent
+  doc.setDrawColor(...ACCENT);
   doc.setLineWidth(0.6);
   doc.line(ML, 63, W - MR, 63);
 
@@ -212,7 +217,7 @@ export async function exportPreventivoPDF(p: PreventivoPDFData) {
   const oggettoLines = doc.splitTextToSize(p.oggetto, CW);
   doc.text(oggettoLines, ML, 94);
 
-  // Info box
+  // Info box (sfondo grigio scuro)
   const boxY = 116;
   const boxH = 76;
   doc.setFillColor(...CARD);
@@ -224,22 +229,30 @@ export async function exportPreventivoPDF(p: PreventivoPDFData) {
   // — Preparato da —
   doc.setFontSize(7);
   doc.setFont("helvetica", "bold");
-  doc.setTextColor(...RED);
+  doc.setTextColor(...ACCENT);
   doc.text("PREPARATO DA", c1, boxY + 12);
 
-  doc.setFontSize(10);
-  doc.setFont("helvetica", "normal");
+  doc.setFontSize(9.5);
+  doc.setFont("helvetica", "bold");
   doc.setTextColor(...WHITE);
-  doc.text("Anda Agencia de Publicidad SL", c1, boxY + 19);
+  doc.text("ANDA AGENCIA DE PUBLICIDAD SL", c1, boxY + 19);
 
-  doc.setFontSize(8.5);
+  doc.setFontSize(7.5);
+  doc.setFont("helvetica", "normal");
   doc.setTextColor(...LGRAY);
-  doc.text("info@socialsuitevideo.com", c1, boxY + 25.5);
+  doc.text("Avenida Quinto Centenario, 23 - Piso 2 Int 21", c1, boxY + 24);
+  doc.text(
+    "38683, Puerto de Santiago (Santa Cruz de Tenerife)",
+    c1,
+    boxY + 28,
+  );
+  doc.text("NIF B16451536", c1, boxY + 32);
+  doc.text("info@andacreativa.com", c1, boxY + 36);
 
   // — Destinatario —
   doc.setFontSize(7);
   doc.setFont("helvetica", "bold");
-  doc.setTextColor(...RED);
+  doc.setTextColor(...ACCENT);
   doc.text("DESTINATARIO", c2, boxY + 12);
 
   doc.setFontSize(10);
@@ -263,7 +276,7 @@ export async function exportPreventivoPDF(p: PreventivoPDFData) {
   // — Data emissione —
   doc.setFontSize(7);
   doc.setFont("helvetica", "bold");
-  doc.setTextColor(...RED);
+  doc.setTextColor(...ACCENT);
   doc.text("DATA EMISSIONE", c1, boxY + 44);
 
   doc.setFontSize(9);
@@ -279,7 +292,7 @@ export async function exportPreventivoPDF(p: PreventivoPDFData) {
   // — N. Preventivo —
   doc.setFontSize(7);
   doc.setFont("helvetica", "bold");
-  doc.setTextColor(...RED);
+  doc.setTextColor(...ACCENT);
   doc.text("N. PREVENTIVO", c2, boxY + 44);
 
   doc.setFontSize(9);
@@ -290,7 +303,7 @@ export async function exportPreventivoPDF(p: PreventivoPDFData) {
   // — Validità —
   doc.setFontSize(7);
   doc.setFont("helvetica", "bold");
-  doc.setTextColor(...RED);
+  doc.setTextColor(...ACCENT);
   doc.text("VALIDITÀ OFFERTA", c1, boxY + 63);
 
   doc.setFontSize(9);
@@ -308,14 +321,14 @@ export async function exportPreventivoPDF(p: PreventivoPDFData) {
     278,
   );
 
-  // Bottom red bar
-  doc.setFillColor(...RED);
+  // Bottom accent bar
+  doc.setFillColor(...ACCENT);
   doc.rect(0, H - 7, W, 7, "F");
 
   // ── PAGE 2: DETAILS + PRICING ──────────────────────────────────────────
   doc.addPage();
 
-  // Header bar
+  // Header bar scura
   doc.setFillColor(...DARK);
   doc.rect(0, 0, W, 14, "F");
 
@@ -332,7 +345,7 @@ export async function exportPreventivoPDF(p: PreventivoPDFData) {
   // Section: PERIMETRO DEI SERVIZI
   doc.setFontSize(10);
   doc.setFont("helvetica", "bold");
-  doc.setTextColor(...RED);
+  doc.setTextColor(...ACCENT);
   doc.text("PERIMETRO DEI SERVIZI", ML, y);
   y += 5;
 
@@ -365,7 +378,7 @@ export async function exportPreventivoPDF(p: PreventivoPDFData) {
   // Section: PIANO TARIFFARIO
   doc.setFontSize(10);
   doc.setFont("helvetica", "bold");
-  doc.setTextColor(...RED);
+  doc.setTextColor(...ACCENT);
   doc.text("PIANO TARIFFARIO", ML, y);
   y += 5;
 
@@ -407,7 +420,7 @@ export async function exportPreventivoPDF(p: PreventivoPDFData) {
   if (condText && y < 250) {
     doc.setFontSize(10);
     doc.setFont("helvetica", "bold");
-    doc.setTextColor(...RED);
+    doc.setTextColor(...ACCENT);
     doc.text("CONDIZIONI COMMERCIALI", ML, y);
     y += 6;
 
@@ -423,7 +436,7 @@ export async function exportPreventivoPDF(p: PreventivoPDFData) {
   if (y < 258) {
     doc.setFontSize(10);
     doc.setFont("helvetica", "bold");
-    doc.setTextColor(...RED);
+    doc.setTextColor(...ACCENT);
     doc.text("FIRMA E ACCETTAZIONE", ML, y);
     y += 6;
 
@@ -446,23 +459,23 @@ export async function exportPreventivoPDF(p: PreventivoPDFData) {
     doc.setFontSize(7.5);
     doc.setTextColor(100, 100, 100);
     doc.text("Per Anda Agencia de Publicidad SL", ML, y);
-    doc.text("Firma e timbro", ML, y + 4.5);
+    doc.text("Firma", ML, y + 4.5);
     const sigName = p.aziendaCliente
       ? `Per ${p.aziendaCliente}`
       : `Per ${p.nomeCliente}`;
     doc.text(sigName, W - MR - 76, y);
-    doc.text("Firma e timbro", W - MR - 76, y + 4.5);
+    doc.text("Firma", W - MR - 76, y + 4.5);
   }
 
-  // Bottom red bar + footer text
-  doc.setFillColor(...RED);
+  // Bottom accent bar + footer text
+  doc.setFillColor(...ACCENT);
   doc.rect(0, H - 7, W, 7, "F");
 
   doc.setFontSize(7);
   doc.setFont("helvetica", "normal");
   doc.setTextColor(120, 120, 120);
   doc.text(
-    "ANDA AGENCIA DE PUBLICIDAD SL  |  info@socialsuitevideo.com  |  Pag. 2",
+    "ANDA AGENCIA DE PUBLICIDAD SL  |  info@andacreativa.com  |  Pag. 2",
     W / 2,
     H - 10,
     { align: "center" },
