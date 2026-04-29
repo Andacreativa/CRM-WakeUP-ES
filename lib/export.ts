@@ -52,61 +52,113 @@ async function loadImage(src: string): Promise<HTMLImageElement | null> {
   }
 }
 
+// Colori brand standard
+export const PINK: [number, number, number] = [233, 30, 140]; // #E91E8C
+export const GREEN: [number, number, number] = [16, 185, 129];
+export const ORANGE: [number, number, number] = [245, 158, 11];
+
+export type CellInput =
+  | string
+  | number
+  | {
+      content: string | number;
+      styles?: {
+        textColor?: [number, number, number];
+        fontStyle?: "normal" | "bold" | "italic";
+        halign?: "left" | "center" | "right";
+        fillColor?: [number, number, number];
+      };
+    };
+
+type FootCell = CellInput;
+
+export interface FooterCell {
+  label: string;
+  value: string;
+  color?: [number, number, number];
+}
+
 export async function exportPDF(
   title: string,
   columns: string[],
-  rows: (string | number)[][],
+  rows: CellInput[][],
   filename: string,
-  options?: { logoPath?: string; footerText?: string },
+  options?: {
+    footRows?: FootCell[][];
+    footerCells?: FooterCell[];
+    orientation?: "portrait" | "landscape";
+  },
 ) {
   const { default: jsPDF } = await import("jspdf");
   const { default: autoTable } = await import("jspdf-autotable");
 
-  const doc = new jsPDF({ orientation: "landscape" });
+  const orientation = options?.orientation ?? "landscape";
+  const doc = new jsPDF({ orientation });
+  const ML = 14;
 
-  // Logo opzionale (top-right)
-  if (options?.logoPath) {
-    const img = await loadImage(options.logoPath);
-    if (img) {
-      const height = 22;
-      const ratio = img.naturalWidth / img.naturalHeight;
-      const width = height * ratio;
-      const pageWidth = doc.internal.pageSize.getWidth();
-      doc.addImage(img, "PNG", pageWidth - width - 14, 8, width, height);
-    }
+  // Logo top-left
+  const img = await loadImage("/logo anda.png");
+  let y = 16;
+  if (img) {
+    const h = 24;
+    const w = h * (img.naturalWidth / img.naturalHeight);
+    doc.addImage(img, "PNG", ML, 8, w, h);
+    y = 38;
   }
 
-  // Header
-  doc.setFontSize(16);
-  doc.setTextColor(232, 48, 138);
-  doc.text("anda!", 14, 16);
+  // Company name + titolo
   doc.setFontSize(10);
   doc.setTextColor(100);
-  doc.text("Anda Agencia de Publicidad SL — Leonardo Mestre", 14, 22);
+  doc.text("Anda Agencia de Publicidad SL", ML, y);
   doc.setFontSize(13);
   doc.setTextColor(30);
-  doc.text(title, 14, 30);
+  doc.text(title, ML, y + 8);
 
   autoTable(doc, {
     head: [columns],
     body: rows,
-    startY: 35,
-    styles: { fontSize: 9, cellPadding: 3 },
+    foot: options?.footRows,
+    startY: y + 14,
+    styles: { fontSize: 8.5, cellPadding: 2.5 },
     headStyles: {
-      fillColor: [232, 48, 138],
+      fillColor: PINK,
       textColor: 255,
       fontStyle: "bold",
     },
-    alternateRowStyles: { fillColor: [253, 242, 248] },
+    footStyles: {
+      fillColor: [240, 240, 240],
+      textColor: 30,
+      fontStyle: "bold",
+    },
+    alternateRowStyles: { fillColor: [249, 249, 249] },
+    margin: { left: ML, right: ML },
   });
 
-  if (options?.footerText) {
+  if (options?.footerCells?.length) {
     const finalY =
       (doc as unknown as { lastAutoTable?: { finalY: number } }).lastAutoTable
-        ?.finalY ?? 35;
-    doc.setFontSize(11);
-    doc.setTextColor(30);
-    doc.text(options.footerText, 14, finalY + 10);
+        ?.finalY ?? y + 20;
+    const pageW = doc.internal.pageSize.getWidth();
+    const baseY = finalY + 10;
+    const rectY = baseY - 5;
+    const rectH = 7.5;
+    // Sfondo grigio chiaro #F3F3F3
+    doc.setFillColor(243, 243, 243);
+    doc.rect(ML, rectY, pageW - ML * 2, rectH, "F");
+
+    let x = ML + 3;
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "bold");
+    for (const cell of options.footerCells) {
+      doc.setTextColor(80);
+      doc.text(`${cell.label}:`, x, baseY);
+      const labelW = doc.getTextWidth(`${cell.label}: `);
+      x += labelW + 1;
+      const c = cell.color ?? [20, 20, 20];
+      doc.setTextColor(c[0], c[1], c[2]);
+      doc.text(cell.value, x, baseY);
+      x += doc.getTextWidth(cell.value) + 8;
+    }
   }
 
   doc.save(`${filename}.pdf`);
@@ -147,13 +199,19 @@ export function fattureToPDF(
   title: string,
 ) {
   const cols = ["Cliente", "Paese", "Azienda", "Mese", "Importo", "Stato"];
-  const rows = fatture.map((f) => [
+  const rows: CellInput[][] = fatture.map((f) => [
     f.cliente?.nome ?? "",
     f.cliente?.paese ?? "",
     f.azienda,
     MESI[f.mese - 1],
     fmt(f.importo),
-    f.pagato ? "Pagato" : "In Attesa",
+    {
+      content: f.pagato ? "Pagato" : "In Attesa",
+      styles: {
+        textColor: f.pagato ? GREEN : ORANGE,
+        fontStyle: "bold",
+      },
+    },
   ]);
   return { cols, rows, title };
 }

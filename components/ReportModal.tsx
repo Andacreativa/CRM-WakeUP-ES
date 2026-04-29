@@ -415,7 +415,7 @@ export default function ReportModal({ open, onClose, initialAnno }: Props) {
       startY: y,
       styles: { fontSize: 9, cellPadding: 3 },
       headStyles: {
-        fillColor: [232, 48, 138],
+        fillColor: [233, 30, 140],
         textColor: 255,
         fontStyle: "bold",
       },
@@ -424,6 +424,7 @@ export default function ReportModal({ open, onClose, initialAnno }: Props) {
         textColor: 30,
         fontStyle: "bold",
       },
+      alternateRowStyles: { fillColor: [249, 249, 249] },
       margin: { left: ML, right: MR },
       didParseCell: (data) => {
         if (data.column.index >= 1) data.cell.styles.halign = "right";
@@ -472,7 +473,7 @@ export default function ReportModal({ open, onClose, initialAnno }: Props) {
       startY: y + 2,
       styles: { fontSize: 8.5, cellPadding: 2.5 },
       headStyles: {
-        fillColor: [232, 48, 138],
+        fillColor: [233, 30, 140],
         textColor: 255,
         fontStyle: "bold",
       },
@@ -481,6 +482,7 @@ export default function ReportModal({ open, onClose, initialAnno }: Props) {
         textColor: 30,
         fontStyle: "bold",
       },
+      alternateRowStyles: { fillColor: [249, 249, 249] },
       margin: { left: ML, right: MR },
       didParseCell: (data) => {
         if (data.column.index >= 1) data.cell.styles.halign = "right";
@@ -527,7 +529,7 @@ export default function ReportModal({ open, onClose, initialAnno }: Props) {
       startY: y + 2,
       styles: { fontSize: 8.5, cellPadding: 2.5 },
       headStyles: {
-        fillColor: [232, 48, 138],
+        fillColor: [233, 30, 140],
         textColor: 255,
         fontStyle: "bold",
       },
@@ -536,6 +538,7 @@ export default function ReportModal({ open, onClose, initialAnno }: Props) {
         textColor: 30,
         fontStyle: "bold",
       },
+      alternateRowStyles: { fillColor: [249, 249, 249] },
       margin: { left: ML, right: MR },
       didParseCell: (data) => {
         if (data.column.index >= 1) data.cell.styles.halign = "right";
@@ -561,10 +564,11 @@ export default function ReportModal({ open, onClose, initialAnno }: Props) {
       startY: y + 2,
       styles: { fontSize: 8.5, cellPadding: 2.5 },
       headStyles: {
-        fillColor: [232, 48, 138],
+        fillColor: [233, 30, 140],
         textColor: 255,
         fontStyle: "bold",
       },
+      alternateRowStyles: { fillColor: [249, 249, 249] },
       margin: { left: ML, right: MR },
       didParseCell: (data) => {
         if (data.column.index >= 1) data.cell.styles.halign = "right";

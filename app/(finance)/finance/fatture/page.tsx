@@ -260,9 +260,25 @@ export default function FatturePage() {
                 (s, f) => s + (f?.importo ?? 0),
                 0,
               );
+              const totIncassato = filtered
+                .filter((f) => f?.pagato)
+                .reduce((s, f) => s + (f?.importo ?? 0), 0);
+              const totNonPagato = totImporto - totIncassato;
               exportPDF(title, cols, rows, `fatture_${anno}`, {
-                logoPath: "/logo anda.png",
-                footerText: `Totale fatture: ${rows.length}     Totale importo: ${fmt(totImporto)}`,
+                footerCells: [
+                  { label: "Totale fatture", value: String(rows.length) },
+                  { label: "Totale importo", value: fmt(totImporto) },
+                  {
+                    label: "Totale incassato",
+                    value: fmt(totIncassato),
+                    color: [16, 185, 129],
+                  },
+                  {
+                    label: "Totale non pagato",
+                    value: fmt(totNonPagato),
+                    color: [245, 158, 11],
+                  },
+                ],
               });
             }}
             className="flex items-center gap-1.5 border border-gray-200 text-gray-600 text-sm font-medium px-3 py-2 rounded-xl hover:bg-gray-50 transition-colors"
