@@ -12,12 +12,13 @@ import {
   Legend,
   ReferenceLine,
 } from "recharts";
-import { Download, FileSpreadsheet } from "lucide-react";
+import { Download, FileSpreadsheet, FileText } from "lucide-react";
 import { fmt, MESI } from "@/lib/constants";
 import FiltriBar from "@/components/FiltriBar";
 import { useAnno } from "@/lib/anno-context";
 import { exportExcel, exportPDF } from "@/lib/export";
 import { isFinnRitenuta } from "@/lib/finn-split";
+import ReportModal from "@/components/ReportModal";
 
 interface MeseData {
   mese: number;
@@ -32,6 +33,7 @@ export default function BilancioPage() {
   const [speseTotale, setSpeseTotale] = useState(0);
   const { anno, setAnno } = useAnno();
   const [azienda, setAzienda] = useState("");
+  const [reportOpen, setReportOpen] = useState(false);
 
   useEffect(() => {
     const run = async () => {
@@ -147,8 +149,20 @@ export default function BilancioPage() {
           >
             <Download className="w-4 h-4 text-red-500" /> PDF
           </button>
+          <button
+            onClick={() => setReportOpen(true)}
+            className="glass-btn-primary flex items-center gap-2 text-white text-sm font-medium px-4 py-2 rounded-xl"
+          >
+            <FileText className="w-4 h-4" /> Genera Report
+          </button>
         </div>
       </div>
+
+      <ReportModal
+        open={reportOpen}
+        onClose={() => setReportOpen(false)}
+        initialAnno={anno}
+      />
 
       {/* KPI Totali */}
       <div className="grid grid-cols-3 gap-4">
