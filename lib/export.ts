@@ -87,6 +87,7 @@ export async function exportPDF(
     footRows?: FootCell[][];
     footerCells?: FooterCell[];
     orientation?: "portrait" | "landscape";
+    extraTables?: { columns: string[]; rows: CellInput[][] }[];
   },
 ) {
   const { default: jsPDF } = await import("jspdf");
@@ -133,6 +134,28 @@ export async function exportPDF(
     alternateRowStyles: { fillColor: [249, 249, 249] },
     margin: { left: ML, right: ML },
   });
+
+  // Tabelle aggiuntive (es. riepilogo mensile)
+  if (options?.extraTables?.length) {
+    for (const t of options.extraTables) {
+      const lastY =
+        (doc as unknown as { lastAutoTable?: { finalY: number } })
+          .lastAutoTable?.finalY ?? y + 20;
+      autoTable(doc, {
+        head: [t.columns],
+        body: t.rows,
+        startY: lastY + 6,
+        styles: { fontSize: 8.5, cellPadding: 2.5 },
+        headStyles: {
+          fillColor: PINK,
+          textColor: 255,
+          fontStyle: "bold",
+        },
+        alternateRowStyles: { fillColor: [249, 249, 249] },
+        margin: { left: ML, right: ML },
+      });
+    }
+  }
 
   if (options?.footerCells?.length) {
     const finalY =

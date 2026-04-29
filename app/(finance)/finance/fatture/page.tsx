@@ -264,7 +264,18 @@ export default function FatturePage() {
                 .filter((f) => f?.pagato)
                 .reduce((s, f) => s + (f?.importo ?? 0), 0);
               const totNonPagato = totImporto - totIncassato;
+              const perMese = Array.from({ length: 12 }, (_, i) =>
+                filtered
+                  .filter((f) => f.mese === i + 1)
+                  .reduce((s, f) => s + (f?.importo ?? 0), 0),
+              );
               exportPDF(title, cols, rows, `fatture_${anno}`, {
+                extraTables: [
+                  {
+                    columns: MESI,
+                    rows: [perMese.map((v) => fmt(v))],
+                  },
+                ],
                 footerCells: [
                   { label: "Totale fatture", value: String(rows.length) },
                   { label: "Totale importo", value: fmt(totImporto) },
