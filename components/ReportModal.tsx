@@ -54,11 +54,6 @@ interface SpesaRow {
   mese: number;
   anno: number;
 }
-interface DipendenteRow {
-  irpfImporto: number;
-  pagamenti: { tipo: string; mese: number; anno: number }[];
-}
-
 const CATEGORIE_DIPENDENTI = ["Stipendio", "Seguridad Social"];
 
 export default function ReportModal({ open, onClose, initialAnno }: Props) {
@@ -74,10 +69,9 @@ export default function ReportModal({ open, onClose, initialAnno }: Props) {
     setLoading(true);
     try {
       const params = `?anno=${anno}`;
-      const [fatture, spese, dipendenti] = await Promise.all([
+      const [fatture, spese] = await Promise.all([
         fetchJson<FatturaRow>(`/api/fatture${params}`),
         fetchJson<SpesaRow>(`/api/spese${params}`),
-        fetchJson<DipendenteRow>(`/api/dipendenti${params}`),
       ]);
 
       // Mesi
@@ -111,17 +105,12 @@ export default function ReportModal({ open, onClose, initialAnno }: Props) {
       const it = sumF(fattItalia);
       const sp = sumF(fattSpagna);
 
-      // Dipendenti: stipendi + seguridad social spese + IRPF€ × mesi pagati
-      const totDipSpese = spese
-        .filter((s) => CATEGORIE_DIPENDENTI.includes(s.categoria))
-        .reduce((s, e) => s + e.importo, 0);
-      const totIrpf = dipendenti.reduce((acc, d) => {
-        const monthsPaid = (d.pagamenti ?? []).filter(
-          (p) => p.tipo === "stipendio" && p.anno === anno,
-        ).length;
-        return acc + (d.irpfImporto ?? 0) * monthsPaid;
-      }, 0);
-      const totaleDipendenti = r2(totDipSpese + totIrpf);
+      // Dipendenti: stipendi + seguridad social (IRPF registrato a mano in Spese quando pagato)
+      const totaleDipendenti = r2(
+        spese
+          .filter((s) => CATEGORIE_DIPENDENTI.includes(s.categoria))
+          .reduce((s, e) => s + e.importo, 0),
+      );
 
       // Categorie fisse (label visibile → categoria spesa)
       const CATEGORIE_FISSE: { label: string; key: string }[] = [
