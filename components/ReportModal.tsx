@@ -217,25 +217,31 @@ export default function ReportModal({ open, onClose, initialAnno }: Props) {
       ),
     }));
 
-  const totaleEntrate = useMemo(
+  // Sub-totali Dettaglio (parziali / curati)
+  const totaleEntrateDett = useMemo(
     () => r2(report.entrate.reduce((s, r) => s + r.totale, 0)),
     [report.entrate],
   );
-  const totaleUscite = useMemo(
+  const totaleUsciteDett = useMemo(
     () => r2(report.uscite.reduce((s, r) => s + r.totale, 0)),
     [report.uscite],
   );
-  const bilancio = r2(totaleEntrate - totaleUscite);
 
-  const totEntrateMesi = useMemo(
+  // Totali canonici (= TOTALE Mese per mese, derivati da TUTTE le spese/fatture)
+  const totaleEntrate = useMemo(
     () => r2(report.mesi.reduce((s, m) => s + m.entrate, 0)),
     [report.mesi],
   );
-  const totUsciteMesi = useMemo(
+  const totaleUscite = useMemo(
     () => r2(report.mesi.reduce((s, m) => s + m.uscite, 0)),
     [report.mesi],
   );
-  const bilancioMesi = r2(totEntrateMesi - totUsciteMesi);
+  const bilancio = r2(totaleEntrate - totaleUscite);
+
+  // Alias per leggibilità nel Mese per mese
+  const totEntrateMesi = totaleEntrate;
+  const totUsciteMesi = totaleUscite;
+  const bilancioMesi = bilancio;
 
   // ── Export Excel ───────────────────────────────────────────────────────
   const handleExportExcel = () => {
@@ -315,7 +321,7 @@ export default function ReportModal({ open, onClose, initialAnno }: Props) {
     data.push({
       Sezione: "",
       Voce: "TOTALE ENTRATE",
-      Totale: totaleEntrate,
+      Totale: totaleEntrateDett,
       Pagate: "",
       "Non Pagate": "",
     });
@@ -340,7 +346,7 @@ export default function ReportModal({ open, onClose, initialAnno }: Props) {
     data.push({
       Sezione: "",
       Voce: "TOTALE USCITE",
-      Totale: totaleUscite,
+      Totale: totaleUsciteDett,
       Pagate: "",
       "Non Pagate": "",
     });
@@ -504,7 +510,7 @@ export default function ReportModal({ open, onClose, initialAnno }: Props) {
       foot: [
         [
           "TOTALE ENTRATE",
-          fmt(totaleEntrate),
+          fmt(totaleEntrateDett),
           {
             content: fmt(totPagate),
             styles: { textColor: [16, 185, 129] },
@@ -732,7 +738,7 @@ export default function ReportModal({ open, onClose, initialAnno }: Props) {
         <DetailSection
           title="Dettaglio Entrate"
           rows={report.entrate}
-          totale={totaleEntrate}
+          totale={totaleEntrateDett}
           totaleColor="#10b981"
           showFattureCols
           onUpdate={(id, patch) => updateRow("entrate", id, patch)}
@@ -744,7 +750,7 @@ export default function ReportModal({ open, onClose, initialAnno }: Props) {
         <DetailSection
           title="Dettaglio Uscite"
           rows={report.uscite}
-          totale={totaleUscite}
+          totale={totaleUsciteDett}
           totaleColor="#ef4444"
           onUpdate={(id, patch) => updateRow("uscite", id, patch)}
           onRemove={(id) => removeRow("uscite", id)}
