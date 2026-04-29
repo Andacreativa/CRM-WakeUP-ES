@@ -295,6 +295,63 @@ export default function ClientiPage() {
         />
       )}
 
+      {/* Top 5 Clienti per Fatturato */}
+      {(() => {
+        const top5 = [...(clienti ?? [])]
+          .map((c) => ({ c, totale: stats(c).totale }))
+          .filter((x) => x.totale > 0)
+          .sort((a, b) => b.totale - a.totale)
+          .slice(0, 5);
+        if (top5.length === 0) return null;
+        return (
+          <div className="glass-card rounded-2xl overflow-hidden">
+            <div className="px-5 py-3 border-b border-gray-100 bg-gray-50">
+              <h2 className="text-sm font-bold text-gray-700 uppercase tracking-wide">
+                Top 5 Clienti per Fatturato
+              </h2>
+            </div>
+            <ul>
+              {top5.map((x, i) => (
+                <li
+                  key={x.c.id}
+                  className="flex items-center justify-between px-5 py-3 border-b border-gray-50 last:border-0 hover:bg-gray-50 transition-colors"
+                >
+                  <div className="flex items-center gap-3">
+                    <span
+                      className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold text-white shrink-0"
+                      style={{
+                        background:
+                          i === 0
+                            ? "#e8308a"
+                            : i === 1
+                              ? "#a855f7"
+                              : i === 2
+                                ? "#6366f1"
+                                : "#94a3b8",
+                      }}
+                    >
+                      {i + 1}
+                    </span>
+                    <button
+                      onClick={() => setDetail(x.c)}
+                      className="text-sm font-medium text-gray-900 hover:text-pink-600 hover:underline text-left"
+                    >
+                      {x.c.nome}
+                    </button>
+                    <span className="text-lg">
+                      {PAESE_FLAG[x.c.paese] || "🌍"}
+                    </span>
+                  </div>
+                  <span className="text-sm font-bold tabular-nums text-gray-900">
+                    {fmt(x.totale)}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        );
+      })()}
+
       {/* Detail modal */}
       {detail && (
         <ClienteDetailModal
