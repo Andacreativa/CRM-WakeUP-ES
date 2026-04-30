@@ -109,15 +109,29 @@ model Fornitore {
 }
 
 model FatturaFornitore {
-  id           Int        @id @default(autoincrement())
-  fileName     String
-  filePath     String
-  fornitoreId  Int
-  fornitore    Fornitore  @relation(fields: [fornitoreId], references: [id], onDelete: Cascade)
-  mese         Int
-  anno         Int
-  importo      Float      @default(0)
-  createdAt    DateTime   @default(now())
+  id            Int        @id @default(autoincrement())
+  fileName      String
+  filePath      String?
+  fileData      String?    @db.Text
+  fileMimeType  String?
+  fornitoreId   Int
+  fornitore     Fornitore  @relation(fields: [fornitoreId], references: [id], onDelete: Cascade)
+  mese          Int
+  anno          Int
+  importo       Float      @default(0)
+  createdAt     DateTime   @default(now())
+}
+
+model Documento {
+  id              Int      @id @default(autoincrement())
+  nome            String?
+  categoria       String?
+  socio           String?
+  fileName        String
+  fileData        String   @db.Text
+  fileMimeType    String
+  dataCaricamento DateTime @default(now())
+  createdAt       DateTime @default(now())
 }
 
 model Dipendente {

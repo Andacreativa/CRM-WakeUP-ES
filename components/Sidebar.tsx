@@ -11,6 +11,7 @@ import {
   Truck,
   UserCog,
   Bell,
+  Folder,
   Home,
   LogOut,
   Menu,
@@ -36,6 +37,7 @@ const navGroups = [
     { href: "/finance/fornitori", label: "Fornitori", icon: Truck },
   ],
   [{ href: "/finance/dipendenti", label: "Dipendenti", icon: UserCog }],
+  [{ href: "/finance/documenti", label: "Documenti", icon: Folder }],
 ];
 
 export default function Sidebar() {

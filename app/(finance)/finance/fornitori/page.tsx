@@ -598,7 +598,8 @@ function FornitoreDetailModal({
 interface FatturaFornitore {
   id: number;
   fileName: string;
-  filePath: string;
+  filePath: string | null;
+  fileMimeType: string | null;
   fornitoreId: number;
   fornitore: { nome: string };
   mese: number;
@@ -618,6 +619,7 @@ function FattureFornitoriTab({
   const [filtroMese, setFiltroMese] = useState(0);
   const [filtroAnno, setFiltroAnno] = useState(new Date().getFullYear());
   const [showUpload, setShowUpload] = useState(false);
+  const [preview, setPreview] = useState<FatturaFornitore | null>(null);
 
   const load = async () => {
     const params = new URLSearchParams();
@@ -716,7 +718,12 @@ function FattureFornitoriTab({
                 className={`border-b border-gray-50 hover:bg-gray-50 transition-colors ${i % 2 === 1 ? "bg-[#F9F9F9]" : "bg-white"}`}
               >
                 <td className="px-4 py-3 text-sm font-medium text-gray-800">
-                  {f.fileName}
+                  <button
+                    onClick={() => setPreview(f)}
+                    className="hover:text-pink-600 hover:underline text-left"
+                  >
+                    {f.fileName}
+                  </button>
                 </td>
                 <td className="px-4 py-3 text-sm text-gray-700">
                   {f.fornitore?.nome ?? "—"}
@@ -733,7 +740,7 @@ function FattureFornitoriTab({
                 <td className="px-4 py-3">
                   <div className="flex items-center gap-1 justify-end">
                     <a
-                      href={f.filePath}
+                      href={`/api/fatture-fornitori/${f.id}/file`}
                       download={f.fileName}
                       target="_blank"
                       rel="noopener noreferrer"
@@ -766,6 +773,13 @@ function FattureFornitoriTab({
             load();
           }}
           onFornitoreCreato={onFornitoreCreato}
+        />
+      )}
+
+      {preview && (
+        <PreviewFatturaModal
+          fattura={preview}
+          onClose={() => setPreview(null)}
         />
       )}
     </div>
@@ -891,36 +905,72 @@ function UploadFatturaModal({
 
   const submit = async () => {
     setError(null);
+    console.log("[upload-fattura] submit() start", {
+      file,
+      fornitoreId,
+      mese,
+      anno,
+      importo,
+    });
     if (!file) return setError("Seleziona un file");
     if (!fornitoreId) return setError("Seleziona o crea un fornitore");
     setUploading(true);
     try {
       const fd = new FormData();
       fd.append("file", file);
-      fd.append("subdir", "fatture-fornitori");
-      const upRes = await fetch("/api/upload", { method: "POST", body: fd });
-      if (!upRes.ok) {
-        setError("Errore upload file");
+      fd.append("fornitoreId", String(fornitoreId));
+      fd.append("mese", String(mese));
+      fd.append("anno", String(anno));
+      fd.append("importo", String(importo === "" ? 0 : importo));
+
+      // Verifica contenuto FormData prima del send
+      const fdEntries: Record<string, string> = {};
+      for (const [k, v] of fd.entries()) {
+        if (v instanceof File) {
+          fdEntries[k] = `File("${v.name}", ${v.size} bytes, "${v.type}")`;
+        } else {
+          fdEntries[k] = String(v);
+        }
+      }
+      console.log("[upload-fattura] FormData pronto:", fdEntries);
+      console.log(
+        "[upload-fattura] POST /api/fatture-fornitori (no Content-Type → browser imposta multipart/form-data con boundary)",
+      );
+
+      let res: Response;
+      try {
+        res = await fetch("/api/fatture-fornitori", {
+          method: "POST",
+          body: fd,
+        });
+      } catch (fetchErr) {
+        const msg =
+          fetchErr instanceof Error ? fetchErr.message : String(fetchErr);
+        console.error("[upload-fattura] fetch THREW:", fetchErr);
+        setError(`Errore rete: ${msg}`);
         return;
       }
-      const { path: filePath } = await upRes.json();
-      const res = await fetch("/api/fatture-fornitori", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          fileName: file.name,
-          filePath,
-          fornitoreId,
-          mese,
-          anno,
-          importo: importo === "" ? 0 : importo,
-        }),
+
+      console.log(
+        `[upload-fattura] response status=${res.status} ok=${res.ok}`,
+      );
+      const body = await res.json().catch((e) => {
+        console.error("[upload-fattura] response.json() fallita:", e);
+        return {};
       });
+      console.log("[upload-fattura] response body:", body);
+
       if (!res.ok) {
-        const j = await res.json().catch(() => ({}));
-        setError(j.error || "Errore salvataggio");
+        const dbg =
+          body.stage || body.code
+            ? ` [stage=${body.stage ?? "?"} code=${body.code ?? "?"}]`
+            : "";
+        setError(
+          `${body.error || `Errore salvataggio (${res.status})`}${dbg}`,
+        );
         return;
       }
+      console.log("[upload-fattura] ✓ salvato, chiudo modal");
       onUploaded();
     } finally {
       setUploading(false);
@@ -1100,6 +1150,107 @@ function UploadFatturaModal({
           >
             {uploading ? "Caricamento..." : "Carica"}
           </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Preview Fattura Modal ─────────────────────────────────────────────────
+function PreviewFatturaModal({
+  fattura,
+  onClose,
+}: {
+  fattura: FatturaFornitore;
+  onClose: () => void;
+}) {
+  const fileUrl = `/api/fatture-fornitori/${fattura.id}/file`;
+  const mime = fattura.fileMimeType ?? "";
+  const isPdf = mime === "application/pdf" || /\.pdf$/i.test(fattura.fileName);
+  const isImage = /^image\//.test(mime) || /\.(jpe?g|png|webp|gif)$/i.test(fattura.fileName);
+
+  const downloadFile = async () => {
+    const res = await fetch(fileUrl);
+    if (!res.ok) {
+      alert("Errore download file");
+      return;
+    }
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = fattura.fileName;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  };
+
+  return (
+    <div
+      className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4"
+      onClick={onClose}
+    >
+      <div
+        className="bg-white rounded-2xl w-full max-w-4xl h-[88vh] flex flex-col overflow-hidden"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between px-5 py-3 border-b border-gray-200 bg-gray-50">
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-gray-900 truncate">
+              {fattura.fileName}
+            </p>
+            <p className="text-[11px] text-gray-500">
+              {fattura.fornitore?.nome ?? "—"}
+              {" · "}
+              {fattura.fileMimeType ?? "tipo sconosciuto"}
+            </p>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              onClick={downloadFile}
+              className="flex items-center gap-1.5 text-sm border border-gray-200 text-gray-700 px-3 py-1.5 rounded-lg hover:bg-white"
+            >
+              <Download className="w-4 h-4" /> Scarica
+            </button>
+            <button
+              onClick={onClose}
+              aria-label="Chiudi"
+              className="p-2 rounded-lg text-gray-500 hover:text-gray-900 hover:bg-white"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+        <div className="flex-1 bg-gray-100 overflow-auto">
+          {isPdf && (
+            <iframe
+              src={fileUrl}
+              title={fattura.fileName}
+              className="w-full h-full border-0"
+            />
+          )}
+          {isImage && (
+            <div className="w-full h-full flex items-center justify-center p-4">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={fileUrl}
+                alt={fattura.fileName}
+                className="max-w-full max-h-full object-contain"
+              />
+            </div>
+          )}
+          {!isPdf && !isImage && (
+            <div className="w-full h-full flex flex-col items-center justify-center text-gray-500 text-sm gap-3">
+              <p>Anteprima non disponibile per questo formato.</p>
+              <button
+                onClick={downloadFile}
+                className="flex items-center gap-1.5 text-sm border border-gray-200 text-gray-700 px-3 py-1.5 rounded-lg hover:bg-white"
+              >
+                <Download className="w-4 h-4" /> Scarica file
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </div>

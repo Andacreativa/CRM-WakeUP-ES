@@ -35,10 +35,10 @@ type ExtractedData = {
 };
 
 export async function POST(request: Request) {
-  const apiKey = process.env.ANTHROPIC_API_KEY;
+  const apiKey = process.env.LEO_API_KEY ?? process.env.ANTHROPIC_API_KEY;
   if (!apiKey) {
     return NextResponse.json(
-      { error: "ANTHROPIC_API_KEY non configurata nel server" },
+      { error: "LEO_API_KEY (o ANTHROPIC_API_KEY) non configurata nel server" },
       { status: 500 },
     );
   }
