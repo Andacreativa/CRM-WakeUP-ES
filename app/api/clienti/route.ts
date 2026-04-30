@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { syncClienteToContatto } from "@/lib/cliente-contatto-sync";
 
 export async function GET() {
   const clienti = await prisma.cliente.findMany({
@@ -27,5 +28,10 @@ export async function POST(request: Request) {
       note: body.note || null,
     },
   });
+  try {
+    await syncClienteToContatto(prisma, cliente);
+  } catch (e) {
+    console.error("[POST /api/clienti] sync contatto:", e);
+  }
   return NextResponse.json(cliente);
 }

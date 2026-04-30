@@ -6,6 +6,7 @@ import {
   LayoutDashboard,
   Users,
   FileText,
+  FileSignature,
   Home,
   LogOut,
   Menu,
@@ -22,6 +23,7 @@ const navItems = [
   { href: "/sales", label: "Dashboard", icon: LayoutDashboard },
   { href: "/sales/contatti", label: "Contatti", icon: Users },
   { href: "/sales/preventivi", label: "Preventivi", icon: FileText },
+  { href: "/sales/contratti", label: "Contratti", icon: FileSignature },
 ];
 
 export default function SalesSidebar() {

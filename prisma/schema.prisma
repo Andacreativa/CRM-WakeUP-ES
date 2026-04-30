@@ -20,8 +20,9 @@ model Cliente {
   iban         String?
   tipoImposta  String?   @default("IGIC Exenta")
   note         String?
-  createdAt    DateTime  @default(now())
+  createdAt    DateTime    @default(now())
   fatture      Fattura[]
+  contratti    Contratto[]
 }
 
 model Fattura {
@@ -185,23 +186,47 @@ model AppuntoCall {
 }
 
 model Preventivo {
-  id             Int       @id @default(autoincrement())
+  id             Int          @id @default(autoincrement())
   numero         String
   nomeCliente    String
   emailCliente   String?
   aziendaCliente String?
-  azienda        String    @default("Spagna")
+  azienda        String       @default("Spagna")
   oggetto        String
   voci           String
-  iva            Float     @default(21)
-  subtotale      Float     @default(0)
-  totale         Float     @default(0)
-  feeCommerciale Float     @default(0)
+  iva            Float        @default(21)
+  subtotale      Float        @default(0)
+  totale         Float        @default(0)
+  feeCommerciale Float        @default(0)
   leadId         Int?
-  lead           Lead?     @relation(fields: [leadId], references: [id], onDelete: SetNull)
-  status         String    @default("attesa")
+  lead           Lead?        @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  status         String       @default("attesa")
   note           String?
   condizioni     String?
   dataScadenza   DateTime?
-  createdAt      DateTime  @default(now())
+  createdAt      DateTime     @default(now())
+  contratti      Contratto[]
+}
+
+model Contratto {
+  id                   Int         @id @default(autoincrement())
+  numero               String      @unique
+  preventivoId         Int?
+  preventivo           Preventivo? @relation(fields: [preventivoId], references: [id], onDelete: SetNull)
+  clienteId            Int?
+  cliente              Cliente?    @relation(fields: [clienteId], references: [id], onDelete: SetNull)
+  nomeClienteFallback  String?
+  rappresentanteLegale String
+  dataDecorrenza       DateTime
+  durataMesi           Int         @default(6)
+  importoMensile       Float
+  numeroRate           Int         @default(6)
+  totaleContratto      Float
+  oggetto              String
+  voci                 String
+  lingua               String      @default("it") // it | es
+  status               String      @default("bozza") // bozza | inviato | firmato
+  note                 String?
+  createdAt            DateTime    @default(now())
+  updatedAt            DateTime    @updatedAt
 }

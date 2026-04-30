@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { syncContattoToCliente } from "@/lib/cliente-contatto-sync";
 
 export async function PATCH(
   request: Request,
@@ -26,6 +27,11 @@ export async function PATCH(
         ...(body.status !== undefined && { status: body.status }),
       },
     });
+    try {
+      await syncContattoToCliente(prisma, contatto);
+    } catch (e) {
+      console.error("[PATCH /api/contatti/[id]] sync cliente:", e);
+    }
     return NextResponse.json(contatto);
   } catch (e) {
     console.error("[PATCH /api/contatti/[id]]", e);

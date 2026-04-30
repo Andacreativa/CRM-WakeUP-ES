@@ -1,9 +1,21 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Plus, Pencil, Trash2, Download, X, Check } from "lucide-react";
+import {
+  Plus,
+  Pencil,
+  Trash2,
+  Download,
+  X,
+  Check,
+  FileText,
+} from "lucide-react";
 import { fmt } from "@/lib/constants";
-import { exportPreventivoPDF, VocePreventivoData } from "@/lib/export";
+import {
+  exportPreventivoPDF,
+  exportContrattoPDF,
+  VocePreventivoData,
+} from "@/lib/export";
 
 interface Preventivo {
   id: number;
@@ -31,12 +43,15 @@ interface Contatto {
   email: string | null;
 }
 
+type TipoVoce = "mensile" | "una_tantum";
+
 interface Voce {
   id: string;
   servizio: string;
   descrizione: string;
   quantita: number;
   prezzoUnitario: number;
+  tipo: TipoVoce;
 }
 
 const STATUS_OPTIONS = [
@@ -80,6 +95,7 @@ const newVoce = (): Voce => ({
   descrizione: "",
   quantita: 1,
   prezzoUnitario: 0,
+  tipo: "mensile",
 });
 
 const emptyForm = {
@@ -104,6 +120,7 @@ export default function PreventiviPage() {
   const [form, setForm] = useState({ ...emptyForm });
   const [voci, setVoci] = useState<Voce[]>([newVoce()]);
   const [filtroStatus, setFiltroStatus] = useState("tutti");
+  const [genContratto, setGenContratto] = useState<Preventivo | null>(null);
 
   const load = async () => {
     const [p, c]: any[] = await Promise.all([
@@ -147,9 +164,15 @@ export default function PreventiviPage() {
       dataScadenza: p.dataScadenza ? p.dataScadenza.slice(0, 10) : "",
     });
     try {
-      const parsed: VocePreventivoData[] = JSON.parse(p.voci);
+      const parsed: (VocePreventivoData & { tipo?: TipoVoce })[] = JSON.parse(
+        p.voci,
+      );
       setVoci(
-        parsed.map((v) => ({ ...v, id: Math.random().toString(36).slice(2) })),
+        parsed.map((v) => ({
+          ...v,
+          id: Math.random().toString(36).slice(2),
+          tipo: (v.tipo === "una_tantum" ? "una_tantum" : "mensile") as TipoVoce,
+        })),
       );
     } catch {
       setVoci([newVoce()]);
@@ -172,12 +195,15 @@ export default function PreventiviPage() {
     const payload = {
       ...form,
       iva: Number(form.iva),
-      voci: voci.map(({ servizio, descrizione, quantita, prezzoUnitario }) => ({
-        servizio,
-        descrizione,
-        quantita: Number(quantita),
-        prezzoUnitario: Number(prezzoUnitario),
-      })),
+      voci: voci.map(
+        ({ servizio, descrizione, quantita, prezzoUnitario, tipo }) => ({
+          servizio,
+          descrizione,
+          quantita: Number(quantita),
+          prezzoUnitario: Number(prezzoUnitario),
+          tipo,
+        }),
+      ),
       dataScadenza: form.dataScadenza || null,
     };
     if (editing) {
@@ -429,6 +455,15 @@ export default function PreventiviPage() {
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-1 justify-end">
+                      {p.status === "accettato" && (
+                        <button
+                          onClick={() => setGenContratto(p)}
+                          title="Genera Contratto"
+                          className="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                        >
+                          <FileText className="w-4 h-4" />
+                        </button>
+                      )}
                       <button
                         onClick={() => downloadPDF(p)}
                         title="Scarica PDF"
@@ -645,11 +680,14 @@ export default function PreventiviPage() {
                 <table className="w-full">
                   <thead className="bg-gray-50">
                     <tr>
-                      <th className="text-xs font-semibold text-gray-500 px-3 py-2 text-left w-[32%]">
+                      <th className="text-xs font-semibold text-gray-500 px-3 py-2 text-left w-[26%]">
                         Servizio
                       </th>
-                      <th className="text-xs font-semibold text-gray-500 px-3 py-2 text-left w-[30%]">
+                      <th className="text-xs font-semibold text-gray-500 px-3 py-2 text-left w-[22%]">
                         Descrizione
+                      </th>
+                      <th className="text-xs font-semibold text-gray-500 px-3 py-2 text-left w-[14%]">
+                        Tipo
                       </th>
                       <th className="text-xs font-semibold text-gray-500 px-3 py-2 text-center w-[10%]">
                         Q.tà
@@ -687,6 +725,22 @@ export default function PreventiviPage() {
                             placeholder="Dettaglio breve"
                             className="w-full border border-gray-200 rounded-md px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-red-300"
                           />
+                        </td>
+                        <td className="px-2 py-1.5">
+                          <select
+                            value={v.tipo}
+                            onChange={(e) =>
+                              updateVoce(
+                                v.id,
+                                "tipo",
+                                e.target.value as TipoVoce,
+                              )
+                            }
+                            className="w-full border border-gray-200 rounded-md px-2 py-1.5 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-red-300"
+                          >
+                            <option value="mensile">Mensile</option>
+                            <option value="una_tantum">Una Tantum</option>
+                          </select>
                         </td>
                         <td className="px-2 py-1.5">
                           <input
@@ -860,9 +914,320 @@ export default function PreventiviPage() {
                 {editing ? "Salva Modifiche" : "Crea Preventivo"}
               </button>
             </div>
+            {editing && editing.status === "accettato" && (
+              <button
+                onClick={() => {
+                  setShowForm(false);
+                  setGenContratto(editing);
+                }}
+                className="w-full flex items-center justify-center gap-2 border border-red-200 text-red-600 text-sm font-medium py-2.5 rounded-xl hover:bg-red-50 transition-colors"
+              >
+                <FileText className="w-4 h-4" /> Genera Contratto
+              </button>
+            )}
           </div>
         </div>
       )}
+
+      {genContratto && (
+        <GeneraContrattoModal
+          preventivo={genContratto}
+          onClose={() => setGenContratto(null)}
+        />
+      )}
+    </div>
+  );
+}
+
+// ─── Genera Contratto Modal ─────────────────────────────────────────────────
+interface ClienteAnag {
+  id: number;
+  nome: string;
+  via: string | null;
+  cap: string | null;
+  citta: string | null;
+  provincia: string | null;
+  partitaIva: string | null;
+}
+function GeneraContrattoModal({
+  preventivo,
+  onClose,
+}: {
+  preventivo: Preventivo;
+  onClose: () => void;
+}) {
+  const [clienti, setClienti] = useState<ClienteAnag[]>([]);
+  const [clienteId, setClienteId] = useState<number | null>(null);
+  const [rappresentante, setRappresentante] = useState("");
+  const [dataDecorrenza, setDataDecorrenza] = useState(
+    new Date().toISOString().slice(0, 10),
+  );
+  const [durataMesi, setDurataMesi] = useState(6);
+  const [importoMensile, setImportoMensile] = useState(preventivo.totale);
+  const [numeroRate, setNumeroRate] = useState(6);
+  const [lingua, setLingua] = useState<"it" | "es">("it");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetch("/api/clienti")
+      .then((r) => r.json())
+      .then((data) => {
+        const arr: ClienteAnag[] = Array.isArray(data) ? data : [];
+        setClienti(arr);
+        // Match per nome
+        const match = arr.find(
+          (c) =>
+            c.nome.toLowerCase() === preventivo.nomeCliente.toLowerCase() ||
+            (preventivo.aziendaCliente &&
+              c.nome.toLowerCase() ===
+                preventivo.aziendaCliente.toLowerCase()),
+        );
+        if (match) setClienteId(match.id);
+      });
+  }, [preventivo.nomeCliente, preventivo.aziendaCliente]);
+
+  const cliente = clienti.find((c) => c.id === clienteId) ?? null;
+  const totale = importoMensile * numeroRate;
+
+  const submit = async () => {
+    if (!clienteId) {
+      setError("Seleziona un cliente dall'anagrafica");
+      return;
+    }
+    if (!rappresentante.trim()) {
+      setError("Inserisci il rappresentante legale");
+      return;
+    }
+    setError(null);
+    setSaving(true);
+    try {
+      const res = await fetch("/api/contratti", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          preventivoId: preventivo.id,
+          clienteId,
+          rappresentanteLegale: rappresentante,
+          dataDecorrenza,
+          durataMesi,
+          importoMensile,
+          numeroRate,
+          oggetto: preventivo.oggetto,
+          voci: preventivo.voci,
+          lingua,
+          status: "bozza",
+        }),
+      });
+      if (!res.ok) {
+        const j = await res.json();
+        setError(j.error || "Errore salvataggio");
+        return;
+      }
+      const c = await res.json();
+      // Download PDF
+      await exportContrattoPDF({
+        numero: c.numero,
+        cliente: {
+          nome: c.cliente.nome,
+          via: c.cliente.via,
+          cap: c.cliente.cap,
+          citta: c.cliente.citta,
+          provincia: c.cliente.provincia,
+          partitaIva: c.cliente.partitaIva,
+        },
+        rappresentanteLegale: c.rappresentanteLegale,
+        oggetto: c.oggetto,
+        voci: c.voci,
+        dataDecorrenza: c.dataDecorrenza,
+        durataMesi: c.durataMesi,
+        importoMensile: c.importoMensile,
+        numeroRate: c.numeroRate,
+        totaleContratto: c.totaleContratto,
+        lingua: c.lingua === "es" ? "es" : "it",
+      });
+      onClose();
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+      <div className="glass-modal rounded-2xl w-full max-w-lg p-6 space-y-4 max-h-[92vh] overflow-y-auto">
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-bold text-gray-900">
+            Genera Contratto da {preventivo.numero}
+          </h2>
+          <button
+            onClick={onClose}
+            className="p-1.5 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        <div className="space-y-3">
+          <div>
+            <label className="text-xs font-medium text-gray-600 block mb-1">
+              Cliente (anagrafica) *
+            </label>
+            <select
+              value={clienteId ?? ""}
+              onChange={(e) => setClienteId(parseInt(e.target.value) || null)}
+              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-300"
+            >
+              <option value="">Seleziona cliente...</option>
+              {clienti.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.nome}
+                </option>
+              ))}
+            </select>
+            {cliente && (
+              <p className="text-[11px] text-gray-500 mt-1">
+                {[cliente.via, cliente.cap, cliente.citta]
+                  .filter(Boolean)
+                  .join(", ")}
+                {cliente.partitaIva ? ` — P.IVA ${cliente.partitaIva}` : ""}
+              </p>
+            )}
+          </div>
+
+          <div>
+            <label className="text-xs font-medium text-gray-600 block mb-1">
+              Rappresentante Legale *
+            </label>
+            <input
+              type="text"
+              value={rappresentante}
+              onChange={(e) => setRappresentante(e.target.value)}
+              placeholder="Es. Eugenio Zuppichin"
+              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-300"
+            />
+          </div>
+
+          <div>
+            <label className="text-xs font-medium text-gray-600 block mb-1">
+              Lingua contratto
+            </label>
+            <div className="flex gap-2">
+              {(
+                [
+                  { v: "it", l: "Italiano" },
+                  { v: "es", l: "Spagnolo" },
+                ] as const
+              ).map(({ v, l }) => (
+                <button
+                  key={v}
+                  onClick={() => setLingua(v)}
+                  className="flex-1 text-sm py-2 rounded-lg border font-semibold"
+                  style={
+                    lingua === v
+                      ? {
+                          background: "#db291b",
+                          color: "#fff",
+                          borderColor: "#db291b",
+                        }
+                      : {
+                          background: "#fff",
+                          borderColor: "#e2e8f0",
+                          color: "#94a3b8",
+                        }
+                  }
+                >
+                  {l}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs font-medium text-gray-600 block mb-1">
+                Decorrenza
+              </label>
+              <input
+                type="date"
+                value={dataDecorrenza}
+                onChange={(e) => setDataDecorrenza(e.target.value)}
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-300"
+              />
+            </div>
+            <div>
+              <label className="text-xs font-medium text-gray-600 block mb-1">
+                Durata (mesi)
+              </label>
+              <input
+                type="number"
+                min={1}
+                value={durataMesi}
+                onChange={(e) => {
+                  const v = parseInt(e.target.value) || 1;
+                  setDurataMesi(v);
+                  setNumeroRate(v);
+                }}
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-300"
+              />
+            </div>
+            <div>
+              <label className="text-xs font-medium text-gray-600 block mb-1">
+                Importo mensile (€)
+              </label>
+              <input
+                type="number"
+                step="0.01"
+                value={importoMensile}
+                onChange={(e) =>
+                  setImportoMensile(parseFloat(e.target.value) || 0)
+                }
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-300"
+              />
+            </div>
+            <div>
+              <label className="text-xs font-medium text-gray-600 block mb-1">
+                Numero rate
+              </label>
+              <input
+                type="number"
+                min={1}
+                value={numeroRate}
+                onChange={(e) => setNumeroRate(parseInt(e.target.value) || 1)}
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-300"
+              />
+            </div>
+          </div>
+
+          <div className="bg-gray-50 rounded-lg p-3 text-sm flex justify-between">
+            <span className="text-gray-600">
+              Totale contratto ({numeroRate} rate × {fmt(importoMensile)})
+            </span>
+            <span className="font-bold text-gray-900">{fmt(totale)}</span>
+          </div>
+
+          {error && (
+            <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+              {error}
+            </div>
+          )}
+        </div>
+
+        <div className="flex gap-3 pt-2">
+          <button
+            onClick={onClose}
+            className="flex-1 border border-gray-200 text-gray-600 text-sm font-medium py-2.5 rounded-xl hover:bg-gray-50"
+          >
+            Annulla
+          </button>
+          <button
+            onClick={submit}
+            disabled={saving}
+            className="glass-btn-primary flex-1 text-white text-sm font-medium py-2.5 rounded-xl disabled:opacity-60"
+          >
+            {saving ? "Generazione..." : "Genera e Scarica PDF"}
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
