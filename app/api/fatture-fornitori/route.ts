@@ -19,7 +19,7 @@ export async function GET(request: Request) {
     const fatture = await prisma.fatturaFornitore.findMany({
       where,
       include: { fornitore: true },
-      orderBy: { createdAt: "desc" },
+      orderBy: [{ anno: "desc" }, { mese: "desc" }, { createdAt: "desc" }],
       omit: { fileData: true },
     });
     return NextResponse.json(fatture);
@@ -52,6 +52,7 @@ export async function POST(request: Request) {
       const mese = formData.get("mese") as string | null;
       const anno = formData.get("anno") as string | null;
       const importo = formData.get("importo") as string | null;
+      const dataFatturaStr = formData.get("dataFattura") as string | null;
 
       console.log(
         `[fatture-fornitori POST] formData: file=${file ? `"${file.name}" (${file.size} bytes, ${file.type})` : "null"} fornitoreId=${fornitoreId} mese=${mese} anno=${anno} importo=${importo}`,
@@ -98,6 +99,7 @@ export async function POST(request: Request) {
           anno:
             (anno ? parseInt(anno, 10) : null) || new Date().getFullYear(),
           importo: importo ? parseFloat(importo) || 0 : 0,
+          dataFattura: dataFatturaStr ? new Date(dataFatturaStr) : null,
         },
         include: { fornitore: true },
         omit: { fileData: true },
@@ -128,6 +130,7 @@ export async function POST(request: Request) {
         mese: parseInt(body.mese, 10),
         anno: parseInt(body.anno, 10) || new Date().getFullYear(),
         importo: parseFloat(body.importo) || 0,
+        dataFattura: body.dataFattura ? new Date(body.dataFattura) : null,
       },
       include: { fornitore: true },
       omit: { fileData: true },

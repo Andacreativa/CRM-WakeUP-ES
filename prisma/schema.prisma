@@ -119,6 +119,7 @@ model FatturaFornitore {
   mese          Int
   anno          Int
   importo       Float      @default(0)
+  dataFattura   DateTime?
   createdAt     DateTime   @default(now())
 }
 

@@ -605,6 +605,7 @@ interface FatturaFornitore {
   mese: number;
   anno: number;
   importo: number;
+  dataFattura: string | null;
   createdAt: string;
 }
 
@@ -685,11 +686,11 @@ function FattureFornitoriTab({
           <thead>
             <tr className="border-b border-gray-100 bg-gray-50">
               {[
-                "Nome file",
                 "Fornitore",
+                "Nome file",
                 "Mese",
                 "Importo",
-                "Caricata il",
+                "Data fattura",
                 "",
               ].map((h) => (
                 <th
@@ -717,16 +718,16 @@ function FattureFornitoriTab({
                 key={f.id}
                 className={`border-b border-gray-50 hover:bg-gray-50 transition-colors ${i % 2 === 1 ? "bg-[#F9F9F9]" : "bg-white"}`}
               >
-                <td className="px-4 py-3 text-sm font-medium text-gray-800">
+                <td className="px-4 py-3 text-sm font-semibold text-gray-900">
+                  {f.fornitore?.nome ?? "—"}
+                </td>
+                <td className="px-4 py-3 text-sm text-gray-700">
                   <button
                     onClick={() => setPreview(f)}
                     className="hover:text-pink-600 hover:underline text-left"
                   >
                     {f.fileName}
                   </button>
-                </td>
-                <td className="px-4 py-3 text-sm text-gray-700">
-                  {f.fornitore?.nome ?? "—"}
                 </td>
                 <td className="px-4 py-3 text-sm text-gray-600">
                   {MESI[f.mese - 1]} {f.anno}
@@ -735,7 +736,9 @@ function FattureFornitoriTab({
                   {fmt(f.importo)}
                 </td>
                 <td className="px-4 py-3 text-sm text-gray-500">
-                  {new Date(f.createdAt).toLocaleDateString("it-IT")}
+                  {f.dataFattura
+                    ? new Date(f.dataFattura).toLocaleDateString("it-IT")
+                    : "—"}
                 </td>
                 <td className="px-4 py-3">
                   <div className="flex items-center gap-1 justify-end">
@@ -803,6 +806,7 @@ function UploadFatturaModal({
   const [mese, setMese] = useState(new Date().getMonth() + 1);
   const [anno, setAnno] = useState(new Date().getFullYear());
   const [importo, setImporto] = useState<number | "">("");
+  const [dataFattura, setDataFattura] = useState("");
   const [extractedNome, setExtractedNome] = useState("");
   const [extractedPiva, setExtractedPiva] = useState("");
   const [matchFound, setMatchFound] = useState(false);
@@ -859,8 +863,12 @@ function UploadFatturaModal({
       if (typeof data.data === "string") {
         const m = data.data.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
         if (m) {
+          const dd = m[1].padStart(2, "0");
+          const mm = m[2].padStart(2, "0");
+          const yyyy = m[3];
           setMese(parseInt(m[2], 10));
-          setAnno(parseInt(m[3], 10));
+          setAnno(parseInt(yyyy, 10));
+          setDataFattura(`${yyyy}-${mm}-${dd}`);
         }
       }
     } catch (e) {
@@ -922,6 +930,7 @@ function UploadFatturaModal({
       fd.append("mese", String(mese));
       fd.append("anno", String(anno));
       fd.append("importo", String(importo === "" ? 0 : importo));
+      if (dataFattura) fd.append("dataFattura", dataFattura);
 
       // Verifica contenuto FormData prima del send
       const fdEntries: Record<string, string> = {};
@@ -1110,7 +1119,7 @@ function UploadFatturaModal({
                 ))}
               </select>
             </div>
-            <div className="col-span-2">
+            <div>
               <label className="text-xs font-medium text-gray-600 block mb-1">
                 Importo (€)
               </label>
@@ -1124,6 +1133,17 @@ function UploadFatturaModal({
                   )
                 }
                 placeholder="0.00"
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-300"
+              />
+            </div>
+            <div>
+              <label className="text-xs font-medium text-gray-600 block mb-1">
+                Data fattura
+              </label>
+              <input
+                type="date"
+                value={dataFattura}
+                onChange={(e) => setDataFattura(e.target.value)}
                 className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-300"
               />
             </div>
