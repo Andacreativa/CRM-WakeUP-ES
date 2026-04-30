@@ -114,8 +114,8 @@ model FatturaFornitore {
   filePath      String?
   fileData      String?    @db.Text
   fileMimeType  String?
-  fornitoreId   Int
-  fornitore     Fornitore  @relation(fields: [fornitoreId], references: [id], onDelete: Cascade)
+  fornitoreId   Int?
+  fornitore     Fornitore? @relation(fields: [fornitoreId], references: [id], onDelete: SetNull)
   mese          Int
   anno          Int
   importo       Float      @default(0)
