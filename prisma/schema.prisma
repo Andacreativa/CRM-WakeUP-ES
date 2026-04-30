@@ -104,7 +104,20 @@ model Fornitore {
   citta       String?
   provincia   String?
   note        String?
-  createdAt   DateTime @default(now())
+  createdAt   DateTime          @default(now())
+  fattureFile FatturaFornitore[]
+}
+
+model FatturaFornitore {
+  id           Int        @id @default(autoincrement())
+  fileName     String
+  filePath     String
+  fornitoreId  Int
+  fornitore    Fornitore  @relation(fields: [fornitoreId], references: [id], onDelete: Cascade)
+  mese         Int
+  anno         Int
+  importo      Float      @default(0)
+  createdAt    DateTime   @default(now())
 }
 
 model Dipendente {
