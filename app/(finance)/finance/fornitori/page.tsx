@@ -673,12 +673,45 @@ function FattureFornitoriTab({
             {fatture.length} fatture
           </span>
         </div>
-        <button
-          onClick={() => setShowUpload(true)}
-          className="glass-btn-primary flex items-center gap-2 text-white text-sm font-medium px-4 py-2.5 rounded-xl"
-        >
-          <Upload className="w-4 h-4" /> Carica Fattura
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={async () => {
+              if (fatture.length === 0) return;
+              const params = new URLSearchParams();
+              params.set("anno", String(filtroAnno));
+              if (filtroMese > 0) params.set("mese", String(filtroMese));
+              const res = await fetch(`/api/fatture-fornitori/zip?${params}`);
+              if (!res.ok) {
+                const err = await res.json().catch(() => ({}));
+                alert(`Errore download: ${err.error ?? res.statusText}`);
+                return;
+              }
+              const blob = await res.blob();
+              const dispo = res.headers.get("content-disposition") ?? "";
+              const m = dispo.match(/filename="?([^"]+)"?/);
+              const fname = m ? decodeURIComponent(m[1]) : "fatture.zip";
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement("a");
+              a.href = url;
+              a.download = fname;
+              document.body.appendChild(a);
+              a.click();
+              a.remove();
+              setTimeout(() => URL.revokeObjectURL(url), 1000);
+            }}
+            disabled={fatture.length === 0}
+            title={fatture.length === 0 ? "Nessuna fattura nel filtro" : "Scarica ZIP"}
+            className="flex items-center gap-2 border border-gray-200 text-gray-700 text-sm font-medium px-4 py-2.5 rounded-xl hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <Download className="w-4 h-4" /> Scarica ZIP
+          </button>
+          <button
+            onClick={() => setShowUpload(true)}
+            className="glass-btn-primary flex items-center gap-2 text-white text-sm font-medium px-4 py-2.5 rounded-xl"
+          >
+            <Upload className="w-4 h-4" /> Carica Fattura
+          </button>
+        </div>
       </div>
 
       <div className="glass-card rounded-2xl overflow-hidden">
