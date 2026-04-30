@@ -962,9 +962,36 @@ function GeneraContrattoModal({
   const [dataDecorrenza, setDataDecorrenza] = useState(
     new Date().toISOString().slice(0, 10),
   );
-  const [durataMesi, setDurataMesi] = useState(6);
-  const [importoMensile, setImportoMensile] = useState(preventivo.totale);
-  const [numeroRate, setNumeroRate] = useState(6);
+
+  // Deriva importo mensile, durata e una tantum dalle voci del preventivo
+  const { vociMensili, vociTantum, importoMensileAuto, durataAuto, totUnaTantum } = (() => {
+    type V = { quantita?: number; prezzoUnitario?: number; tipo?: string };
+    let parsed: V[] = [];
+    try {
+      parsed = JSON.parse(preventivo.voci);
+    } catch {
+      parsed = [];
+    }
+    const mens = parsed.filter((v) => v.tipo !== "una_tantum");
+    const tan = parsed.filter((v) => v.tipo === "una_tantum");
+    const im = mens.reduce((s, v) => s + (Number(v.prezzoUnitario) || 0), 0);
+    const du = mens.length > 0 ? Math.max(...mens.map((v) => Number(v.quantita) || 0)) : 6;
+    const tt = tan.reduce(
+      (s, v) => s + (Number(v.quantita) || 1) * (Number(v.prezzoUnitario) || 0),
+      0,
+    );
+    return {
+      vociMensili: mens.length,
+      vociTantum: tan.length,
+      importoMensileAuto: im,
+      durataAuto: du > 0 ? du : 6,
+      totUnaTantum: tt,
+    };
+  })();
+
+  const [durataMesi, setDurataMesi] = useState(durataAuto);
+  const [importoMensile, setImportoMensile] = useState(importoMensileAuto);
+  const [numeroRate, setNumeroRate] = useState(durataAuto);
   const [lingua, setLingua] = useState<"it" | "es">("it");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -988,7 +1015,8 @@ function GeneraContrattoModal({
   }, [preventivo.nomeCliente, preventivo.aziendaCliente]);
 
   const cliente = clienti.find((c) => c.id === clienteId) ?? null;
-  const totale = importoMensile * numeroRate;
+  const totaleRicorrente = importoMensile * numeroRate;
+  const totale = totaleRicorrente + totUnaTantum;
 
   const submit = async () => {
     if (!clienteId) {
@@ -1198,11 +1226,36 @@ function GeneraContrattoModal({
             </div>
           </div>
 
-          <div className="bg-gray-50 rounded-lg p-3 text-sm flex justify-between">
-            <span className="text-gray-600">
-              Totale contratto ({numeroRate} rate × {fmt(importoMensile)})
-            </span>
-            <span className="font-bold text-gray-900">{fmt(totale)}</span>
+          <div className="bg-gray-50 rounded-lg p-3 text-sm space-y-1.5">
+            {vociMensili > 0 && (
+              <div className="flex justify-between">
+                <span className="text-gray-600">
+                  Ricorrente ({numeroRate} × {fmt(importoMensile)}/mese)
+                </span>
+                <span className="font-medium text-gray-900">
+                  {fmt(totaleRicorrente)}
+                </span>
+              </div>
+            )}
+            {vociTantum > 0 && (
+              <div className="flex justify-between">
+                <span className="text-gray-600">Una tantum</span>
+                <span className="font-medium text-gray-900">
+                  {fmt(totUnaTantum)}
+                </span>
+              </div>
+            )}
+            <div className="flex justify-between border-t border-gray-200 pt-1.5">
+              <span className="text-gray-700 font-semibold">
+                Totale contratto
+              </span>
+              <span className="font-bold text-gray-900">{fmt(totale)}</span>
+            </div>
+            <p className="text-[11px] text-gray-500">
+              {vociMensili > 0
+                ? `Importo mensile = somma costi mensili (${vociMensili} servizi). Durata = max mesi tra i servizi mensili.`
+                : "Nessun servizio mensile nel preventivo — solo una tantum."}
+            </p>
           </div>
 
           {error && (

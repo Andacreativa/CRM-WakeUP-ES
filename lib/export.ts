@@ -466,29 +466,109 @@ export async function exportPreventivoPDF(p: PreventivoPDFData) {
 
   const ivaAmt = (p.subtotale * p.iva) / 100;
 
+  const mensili = voci.filter((v) => v.tipo !== "una_tantum");
+  const tantum = voci.filter((v) => v.tipo === "una_tantum");
+  const importoMensile = mensili.reduce(
+    (s, v) => s + (Number(v.prezzoUnitario) || 0),
+    0,
+  );
+  const durataMensile =
+    mensili.length > 0
+      ? Math.max(...mensili.map((v) => Number(v.quantita) || 0))
+      : 0;
+  const totUnaTantum = tantum.reduce(
+    (s, v) => s + (Number(v.quantita) || 1) * (Number(v.prezzoUnitario) || 0),
+    0,
+  );
+
+  if (mensili.length > 0) {
+    autoTable(doc, {
+      head: [
+        [
+          { content: "Servizi mensili ricorrenti", colSpan: 4, styles: { halign: "left", fillColor: ACCENT, textColor: WHITE } },
+        ],
+        ["Servizio", "Mesi", "Costo mensile", "Totale"],
+      ],
+      body: mensili.map((v) => [
+        v.servizio,
+        String(v.quantita),
+        fmt(v.prezzoUnitario),
+        fmt((Number(v.quantita) || 0) * (Number(v.prezzoUnitario) || 0)),
+      ]),
+      startY: y,
+      styles: { fontSize: 9, cellPadding: 3.5, textColor: [40, 40, 40] },
+      headStyles: { fillColor: DARK, textColor: WHITE, fontStyle: "bold" },
+      alternateRowStyles: { fillColor: [248, 248, 248] },
+      columnStyles: {
+        0: { cellWidth: "auto" },
+        1: { cellWidth: 18, halign: "center" },
+        2: { cellWidth: 38, halign: "right" },
+        3: { cellWidth: 38, halign: "right" },
+      },
+      margin: { left: ML, right: MR },
+    });
+    y =
+      (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable
+        .finalY + 6;
+  }
+
+  if (tantum.length > 0) {
+    autoTable(doc, {
+      head: [
+        [
+          { content: "Servizi una tantum", colSpan: 4, styles: { halign: "left", fillColor: ACCENT, textColor: WHITE } },
+        ],
+        ["Servizio", "Q.tà", "Prezzo unitario", "Totale"],
+      ],
+      body: tantum.map((v) => [
+        v.servizio,
+        String(v.quantita),
+        fmt(v.prezzoUnitario),
+        fmt((Number(v.quantita) || 1) * (Number(v.prezzoUnitario) || 0)),
+      ]),
+      startY: y,
+      styles: { fontSize: 9, cellPadding: 3.5, textColor: [40, 40, 40] },
+      headStyles: { fillColor: DARK, textColor: WHITE, fontStyle: "bold" },
+      alternateRowStyles: { fillColor: [248, 248, 248] },
+      columnStyles: {
+        0: { cellWidth: "auto" },
+        1: { cellWidth: 18, halign: "center" },
+        2: { cellWidth: 38, halign: "right" },
+        3: { cellWidth: 38, halign: "right" },
+      },
+      margin: { left: ML, right: MR },
+    });
+    y =
+      (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable
+        .finalY + 6;
+  }
+
+  // Riepilogo finale
+  const summaryRows: (string | number)[][] = [];
+  if (mensili.length > 0) {
+    summaryRows.push([
+      "Importo mensile ricorrente",
+      `${fmt(importoMensile)} × ${durataMensile} mesi`,
+      fmt(importoMensile * durataMensile),
+    ]);
+  }
+  if (tantum.length > 0) {
+    summaryRows.push(["Servizi una tantum", "", fmt(totUnaTantum)]);
+  }
+  summaryRows.push(["Subtotale", "", fmt(p.subtotale)]);
+  summaryRows.push([`IVA (${p.iva}%)`, "", fmt(ivaAmt)]);
+
   autoTable(doc, {
-    head: [["Servizio", "Q.tà", "Prezzo Unitario", "Totale"]],
-    body: voci.map((v) => [
-      v.servizio,
-      String(v.quantita),
-      fmt(v.prezzoUnitario),
-      fmt(v.quantita * v.prezzoUnitario),
-    ]),
-    foot: [
-      ["", "", "Subtotale", fmt(p.subtotale)],
-      ["", "", `IVA (${p.iva}%)`, fmt(ivaAmt)],
-      ["", "", "TOTALE", fmt(p.totale)],
-    ],
+    body: summaryRows,
+    foot: [["TOTALE", "", fmt(p.totale)]],
     startY: y,
-    styles: { fontSize: 9, cellPadding: 3.5, textColor: [40, 40, 40] },
-    headStyles: { fillColor: DARK, textColor: WHITE, fontStyle: "bold" },
-    alternateRowStyles: { fillColor: [248, 248, 248] },
-    footStyles: { fillColor: DARK, textColor: WHITE, fontStyle: "bold" },
+    theme: "plain",
+    styles: { fontSize: 9, cellPadding: 3, textColor: [40, 40, 40] },
+    footStyles: { fillColor: DARK, textColor: WHITE, fontStyle: "bold", fontSize: 10 },
     columnStyles: {
-      0: { cellWidth: "auto" },
-      1: { cellWidth: 18, halign: "center" },
-      2: { cellWidth: 38, halign: "right" },
-      3: { cellWidth: 38, halign: "right" },
+      0: { cellWidth: "auto", fontStyle: "bold" },
+      1: { cellWidth: 50, halign: "right", textColor: [110, 110, 110] },
+      2: { cellWidth: 38, halign: "right", fontStyle: "bold" },
     },
     margin: { left: ML, right: MR },
   });
@@ -752,12 +832,12 @@ export function buildContrattoText(c: {
   lines.push(`• ${T.art51b2}`);
   lines.push(`• ${T.art51b3(fmtCurrency(c.importoMensile))}`);
   lines.push(`• ${T.art51b4}`);
+  const totUnaTantum = tantum.reduce(
+    (s, v) =>
+      s + (Number(v.quantita) || 1) * (Number(v.prezzoUnitario) || 0),
+    0,
+  );
   if (tantum.length > 0) {
-    const totUnaTantum = tantum.reduce(
-      (s, v) =>
-        s + (Number(v.quantita) || 1) * (Number(v.prezzoUnitario) || 0),
-      0,
-    );
     lines.push("");
     lines.push(
       lang === "es"
@@ -770,6 +850,31 @@ export function buildContrattoText(c: {
       );
     }
   }
+
+  // Prospetto economico finale
+  const ricorrente = c.importoMensile * c.durataMesi;
+  const totaleFinale = ricorrente + totUnaTantum;
+  lines.push("");
+  if (mensili.length > 0) {
+    lines.push(
+      lang === "es"
+        ? `• Importe mensual recurrente: ${fmtCurrency(c.importoMensile)} × ${c.durataMesi} meses = ${fmtCurrency(ricorrente)}`
+        : `• Importo mensile ricorrente: ${fmtCurrency(c.importoMensile)} × ${c.durataMesi} mesi = ${fmtCurrency(ricorrente)}`,
+    );
+  }
+  if (tantum.length > 0) {
+    lines.push(
+      lang === "es"
+        ? `• Servicios una sola vez: ${fmtCurrency(totUnaTantum)}`
+        : `• Servizi una tantum: ${fmtCurrency(totUnaTantum)}`,
+    );
+  }
+  lines.push(
+    lang === "es"
+      ? `**TOTAL CONTRATO (IVA incluido): ${fmtCurrency(totaleFinale)}**`
+      : `**TOTALE CONTRATTO (IVA inclusa): ${fmtCurrency(totaleFinale)}**`,
+  );
+
   lines.push("");
   lines.push(T.art52);
   lines.push("");
@@ -1125,6 +1230,7 @@ const CONTRATTO_T = {
 
 export async function exportContrattoPDF(c: ContrattoPDFData) {
   const { default: jsPDF } = await import("jspdf");
+  const { default: autoTable } = await import("jspdf-autotable");
   const lang = c.lingua === "es" ? "es" : "it";
   const T = CONTRATTO_T[lang];
 
@@ -1280,11 +1386,11 @@ export async function exportContrattoPDF(c: ContrattoPDFData) {
   writeBullet(T.art51b4);
 
   // Servizi una tantum (se presenti)
+  const totUnaTantum = tantum.reduce(
+    (s, v) => s + (Number(v.quantita) || 1) * (Number(v.prezzoUnitario) || 0),
+    0,
+  );
   if (tantum.length > 0) {
-    const totUnaTantum = tantum.reduce(
-      (s, v) => s + (Number(v.quantita) || 1) * (Number(v.prezzoUnitario) || 0),
-      0,
-    );
     writeP(
       lang === "es"
         ? `Adicionalmente, el Cliente abonará servicios una sola vez por un total de ${fmt(totUnaTantum)} IVA incluido, facturados al inicio del contrato:`
@@ -1298,6 +1404,55 @@ export async function exportContrattoPDF(c: ContrattoPDFData) {
       );
     }
   }
+
+  // Prospetto economico finale
+  const ricorrente = c.importoMensile * c.durataMesi;
+  const totaleFinale = ricorrente + totUnaTantum;
+  const summaryBody: (string | number)[][] = [];
+  if (mensili.length > 0) {
+    summaryBody.push([
+      lang === "es" ? "Importe mensual recurrente" : "Importo mensile ricorrente",
+      `${fmt(c.importoMensile)} × ${c.durataMesi} ${lang === "es" ? "meses" : "mesi"}`,
+      fmt(ricorrente),
+    ]);
+  }
+  if (tantum.length > 0) {
+    summaryBody.push([
+      lang === "es" ? "Servicios una sola vez" : "Servizi una tantum",
+      "",
+      fmt(totUnaTantum),
+    ]);
+  }
+  y += 2;
+  checkPage(30);
+  autoTable(doc, {
+    body: summaryBody,
+    foot: [
+      [
+        lang === "es" ? "TOTAL CONTRATO (IVA incl.)" : "TOTALE CONTRATTO (IVA incl.)",
+        "",
+        fmt(totaleFinale),
+      ],
+    ],
+    startY: y,
+    theme: "plain",
+    styles: { fontSize: 10, cellPadding: 3, textColor: [40, 40, 40] },
+    footStyles: {
+      fillColor: [30, 30, 30],
+      textColor: [255, 255, 255],
+      fontStyle: "bold",
+      fontSize: 11,
+    },
+    columnStyles: {
+      0: { cellWidth: "auto", fontStyle: "bold" },
+      1: { cellWidth: 50, halign: "right", textColor: [110, 110, 110] },
+      2: { cellWidth: 38, halign: "right", fontStyle: "bold" },
+    },
+    margin: { left: ML, right: MR },
+  });
+  y =
+    (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable
+      .finalY + 4;
 
   writeP(T.art52);
   writeP(T.art53);

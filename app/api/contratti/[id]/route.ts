@@ -14,20 +14,61 @@ export async function GET(
   return NextResponse.json(c);
 }
 
+function unaTantumFromVoci(vociJson: string): number {
+  try {
+    const voci: Array<{
+      quantita?: number;
+      prezzoUnitario?: number;
+      tipo?: string;
+    }> = JSON.parse(vociJson || "[]");
+    return voci
+      .filter((v) => v.tipo === "una_tantum")
+      .reduce(
+        (s, v) =>
+          s + (Number(v.quantita) || 1) * (Number(v.prezzoUnitario) || 0),
+        0,
+      );
+  } catch {
+    return 0;
+  }
+}
+
 export async function PATCH(
   request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params;
+  const contrattoId = parseInt(id);
   const body = await request.json();
-  const importoMensile =
+  const importoMensileNew =
     body.importoMensile !== undefined
       ? parseFloat(body.importoMensile)
       : undefined;
-  const numeroRate =
+  const numeroRateNew =
     body.numeroRate !== undefined ? parseInt(body.numeroRate, 10) : undefined;
+  const vociNew = body.voci !== undefined ? body.voci : undefined;
+
+  // Ricalcola totaleContratto se cambia importoMensile, numeroRate o voci
+  let totaleContrattoNew: number | undefined;
+  if (
+    importoMensileNew !== undefined ||
+    numeroRateNew !== undefined ||
+    vociNew !== undefined
+  ) {
+    const current = await prisma.contratto.findUnique({
+      where: { id: contrattoId },
+      select: { importoMensile: true, numeroRate: true, voci: true },
+    });
+    if (current) {
+      const im = importoMensileNew ?? current.importoMensile;
+      const nr = numeroRateNew ?? current.numeroRate;
+      const voci = vociNew ?? current.voci;
+      totaleContrattoNew = im * nr + unaTantumFromVoci(voci);
+    }
+  }
+
   const c = await prisma.contratto.update({
-    where: { id: parseInt(id) },
+    where: { id: contrattoId },
     data: {
       ...(body.clienteId !== undefined && { clienteId: body.clienteId }),
       ...(body.rappresentanteLegale !== undefined && {
@@ -39,13 +80,13 @@ export async function PATCH(
       ...(body.durataMesi !== undefined && {
         durataMesi: parseInt(body.durataMesi, 10),
       }),
-      ...(importoMensile !== undefined && { importoMensile }),
-      ...(numeroRate !== undefined && { numeroRate }),
-      ...(importoMensile !== undefined && numeroRate !== undefined && {
-        totaleContratto: importoMensile * numeroRate,
+      ...(importoMensileNew !== undefined && { importoMensile: importoMensileNew }),
+      ...(numeroRateNew !== undefined && { numeroRate: numeroRateNew }),
+      ...(totaleContrattoNew !== undefined && {
+        totaleContratto: totaleContrattoNew,
       }),
       ...(body.oggetto !== undefined && { oggetto: body.oggetto }),
-      ...(body.voci !== undefined && { voci: body.voci }),
+      ...(vociNew !== undefined && { voci: vociNew }),
       ...(body.lingua !== undefined && { lingua: body.lingua }),
       ...(body.nomeClienteFallback !== undefined && {
         nomeClienteFallback: body.nomeClienteFallback,
