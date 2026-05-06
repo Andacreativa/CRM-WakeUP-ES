@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { X, Plus, Trash2, Download, FileSpreadsheet } from "lucide-react";
 import { fmt, MESI } from "@/lib/constants";
-import { exportExcel } from "@/lib/export";
+import { exportExcel, loadOptimizedLogo } from "@/lib/export";
 
 interface Row {
   id: string;
@@ -363,19 +363,13 @@ export default function ReportModal({ open, onClose, initialAnno }: Props) {
     const ML = 14,
       MR = 14;
 
-    // Logo Anda (top-left)
-    const logo = await new Promise<HTMLImageElement | null>((resolve) => {
-      const im = new Image();
-      im.crossOrigin = "anonymous";
-      im.onload = () => resolve(im);
-      im.onerror = () => resolve(null);
-      im.src = "/logo anda.png";
-    });
+    // Logo Anda (JPEG compresso, top-left)
+    const logo = await loadOptimizedLogo("/logo anda.png");
     let textOffsetY = 16;
     if (logo) {
       const h = 30;
-      const w = h * (logo.naturalWidth / logo.naturalHeight);
-      doc.addImage(logo, "PNG", ML, 8, w, h);
+      const w = h * (logo.width / logo.height);
+      doc.addImage(logo.dataUrl, "JPEG", ML, 8, w, h);
       textOffsetY = 41;
     }
 

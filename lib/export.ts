@@ -53,6 +53,34 @@ async function loadImage(src: string): Promise<HTMLImageElement | null> {
   }
 }
 
+// Carica un'immagine e la ridimensiona/comprime in JPEG per ridurre il peso del PDF.
+// Default: 400px max width, qualità 0.9 → bilanciamento tra nitidezza e peso (~30-80 KB).
+export async function loadOptimizedLogo(
+  src: string,
+  maxWidth = 400,
+  quality = 0.9,
+): Promise<{ dataUrl: string; width: number; height: number } | null> {
+  const img = await loadImage(src);
+  if (!img) return null;
+  const ratio = img.naturalHeight / img.naturalWidth;
+  const w = Math.min(img.naturalWidth, maxWidth);
+  const h = Math.round(w * ratio);
+  const canvas = document.createElement("canvas");
+  canvas.width = w;
+  canvas.height = h;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return null;
+  // Sfondo bianco per evitare bordi grigi nel JPEG (PNG con trasparenza)
+  ctx.fillStyle = "#FFFFFF";
+  ctx.fillRect(0, 0, w, h);
+  ctx.drawImage(img, 0, 0, w, h);
+  return {
+    dataUrl: canvas.toDataURL("image/jpeg", quality),
+    width: w,
+    height: h,
+  };
+}
+
 // Colori brand standard
 export const PINK: [number, number, number] = [233, 30, 140]; // #E91E8C
 export const GREEN: [number, number, number] = [16, 185, 129];
@@ -98,13 +126,13 @@ export async function exportPDF(
   const doc = new jsPDF({ orientation });
   const ML = 14;
 
-  // Logo top-left
-  const img = await loadImage("/logo anda.png");
+  // Logo top-left (compresso JPEG per ridurre peso PDF)
+  const logo = await loadOptimizedLogo("/logo anda.png");
   let y = 16;
-  if (img) {
+  if (logo) {
     const h = 24;
-    const w = h * (img.naturalWidth / img.naturalHeight);
-    doc.addImage(img, "PNG", ML, 8, w, h);
+    const w = h * (logo.width / logo.height);
+    doc.addImage(logo.dataUrl, "JPEG", ML, 8, w, h);
     y = 38;
   }
 
@@ -684,13 +712,18 @@ async function loadFirmaInvertita(): Promise<HTMLCanvasElement | null> {
       img.onload = () => res();
       img.onerror = () => rej(new Error("firma load failed"));
     });
+    // Ridimensiona a max 400px di larghezza per ridurre peso PDF
+    const MAX_W = 400;
+    const ratio = img.naturalHeight / img.naturalWidth;
+    const w = Math.min(img.naturalWidth, MAX_W);
+    const h = Math.round(w * ratio);
     const canvas = document.createElement("canvas");
-    canvas.width = img.naturalWidth;
-    canvas.height = img.naturalHeight;
+    canvas.width = w;
+    canvas.height = h;
     const ctx = canvas.getContext("2d");
     if (!ctx) return null;
-    ctx.drawImage(img, 0, 0);
-    const data = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(img, 0, 0, w, h);
+    const data = ctx.getImageData(0, 0, w, h);
     for (let i = 0; i < data.data.length; i += 4) {
       if (data.data[i + 3] > 0) {
         // non-transparent → setta RGB a nero (mantiene alpha)

@@ -4,13 +4,22 @@ import { applySplit, getSplitType } from "@/lib/finn-split";
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
-  const anno = parseInt(searchParams.get("anno") || "2025");
+  const annoParam = searchParams.get("anno");
+  const anno = annoParam ? parseInt(annoParam) : null;
   const azienda = searchParams.get("azienda") || undefined;
 
   const fatture = await prisma.fattura.findMany({
-    where: { anno, ...(azienda ? { azienda } : {}) },
+    where: {
+      ...(anno && anno > 0 ? { anno } : {}),
+      ...(azienda ? { azienda } : {}),
+    },
     include: { cliente: true },
-    orderBy: [{ data: "desc" }, { mese: "desc" }, { createdAt: "desc" }],
+    orderBy: [
+      { anno: "desc" },
+      { data: "desc" },
+      { mese: "desc" },
+      { createdAt: "desc" },
+    ],
   });
 
   return NextResponse.json(fatture);

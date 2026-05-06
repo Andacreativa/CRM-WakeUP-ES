@@ -107,6 +107,7 @@ export default function FatturePage() {
   const [editing, setEditing] = useState<Fattura | null>(null);
   const [form, setForm] = useState({ ...emptyForm });
   const [filtroMese, setFiltroMese] = useState(0);
+  const [filtroClienteId, setFiltroClienteId] = useState<number>(0);
   const [filtroPagato, setFiltroPagato] = useState<
     "tutti" | "pagato" | "attesa"
   >("tutti");
@@ -117,7 +118,8 @@ export default function FatturePage() {
   const [showImport, setShowImport] = useState(false);
 
   const load = async () => {
-    const params = new URLSearchParams({ anno: String(anno) });
+    const params = new URLSearchParams();
+    if (anno > 0) params.set("anno", String(anno));
     if (azienda) params.set("azienda", azienda);
     const [f, c] = await Promise.all([
       (await fetch(`/api/fatture?${params}`)).json() as Promise<any>,
@@ -132,7 +134,12 @@ export default function FatturePage() {
 
   const openNew = () => {
     setEditing(null);
-    setForm({ ...emptyForm, anno, numero: nextNumero(fatture, anno) });
+    const annoNuova = anno > 0 ? anno : new Date().getFullYear();
+    setForm({
+      ...emptyForm,
+      anno: annoNuova,
+      numero: nextNumero(fatture, annoNuova),
+    });
     setShowForm(true);
   };
   const openEdit = (f: Fattura) => {
@@ -195,16 +202,21 @@ export default function FatturePage() {
   const filtered = (fatture ?? [])
     .filter((f) => {
       if (filtroMese && f.mese !== filtroMese) return false;
+      if (filtroClienteId && f.clienteId !== filtroClienteId) return false;
       if (filtroPagato === "pagato" && !f.pagato) return false;
       if (filtroPagato === "attesa" && f.pagato) return false;
       return true;
     })
     .sort((a, b) => numeroKey(b.numero) - numeroKey(a.numero));
 
+  const clienteFiltrato = filtroClienteId
+    ? (clienti.find((c) => c.id === filtroClienteId) ?? null)
+    : null;
+
   // Reset page se i filtri restringono il dataset
   useEffect(() => {
     setPage(1);
-  }, [filtroMese, filtroPagato, anno, azienda, pageSize]);
+  }, [filtroMese, filtroClienteId, filtroPagato, anno, azienda, pageSize]);
   const paged = filtered.slice((page - 1) * pageSize, page * pageSize);
 
   const totale = filtered.reduce((s, f) => s + (f?.importo ?? 0), 0);
@@ -238,24 +250,36 @@ export default function FatturePage() {
             onAnno={setAnno}
             onAzienda={setAzienda}
             hideOptions={["Altro"]}
+            includeAllYears
           />
           <PageSizeSelect pageSize={pageSize} onChange={setPageSize} />
           <button
-            onClick={() =>
-              exportExcel(fattureToExcel(filtered, MESI), `fatture_${anno}`)
-            }
+            onClick={() => {
+              const annoLabel = anno > 0 ? String(anno) : "tutti";
+              const slug = clienteFiltrato
+                ? `_${clienteFiltrato.nome.replace(/\s+/g, "")}`
+                : "";
+              exportExcel(
+                fattureToExcel(filtered, MESI),
+                `fatture_${annoLabel}${slug}`,
+              );
+            }}
             className="flex items-center gap-1.5 border border-gray-200 text-gray-600 text-sm font-medium px-3 py-2 rounded-xl hover:bg-gray-50 transition-colors"
           >
             <FileSpreadsheet className="w-4 h-4 text-emerald-600" /> Excel
           </button>
           <button
             onClick={() => {
-              const filtroLabel = azienda || "Tutte";
-              const { cols, rows, title } = fattureToPDF(
-                filtered,
-                MESI,
-                `Fatture ${anno} — ${filtroLabel}`,
-              );
+              const aziendaLabel = azienda || "Tutte";
+              const annoStr = anno > 0 ? String(anno) : "tutti gli anni";
+              const annoFile = anno > 0 ? String(anno) : "tutti";
+              const titolo = clienteFiltrato
+                ? `Fatture ${annoStr} — ${aziendaLabel} · ${clienteFiltrato.nome}`
+                : `Fatture ${annoStr} — ${aziendaLabel}`;
+              const slug = clienteFiltrato
+                ? `_${clienteFiltrato.nome.replace(/\s+/g, "")}`
+                : "";
+              const { cols, rows, title } = fattureToPDF(filtered, MESI, titolo);
               const totImporto = filtered.reduce(
                 (s, f) => s + (f?.importo ?? 0),
                 0,
@@ -269,7 +293,7 @@ export default function FatturePage() {
                   .filter((f) => f.mese === i + 1)
                   .reduce((s, f) => s + (f?.importo ?? 0), 0),
               );
-              exportPDF(title, cols, rows, `fatture_${anno}`, {
+              exportPDF(title, cols, rows, `fatture_${annoFile}${slug}`, {
                 extraTables: [
                   {
                     columns: MESI,
@@ -332,7 +356,7 @@ export default function FatturePage() {
       </div>
 
       {/* Filtri */}
-      <div className="flex gap-3 flex-wrap">
+      <div className="flex gap-3 flex-wrap items-center">
         <select
           value={filtroMese}
           onChange={(e) => setFiltroMese(parseInt(e.target.value))}
@@ -345,6 +369,31 @@ export default function FatturePage() {
             </option>
           ))}
         </select>
+        <div className="flex items-center gap-1">
+          <select
+            value={filtroClienteId}
+            onChange={(e) => setFiltroClienteId(parseInt(e.target.value) || 0)}
+            className="text-sm border border-gray-200 rounded-lg px-3 py-2 bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-pink-300 min-w-[180px]"
+          >
+            <option value={0}>Tutti i clienti</option>
+            {[...clienti]
+              .sort((a, b) => a.nome.localeCompare(b.nome))
+              .map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.nome}
+                </option>
+              ))}
+          </select>
+          {filtroClienteId > 0 && (
+            <button
+              onClick={() => setFiltroClienteId(0)}
+              title="Rimuovi filtro cliente"
+              className="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          )}
+        </div>
         <div className="flex gap-1 bg-gray-100 rounded-lg p-1">
           {(["tutti", "pagato", "attesa"] as const).map((v) => (
             <button

@@ -13,6 +13,8 @@ interface Props {
   altroLabel?: string;
   // Nascondi opzioni specifiche dal pill (es. ["Altro"])
   hideOptions?: string[];
+  // Aggiunge "Tutti" come prima voce (value 0) nel selettore anno
+  includeAllYears?: boolean;
 }
 
 const PILL_COLORS: Record<string, string> = {
@@ -47,6 +49,7 @@ export default function FiltriBar({
   showAnno = true,
   altroLabel,
   hideOptions,
+  includeAllYears = false,
 }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const btnRefs = useRef<(HTMLButtonElement | null)[]>([]);
@@ -89,6 +92,7 @@ export default function FiltriBar({
             paddingRight: "28px",
           }}
         >
+          {includeAllYears && <option value={0}>Tutti</option>}
           {ANNI.map((a) => (
             <option key={a} value={a}>
               {a}
