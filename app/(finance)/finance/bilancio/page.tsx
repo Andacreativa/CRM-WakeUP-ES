@@ -125,33 +125,13 @@ export default function BilancioPage() {
         : "—";
   const contributoStipendi = 2000 * mesiTrascorsi;
 
-  // Ufficio: parte da Aprile 2026 (€390/mese; aprile 2026 include matricola = €610,20)
+  // Spese Ufficio: €390/mese × mesi trascorsi nell'anno (attive dal 2026)
   const UFFICIO_START_YEAR = 2026;
-  const UFFICIO_START_MONTH = 4;
   const UFFICIO_RATE = 390;
-  const UFFICIO_FIRST_MONTH_COST = 610.2;
-  let ufficioMesi = 0;
-  let ufficioCosto = 0;
-  if (anno >= UFFICIO_START_YEAR && anno <= annoCorrente) {
-    const meseLimite = anno === annoCorrente ? meseCorrente : 12;
-    if (anno === UFFICIO_START_YEAR) {
-      if (meseLimite >= UFFICIO_START_MONTH) {
-        ufficioMesi = meseLimite - UFFICIO_START_MONTH + 1;
-        ufficioCosto =
-          UFFICIO_FIRST_MONTH_COST + (ufficioMesi - 1) * UFFICIO_RATE;
-      }
-    } else {
-      // Anni successivi al 2026: nessuna matricola, quote regolari fino al mese limite
-      ufficioMesi = meseLimite;
-      ufficioCosto = meseLimite * UFFICIO_RATE;
-    }
-  }
+  const ufficioMesi = anno >= UFFICIO_START_YEAR ? mesiTrascorsi : 0;
+  const ufficioCosto = ufficioMesi * UFFICIO_RATE;
   const ufficioSubLabel =
-    anno === UFFICIO_START_YEAR
-      ? "(€390/mese da apr · apr: €610,20)"
-      : ufficioMesi > 0
-        ? `(€390/mese × ${ufficioMesi})`
-        : "—";
+    ufficioMesi > 0 ? `(€390/mese da gen · ${ufficioMesi} mesi)` : "—";
 
   const costiGestione = baseFatturato * 0.15;
   const totaleCostiVirtuali = contributoStipendi + ufficioCosto + costiGestione;
@@ -194,7 +174,7 @@ export default function BilancioPage() {
           Valore: contributoStipendi,
         },
         {
-          Voce: `Ufficio ${ufficioSubLabel}`,
+          Voce: `Spese Ufficio ${ufficioSubLabel}`,
           Valore: ufficioCosto,
         },
         { Voce: "Costi Gestione Aziendale (15%)", Valore: costiGestione },
@@ -301,7 +281,7 @@ export default function BilancioPage() {
         separator: "thin",
       },
       {
-        label: "Ufficio",
+        label: "Spese Ufficio",
         sub: ufficioSubLabel,
         value: fmt(ufficioCosto),
         color: [220, 38, 38],
@@ -723,7 +703,7 @@ export default function BilancioPage() {
               </tr>
               <tr className="border-b border-amber-200/60">
                 <td className="py-2 text-gray-700">
-                  Ufficio
+                  Spese Ufficio
                   <span className="text-xs text-gray-500 ml-1">
                     {ufficioSubLabel}
                   </span>
