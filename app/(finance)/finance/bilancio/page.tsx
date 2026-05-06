@@ -440,6 +440,7 @@ export default function BilancioPage() {
             azienda={azienda}
             onAnno={setAnno}
             onAzienda={setAzienda}
+            hideOptions={["Altro"]}
           />
           <button
             onClick={handleExcel}
