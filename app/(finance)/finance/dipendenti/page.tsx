@@ -93,9 +93,9 @@ export default function DipendentiPage() {
   };
 
   const load = async () => {
-    const data = (await (
-      await fetch(`/api/dipendenti?anno=${anno}`)
-    ).json()) as any;
+    const url =
+      anno > 0 ? `/api/dipendenti?anno=${anno}` : `/api/dipendenti`;
+    const data = (await (await fetch(url)).json()) as any;
     setDipendenti(Array.isArray(data) ? data : []);
   };
   useEffect(() => {

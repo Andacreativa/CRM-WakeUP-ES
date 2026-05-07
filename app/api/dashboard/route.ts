@@ -5,9 +5,18 @@ import { isFinnRitenuta } from "@/lib/finn-split";
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
-    const anno = parseInt(searchParams.get("anno") || "2025");
+    const annoParam = searchParams.get("anno");
+    const anno = annoParam ? parseInt(annoParam) : null;
     const azienda = searchParams.get("azienda") || undefined;
-    const whereBase = { anno, ...(azienda ? { azienda } : {}) };
+    const isAllYears = !anno || anno <= 0;
+    const whereBase = {
+      ...(isAllYears ? {} : { anno }),
+      ...(azienda ? { azienda } : {}),
+    };
+    // Confronto anno precedente: solo se è selezionato un anno specifico
+    const wherePrec = isAllYears
+      ? { anno: -1 } // condizione impossibile → empty result
+      : { anno: anno! - 1, ...(azienda ? { azienda } : {}) };
 
     const [
       fatture,
@@ -22,15 +31,9 @@ export async function GET(request: Request) {
       prisma.altroIngresso.findMany({ where: whereBase }),
       prisma.spesa.findMany({ where: whereBase }),
       prisma.cliente.count(),
-      prisma.fattura.findMany({
-        where: { anno: anno - 1, ...(azienda ? { azienda } : {}) },
-      }),
-      prisma.altroIngresso.findMany({
-        where: { anno: anno - 1, ...(azienda ? { azienda } : {}) },
-      }),
-      prisma.spesa.findMany({
-        where: { anno: anno - 1, ...(azienda ? { azienda } : {}) },
-      }),
+      prisma.fattura.findMany({ where: wherePrec }),
+      prisma.altroIngresso.findMany({ where: wherePrec }),
+      prisma.spesa.findMany({ where: wherePrec }),
     ]);
 
     // Escludi ritenute Finn dai calcoli (solo riferimento visivo in tabella)
@@ -60,7 +63,7 @@ export async function GET(request: Request) {
       where: {
         pagato: false,
         scadenza: { not: null },
-        anno,
+        ...(isAllYears ? {} : { anno }),
       },
       include: { cliente: true },
     });

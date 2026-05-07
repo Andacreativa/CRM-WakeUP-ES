@@ -83,7 +83,8 @@ export default function ScadenzePage() {
   const [selected, setSelected] = useState<Set<number>>(new Set());
 
   const load = async () => {
-    const params = new URLSearchParams({ anno: String(anno) });
+    const params = new URLSearchParams();
+    if (anno > 0) params.set("anno", String(anno));
     if (filtroAzienda) params.set("azienda", filtroAzienda);
     const data = (await (await fetch(`/api/fatture?${params}`)).json()) as any;
     const arr: Fattura[] = Array.isArray(data) ? data : [];
@@ -204,6 +205,12 @@ export default function ScadenzePage() {
               paddingRight: "28px",
             }}
           >
+            <option
+              value={0}
+              style={{ background: "#fff", color: "#1a1d2e" }}
+            >
+              Tutti
+            </option>
             {ANNI.map((a) => (
               <option
                 key={a}

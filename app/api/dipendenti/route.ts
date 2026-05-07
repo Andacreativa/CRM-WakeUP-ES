@@ -4,13 +4,12 @@ import { prisma } from "@/lib/prisma";
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
-    const anno = parseInt(
-      searchParams.get("anno") || String(new Date().getFullYear()),
-    );
+    const annoParam = searchParams.get("anno");
+    const anno = annoParam ? parseInt(annoParam) : null;
     const dipendenti = await prisma.dipendente.findMany({
       orderBy: { nome: "asc" },
       include: {
-        pagamenti: { where: { anno } },
+        pagamenti: anno && anno > 0 ? { where: { anno } } : true,
       },
     });
     return NextResponse.json(dipendenti);

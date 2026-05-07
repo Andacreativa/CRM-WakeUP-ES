@@ -4,13 +4,15 @@ import { prisma } from "@/lib/prisma";
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
-    const anno = parseInt(
-      searchParams.get("anno") || String(new Date().getFullYear()),
-    );
+    const annoParam = searchParams.get("anno");
+    const anno = annoParam ? parseInt(annoParam) : null;
     const azienda = searchParams.get("azienda") || undefined;
     const rows = await prisma.altroIngresso.findMany({
-      where: { anno, ...(azienda ? { azienda } : {}) },
-      orderBy: [{ mese: "asc" }, { createdAt: "desc" }],
+      where: {
+        ...(anno && anno > 0 ? { anno } : {}),
+        ...(azienda ? { azienda } : {}),
+      },
+      orderBy: [{ anno: "desc" }, { mese: "asc" }, { createdAt: "desc" }],
     });
     return NextResponse.json(rows);
   } catch (e) {

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import {
   BarChart,
   Bar,
+  Cell,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -41,7 +42,8 @@ export default function BilancioPage() {
 
   useEffect(() => {
     const run = async () => {
-      const params = new URLSearchParams({ anno: String(anno) });
+      const params = new URLSearchParams();
+      if (anno > 0) params.set("anno", String(anno));
       if (azienda) params.set("azienda", azienda);
       const [rawF, rawS, rawAltri] = await Promise.all([
         (await fetch(`/api/fatture?${params}`)).json() as Promise<any>,
@@ -104,7 +106,8 @@ export default function BilancioPage() {
   const bilancioTotale = fattureTotale - speseTotale;
 
   // Analisi virtuale Italia: costi stimati NON contabilizzati nel bilancio reale
-  const isItalia = azienda === "Italia";
+  // Mostrata solo per un anno specifico (i calcoli mese-per-mese non hanno senso "Tutti")
+  const isItalia = azienda === "Italia" && anno > 0;
   const baseFatturato =
     modalita === "incassato" ? fattureTotaleIncassato : fattureTotale;
   // Contributi costo dipendenti: 2000€ × mesi trascorsi nell'anno selezionato
@@ -188,16 +191,18 @@ export default function BilancioPage() {
       );
       XLSX.writeFile(
         wb,
-        `bilancio_${anno}_Italia_${modalita === "incassato" ? "incassato" : "fatturato"}.xlsx`,
+        `bilancio_${anno > 0 ? anno : "tutti"}_Italia_${modalita === "incassato" ? "incassato" : "fatturato"}.xlsx`,
       );
       return;
     }
 
-    exportExcel(baseSheet, `bilancio_${anno}`);
+    exportExcel(baseSheet, `bilancio_${anno > 0 ? anno : "tutti"}`);
   };
 
   const handlePDF = async () => {
-    const title = `Bilancio ${anno}${azienda ? ` — ${azienda}` : ""}`;
+    const annoLabel = anno > 0 ? String(anno) : "tutti gli anni";
+    const annoFile = anno > 0 ? String(anno) : "tutti";
+    const title = `Bilancio ${annoLabel}${azienda ? ` — ${azienda}` : ""}`;
     const columns = ["Mese", "Entrate", "Uscite", "Bilancio"];
     const rows = dati.map((d) => [
       MESI[d.mese - 1],
@@ -205,7 +210,7 @@ export default function BilancioPage() {
       fmt(d.uscite),
       fmt(d.bilancio),
     ]);
-    const filename = `bilancio_${anno}${isItalia ? `_Italia_${modalita}` : ""}`;
+    const filename = `bilancio_${annoFile}${isItalia ? `_Italia_${modalita}` : ""}`;
 
     if (!isItalia) {
       await exportPDF(title, columns, rows, filename);
@@ -430,7 +435,7 @@ export default function BilancioPage() {
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Bilancio</h1>
           <p className="text-gray-500 text-sm mt-1">
-            Conto economico {anno}
+            Conto economico {anno > 0 ? anno : "tutti gli anni"}
             {azienda ? ` — ${azienda}` : ""}
           </p>
         </div>
@@ -441,6 +446,7 @@ export default function BilancioPage() {
             onAnno={setAnno}
             onAzienda={setAzienda}
             hideOptions={["Altro"]}
+            includeAllYears
           />
           <button
             onClick={handleExcel}
@@ -565,9 +571,8 @@ export default function BilancioPage() {
               <ReferenceLine y={0} stroke="#e2e8f0" strokeWidth={2} />
               <Bar dataKey="Bilancio" radius={[4, 4, 0, 0]}>
                 {chartData.map((entry, i) => (
-                  <Bar
+                  <Cell
                     key={i}
-                    dataKey="Bilancio"
                     fill={entry.Bilancio >= 0 ? "#10b981" : "#ef4444"}
                   />
                 ))}

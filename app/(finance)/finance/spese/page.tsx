@@ -81,7 +81,8 @@ export default function SpesePage() {
   const [showEstrai, setShowEstrai] = useState(false);
 
   const load = async () => {
-    const params = new URLSearchParams({ anno: String(anno) });
+    const params = new URLSearchParams();
+    if (anno > 0) params.set("anno", String(anno));
     if (azienda) params.set("azienda", azienda);
     const [s, f] = await Promise.all([
       (await fetch(`/api/spese?${params}`)).json() as Promise<any>,
@@ -96,7 +97,10 @@ export default function SpesePage() {
 
   const openNew = () => {
     setEditing(null);
-    setForm({ ...emptyForm, anno });
+    setForm({
+      ...emptyForm,
+      anno: anno > 0 ? anno : new Date().getFullYear(),
+    });
     setShowForm(true);
   };
   const openNewFromExtract = (data: {
@@ -220,11 +224,13 @@ export default function SpesePage() {
     perCategoria[cat] = (perCategoria[cat] || 0) + (s?.importo ?? 0);
   });
 
+  const annoLabel = anno > 0 ? String(anno) : "tutti gli anni";
+  const annoFile = anno > 0 ? String(anno) : "tutti";
   const handleExcelExport = () =>
-    exportExcel(speseToExcel(filtered, MESI), `spese_${anno}`);
+    exportExcel(speseToExcel(filtered, MESI), `spese_${annoFile}`);
   const handlePDFExport = () =>
     exportPDF(
-      `Spese ${anno}`,
+      `Spese ${annoLabel}`,
       ["Fornitore", "Categoria", "Azienda", "Mese", "Importo", "Descrizione"],
       filtered.map((s) => [
         s.fornitore,
@@ -234,7 +240,7 @@ export default function SpesePage() {
         fmt(s.importo),
         s.descrizione || "",
       ]),
-      `spese_${anno}`,
+      `spese_${annoFile}`,
     );
 
   return (
@@ -250,6 +256,7 @@ export default function SpesePage() {
             azienda={azienda}
             onAnno={setAnno}
             onAzienda={setAzienda}
+            includeAllYears
           />
           <PageSizeSelect pageSize={pageSize} onChange={setPageSize} />
           <button

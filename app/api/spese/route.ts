@@ -3,12 +3,16 @@ import { prisma } from "@/lib/prisma";
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
-  const anno = parseInt(searchParams.get("anno") || "2025");
+  const annoParam = searchParams.get("anno");
+  const anno = annoParam ? parseInt(annoParam) : null;
   const azienda = searchParams.get("azienda") || undefined;
 
   const spese = await prisma.spesa.findMany({
-    where: { anno, ...(azienda ? { azienda } : {}) },
-    orderBy: [{ mese: "desc" }, { createdAt: "desc" }],
+    where: {
+      ...(anno && anno > 0 ? { anno } : {}),
+      ...(azienda ? { azienda } : {}),
+    },
+    orderBy: [{ anno: "desc" }, { mese: "desc" }, { createdAt: "desc" }],
   });
 
   return NextResponse.json(spese);

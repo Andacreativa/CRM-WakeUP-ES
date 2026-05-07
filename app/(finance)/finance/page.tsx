@@ -70,7 +70,8 @@ export default function Dashboard() {
   useEffect(() => {
     const run = async () => {
       try {
-        const params = new URLSearchParams({ anno: String(anno) });
+        const params = new URLSearchParams();
+        if (anno > 0) params.set("anno", String(anno));
         if (azienda) params.set("azienda", azienda);
         const res = await fetch(`/api/dashboard?${params}`);
         const text = await res.text();
@@ -201,6 +202,7 @@ export default function Dashboard() {
           onAnno={setAnno}
           onAzienda={setAzienda}
           showAzienda={false}
+          includeAllYears
         />
       </div>
 
