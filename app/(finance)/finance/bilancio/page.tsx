@@ -513,67 +513,68 @@ export default function BilancioPage() {
         </div>
       </div>
 
-      {/* Grafico Entrate vs Uscite */}
-      <div className="glass-card rounded-2xl p-6">
-        <h2 className="text-sm font-semibold text-gray-700 mb-4">
-          Entrate vs Uscite per Mese
-        </h2>
-        <ResponsiveContainer width="100%" height={260}>
-          <BarChart data={chartData} barSize={20} barGap={4}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-            <XAxis
-              dataKey="name"
-              tick={{ fontSize: 11, fill: "#94a3b8" }}
-              axisLine={false}
-              tickLine={false}
-            />
-            <YAxis
-              tick={{ fontSize: 11, fill: "#94a3b8" }}
-              axisLine={false}
-              tickLine={false}
-              tickFormatter={(v) => `€${(v / 1000).toFixed(0)}k`}
-            />
-            <Tooltip formatter={(v) => fmt(Number(v))} />
-            <Legend />
-            <Bar dataKey="Entrate" fill="#10b981" radius={[4, 4, 0, 0]} />
-            <Bar dataKey="Uscite" fill="#ef4444" radius={[4, 4, 0, 0]} />
-          </BarChart>
-        </ResponsiveContainer>
-      </div>
+      {/* Grafici affiancati */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div className="glass-card rounded-2xl p-6">
+          <h2 className="text-sm font-semibold text-gray-700 mb-4">
+            Entrate vs Uscite per Mese
+          </h2>
+          <ResponsiveContainer width="100%" height={250}>
+            <BarChart data={chartData} barSize={16} barGap={3}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+              <XAxis
+                dataKey="name"
+                tick={{ fontSize: 11, fill: "#94a3b8" }}
+                axisLine={false}
+                tickLine={false}
+              />
+              <YAxis
+                tick={{ fontSize: 11, fill: "#94a3b8" }}
+                axisLine={false}
+                tickLine={false}
+                tickFormatter={(v) => `€${(v / 1000).toFixed(0)}k`}
+              />
+              <Tooltip formatter={(v) => fmt(Number(v))} />
+              <Legend />
+              <Bar dataKey="Entrate" fill="#10b981" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="Uscite" fill="#ef4444" radius={[4, 4, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
 
-      {/* Grafico Bilancio netto */}
-      <div className="glass-card rounded-2xl p-6">
-        <h2 className="text-sm font-semibold text-gray-700 mb-4">
-          Bilancio Netto per Mese
-        </h2>
-        <ResponsiveContainer width="100%" height={200}>
-          <BarChart data={chartData} barSize={28}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-            <XAxis
-              dataKey="name"
-              tick={{ fontSize: 11, fill: "#94a3b8" }}
-              axisLine={false}
-              tickLine={false}
-            />
-            <YAxis
-              tick={{ fontSize: 11, fill: "#94a3b8" }}
-              axisLine={false}
-              tickLine={false}
-              tickFormatter={(v) => `€${(v / 1000).toFixed(0)}k`}
-            />
-            <Tooltip formatter={(v) => fmt(Number(v))} />
-            <ReferenceLine y={0} stroke="#e2e8f0" strokeWidth={2} />
-            <Bar dataKey="Bilancio" radius={[4, 4, 0, 0]}>
-              {chartData.map((entry, i) => (
-                <Bar
-                  key={i}
-                  dataKey="Bilancio"
-                  fill={entry.Bilancio >= 0 ? "#10b981" : "#ef4444"}
-                />
-              ))}
-            </Bar>
-          </BarChart>
-        </ResponsiveContainer>
+        <div className="glass-card rounded-2xl p-6">
+          <h2 className="text-sm font-semibold text-gray-700 mb-4">
+            Bilancio Netto per Mese
+          </h2>
+          <ResponsiveContainer width="100%" height={250}>
+            <BarChart data={chartData} barSize={22}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+              <XAxis
+                dataKey="name"
+                tick={{ fontSize: 11, fill: "#94a3b8" }}
+                axisLine={false}
+                tickLine={false}
+              />
+              <YAxis
+                tick={{ fontSize: 11, fill: "#94a3b8" }}
+                axisLine={false}
+                tickLine={false}
+                tickFormatter={(v) => `€${(v / 1000).toFixed(0)}k`}
+              />
+              <Tooltip formatter={(v) => fmt(Number(v))} />
+              <ReferenceLine y={0} stroke="#e2e8f0" strokeWidth={2} />
+              <Bar dataKey="Bilancio" radius={[4, 4, 0, 0]}>
+                {chartData.map((entry, i) => (
+                  <Bar
+                    key={i}
+                    dataKey="Bilancio"
+                    fill={entry.Bilancio >= 0 ? "#10b981" : "#ef4444"}
+                  />
+                ))}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
       </div>
 
       {/* Tabella mensile */}
