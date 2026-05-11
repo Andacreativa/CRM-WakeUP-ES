@@ -272,6 +272,7 @@ export function fattureToPDF(
 export async function exportPreventivoPDF(p: PreventivoPDFData) {
   const { default: jsPDF } = await import("jspdf");
   const { default: autoTable } = await import("jspdf-autotable");
+  const firmaCanvas = await loadFirmaInvertita();
 
   const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
   const W = 210,
@@ -622,50 +623,87 @@ export async function exportPreventivoPDF(p: PreventivoPDFData) {
     y += lines.length * 4.5 + 10;
   }
 
-  // Section: FIRMA E ACCETTAZIONE
-  if (y < 258) {
-    doc.setFontSize(10);
-    doc.setFont("helvetica", "bold");
-    doc.setTextColor(...ACCENT);
-    doc.text("FIRMA E ACCETTAZIONE", ML, y);
-    y += 6;
-
-    doc.setFontSize(8.5);
+  // Section: FIRMA E ACCETTAZIONE — sempre presente (eventualmente su nuova pagina)
+  const firmaWidthMm = 40; // dimensione contenuta sopra la linea
+  const firmaHeightMm = firmaCanvas
+    ? firmaWidthMm * (firmaCanvas.height / firmaCanvas.width)
+    : 14;
+  const sectionH = 6 + 6 + firmaHeightMm + 1 + 14; // titolo + desc + firma + gap + linea/label
+  const pageBottom = H - 14;
+  if (y + sectionH > pageBottom) {
+    doc.addPage();
+    doc.setFillColor(...DARK);
+    doc.rect(0, 0, W, 14, "F");
+    doc.setFontSize(7);
     doc.setFont("helvetica", "normal");
-    doc.setTextColor(...DGRAY);
-    doc.text(
-      "Per accettazione della presente proposta, si prega di restituire il documento firmato.",
-      ML,
-      y,
-    );
-    y += 14;
-
-    doc.setDrawColor(190, 190, 190);
-    doc.setLineWidth(0.3);
-    doc.line(ML, y, ML + 76, y);
-    doc.line(W - MR - 76, y, W - MR, y);
-
-    y += 5;
-    doc.setFontSize(7.5);
-    doc.setTextColor(100, 100, 100);
-    doc.text("Per Anda Agencia de Publicidad SL", ML, y);
-    doc.text("Firma", ML, y + 4.5);
-    const sigName = p.aziendaCliente
-      ? `Per ${p.aziendaCliente}`
-      : `Per ${p.nomeCliente}`;
-    doc.text(sigName, W - MR - 76, y);
-    doc.text("Firma", W - MR - 76, y + 4.5);
+    doc.setTextColor(200, 200, 200);
+    const hT =
+      p.oggetto.length > 55 ? p.oggetto.substring(0, 52) + "..." : p.oggetto;
+    const pageN = doc.getNumberOfPages();
+    doc.text(`ANDA AGENCIA DE PUBLICIDAD SL  |  ${hT}`, ML, 9);
+    doc.text(`Pag. ${pageN}`, W - MR, 9, { align: "right" });
+    y = 26;
   }
 
-  // Bottom accent bar + footer text
+  doc.setFontSize(10);
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(...ACCENT);
+  doc.text("FIRMA E ACCETTAZIONE", ML, y);
+  y += 6;
+
+  doc.setFontSize(8.5);
+  doc.setFont("helvetica", "normal");
+  doc.setTextColor(...DGRAY);
+  doc.text(
+    "Per accettazione della presente proposta, si prega di restituire il documento firmato.",
+    ML,
+    y,
+  );
+  y += 6;
+
+  // Firma Leonardo sopra la linea divisoria (lato sinistro - Anda)
+  if (firmaCanvas) {
+    doc.addImage(
+      firmaCanvas.toDataURL("image/png"),
+      "PNG",
+      ML,
+      y,
+      firmaWidthMm,
+      firmaHeightMm,
+    );
+    y += firmaHeightMm + 1;
+  } else {
+    y += 14;
+  }
+
+  // Linea separatrice (entrambi i lati)
+  doc.setDrawColor(190, 190, 190);
+  doc.setLineWidth(0.3);
+  doc.line(ML, y, ML + 76, y);
+  doc.line(W - MR - 76, y, W - MR, y);
+
+  // Etichette sotto la linea
+  y += 5;
+  doc.setFontSize(7.5);
+  doc.setTextColor(100, 100, 100);
+  doc.text("Per Anda Agencia de Publicidad SL", ML, y);
+  doc.text("Leonardo Mestre, Amministratore", ML, y + 4.5);
+  const sigName = p.aziendaCliente
+    ? `Per ${p.aziendaCliente}`
+    : `Per ${p.nomeCliente}`;
+  doc.text(sigName, W - MR - 76, y);
+  doc.text("Firma", W - MR - 76, y + 4.5);
+
+  // Bottom accent bar + footer text (sull'ultima pagina, dinamico)
   doc.setFillColor(...ACCENT);
   doc.rect(0, H - 7, W, 7, "F");
 
   doc.setFontSize(7);
   doc.setFont("helvetica", "normal");
   doc.setTextColor(120, 120, 120);
+  const totalPages = doc.getNumberOfPages();
   doc.text(
-    "ANDA AGENCIA DE PUBLICIDAD SL  |  info@andacreativa.com  |  Pag. 2",
+    `ANDA AGENCIA DE PUBLICIDAD SL  |  info@andacreativa.com  |  Pag. ${totalPages}`,
     W / 2,
     H - 10,
     { align: "center" },
@@ -717,23 +755,48 @@ async function loadFirmaInvertita(): Promise<HTMLCanvasElement | null> {
     const ratio = img.naturalHeight / img.naturalWidth;
     const w = Math.min(img.naturalWidth, MAX_W);
     const h = Math.round(w * ratio);
-    const canvas = document.createElement("canvas");
-    canvas.width = w;
-    canvas.height = h;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return null;
-    ctx.drawImage(img, 0, 0, w, h);
-    const data = ctx.getImageData(0, 0, w, h);
-    for (let i = 0; i < data.data.length; i += 4) {
-      if (data.data[i + 3] > 0) {
-        // non-transparent → setta RGB a nero (mantiene alpha)
-        data.data[i] = 0;
-        data.data[i + 1] = 0;
-        data.data[i + 2] = 0;
+    const tmp = document.createElement("canvas");
+    tmp.width = w;
+    tmp.height = h;
+    const tctx = tmp.getContext("2d");
+    if (!tctx) return null;
+    tctx.drawImage(img, 0, 0, w, h);
+    const data = tctx.getImageData(0, 0, w, h);
+    // Setta a nero tutti i pixel non-trasparenti e calcola bounding box
+    let minX = w,
+      minY = h,
+      maxX = -1,
+      maxY = -1;
+    const ALPHA_THRESHOLD = 16; // ignora alone semitrasparente sui bordi
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        const i = (y * w + x) * 4;
+        if (data.data[i + 3] > ALPHA_THRESHOLD) {
+          data.data[i] = 0;
+          data.data[i + 1] = 0;
+          data.data[i + 2] = 0;
+          if (x < minX) minX = x;
+          if (x > maxX) maxX = x;
+          if (y < minY) minY = y;
+          if (y > maxY) maxY = y;
+        }
       }
     }
-    ctx.putImageData(data, 0, 0);
-    return canvas;
+    tctx.putImageData(data, 0, 0);
+    if (maxX < 0) return tmp; // nessun pixel visibile, ritorna intero
+    // Crop al bounding box (con piccolo margine 4px)
+    const PAD = 4;
+    const cx = Math.max(0, minX - PAD);
+    const cy = Math.max(0, minY - PAD);
+    const cw = Math.min(w, maxX + PAD) - cx;
+    const ch = Math.min(h, maxY + PAD) - cy;
+    const cropped = document.createElement("canvas");
+    cropped.width = cw;
+    cropped.height = ch;
+    const cctx = cropped.getContext("2d");
+    if (!cctx) return tmp;
+    cctx.drawImage(tmp, cx, cy, cw, ch, 0, 0, cw, ch);
+    return cropped;
   } catch {
     return null;
   }
