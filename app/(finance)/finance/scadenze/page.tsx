@@ -22,6 +22,7 @@ interface Fattura {
   azienda: string;
   descrizione: string | null;
   cliente: { nome: string; paese: string };
+  acconti?: { id: number; importo: number }[];
 }
 
 type Stato = "scaduta" | "urgente" | "prossima" | "ok";
@@ -163,20 +164,28 @@ export default function ScadenzePage() {
   const exportPDFAction = async () => {
     const rows = filtered.filter((f) => selected.has(f.id));
     if (rows.length === 0) return;
-    const totale = rows.reduce((s, f) => s + f.importo, 0);
+    const sumAcc = (f: Fattura) =>
+      (f.acconti ?? []).reduce((s, a) => s + a.importo, 0);
+    const residuo = (f: Fattura) => Math.max(0, f.importo - sumAcc(f));
+    const totaleResiduo = rows.reduce((s, f) => s + residuo(f), 0);
 
     await exportPDF(
       `Scadenze — ${new Date().toLocaleDateString("it-IT")}`,
-      ["Cliente", "Importo", "Data Scadenza", "Stato"],
-      rows.map((f) => [
-        f.cliente?.nome ?? "—",
-        fmt(f.importo),
-        f.scadenza ? new Date(f.scadenza).toLocaleDateString("it-IT") : "—",
-        STATI_CONFIG[f.stato].label,
-      ]),
+      ["Cliente", "Importo", "Acconto", "Residuo", "Data Scadenza", "Stato"],
+      rows.map((f) => {
+        const acc = sumAcc(f);
+        return [
+          f.cliente?.nome ?? "—",
+          fmt(f.importo),
+          acc > 0 ? fmt(acc) : "—",
+          fmt(residuo(f)),
+          f.scadenza ? new Date(f.scadenza).toLocaleDateString("it-IT") : "—",
+          STATI_CONFIG[f.stato].label,
+        ];
+      }),
       `scadenze_${new Date().toISOString().slice(0, 10)}`,
       {
-        footRows: [["TOTALE", fmt(totale), "", ""]],
+        footRows: [["TOTALE RESIDUO", "", "", fmt(totaleResiduo), "", ""]],
       },
     );
   };
@@ -391,9 +400,33 @@ export default function ScadenzePage() {
                   </div>
                 </div>
                 <div className="flex items-center gap-4 shrink-0">
-                  <p className="text-xl font-bold text-gray-900">
-                    {fmt(f.importo)}
-                  </p>
+                  {(() => {
+                    const acc = (f.acconti ?? []).reduce(
+                      (s, a) => s + a.importo,
+                      0,
+                    );
+                    const residuo = Math.max(0, f.importo - acc);
+                    if (acc > 0) {
+                      return (
+                        <div className="text-right">
+                          <p className="text-xl font-bold text-gray-900">
+                            {fmt(residuo)}
+                          </p>
+                          <p className="text-[11px] font-medium text-amber-700 mt-0.5">
+                            Acconto ricevuto: {fmt(acc)}
+                          </p>
+                          <p className="text-[10px] text-gray-400">
+                            Totale {fmt(f.importo)}
+                          </p>
+                        </div>
+                      );
+                    }
+                    return (
+                      <p className="text-xl font-bold text-gray-900">
+                        {fmt(f.importo)}
+                      </p>
+                    );
+                  })()}
                   <button
                     onClick={() => togglePagato(f)}
                     className="flex items-center gap-1.5 text-sm font-medium px-4 py-2 rounded-xl text-white transition-all"

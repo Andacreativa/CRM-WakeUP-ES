@@ -10,6 +10,7 @@ import {
   Download,
   FileSpreadsheet,
   Upload,
+  Wallet,
 } from "lucide-react";
 import {
   BarChart,
@@ -38,6 +39,13 @@ interface Cliente {
   nome: string;
   paese: string;
 }
+interface Acconto {
+  id: number;
+  importo: number;
+  data: string;
+  metodoPagamento: string | null;
+  note: string | null;
+}
 interface Fattura {
   id: number;
   numero: string | null;
@@ -55,7 +63,17 @@ interface Fattura {
   metodo: string | null;
   commerciale: string | null;
   scadenza: string | null;
+  acconti: Acconto[];
 }
+
+const totalePagato = (f: Fattura) =>
+  (f.acconti ?? []).reduce((s, a) => s + a.importo, 0);
+const residuo = (f: Fattura) => Math.max(0, f.importo - totalePagato(f));
+const statoCalcolato = (f: Fattura): "pagato" | "acconto" | "attesa" => {
+  if (f.pagato || totalePagato(f) >= f.importo) return "pagato";
+  if (totalePagato(f) > 0) return "acconto";
+  return "attesa";
+};
 
 type TipoIva = "igic_exenta" | "igic7";
 const TIPO_IVA_OPTIONS: { value: TipoIva; label: string }[] = [
@@ -116,6 +134,7 @@ export default function FatturePage() {
   const [pageSize, setPageSize] = useState(10);
   const [page, setPage] = useState(1);
   const [showImport, setShowImport] = useState(false);
+  const [accontoTarget, setAccontoTarget] = useState<Fattura | null>(null);
 
   const load = async () => {
     const params = new URLSearchParams();
@@ -203,8 +222,14 @@ export default function FatturePage() {
     .filter((f) => {
       if (filtroMese && f.mese !== filtroMese) return false;
       if (filtroClienteId && f.clienteId !== filtroClienteId) return false;
-      if (filtroPagato === "pagato" && !f.pagato) return false;
-      if (filtroPagato === "attesa" && f.pagato) return false;
+      const stato = statoCalcolato(f);
+      if (filtroPagato === "pagato" && stato !== "pagato") return false;
+      if (
+        filtroPagato === "attesa" &&
+        stato !== "attesa" &&
+        stato !== "acconto"
+      )
+        return false;
       return true;
     })
     .sort((a, b) => numeroKey(b.numero) - numeroKey(a.numero));
@@ -220,9 +245,16 @@ export default function FatturePage() {
   const paged = filtered.slice((page - 1) * pageSize, page * pageSize);
 
   const totale = filtered.reduce((s, f) => s + (f?.importo ?? 0), 0);
-  const pagate = filtered
-    .filter((f) => f?.pagato)
-    .reduce((s, f) => s + (f?.importo ?? 0), 0);
+  const pagate = filtered.reduce(
+    (s, f) =>
+      s +
+      (statoCalcolato(f) === "pagato" ? (f?.importo ?? 0) : totalePagato(f)),
+    0,
+  );
+  const daIncassare = filtered.reduce(
+    (s, f) => s + (statoCalcolato(f) === "pagato" ? 0 : residuo(f)),
+    0,
+  );
 
   const oggi = new Date();
   const isScaduta = (f: Fattura) =>
@@ -342,7 +374,7 @@ export default function FatturePage() {
           { label: "Incassato", val: fmt(pagate), color: "text-emerald-600" },
           {
             label: "Da Incassare",
-            val: fmt(totale - pagate),
+            val: fmt(daIncassare),
             color: "text-amber-600",
           },
         ].map((k) => (
@@ -506,23 +538,49 @@ export default function FatturePage() {
                   {fmt(f.importo)}
                 </td>
                 <td className="px-4 py-3 text-center">
-                  <button
-                    onClick={() => togglePagato(f)}
-                    className={`inline-flex items-center gap-1 text-xs font-medium px-3 py-1 rounded-full transition-colors ${f.pagato ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-200" : "bg-amber-100 text-amber-700 hover:bg-amber-200"}`}
-                  >
-                    {f.pagato ? (
-                      <>
-                        <Check className="w-3 h-3" /> Pagato
-                      </>
-                    ) : (
-                      <>
+                  {(() => {
+                    const stato = statoCalcolato(f);
+                    if (stato === "pagato") {
+                      return (
+                        <button
+                          onClick={() => togglePagato(f)}
+                          className="inline-flex items-center gap-1 text-xs font-medium px-3 py-1 rounded-full transition-colors bg-emerald-100 text-emerald-700 hover:bg-emerald-200"
+                        >
+                          <Check className="w-3 h-3" /> Pagato
+                        </button>
+                      );
+                    }
+                    if (stato === "acconto") {
+                      return (
+                        <span
+                          title={`${fmt(totalePagato(f))} ricevuti / ${fmt(residuo(f))} residuo`}
+                          className="inline-flex items-center gap-1 text-xs font-medium px-3 py-1 rounded-full bg-orange-100 text-orange-700"
+                        >
+                          <Wallet className="w-3 h-3" /> Acconto
+                        </span>
+                      );
+                    }
+                    return (
+                      <button
+                        onClick={() => togglePagato(f)}
+                        className="inline-flex items-center gap-1 text-xs font-medium px-3 py-1 rounded-full transition-colors bg-amber-100 text-amber-700 hover:bg-amber-200"
+                      >
                         <X className="w-3 h-3" /> In Attesa
-                      </>
-                    )}
-                  </button>
+                      </button>
+                    );
+                  })()}
                 </td>
                 <td className="px-4 py-3">
                   <div className="flex items-center gap-2 justify-end">
+                    {statoCalcolato(f) !== "pagato" && (
+                      <button
+                        onClick={() => setAccontoTarget(f)}
+                        title="Registra acconto"
+                        className="p-1.5 rounded-lg text-gray-400 hover:text-orange-600 hover:bg-orange-50 transition-colors"
+                      >
+                        <Wallet className="w-4 h-4" />
+                      </button>
+                    )}
                     <button
                       onClick={() => openEdit(f)}
                       className="p-1.5 rounded-lg text-gray-400 hover:text-pink-600 hover:bg-pink-50 transition-colors"
@@ -915,6 +973,190 @@ export default function FatturePage() {
         onClose={() => setShowImport(false)}
         onImported={load}
       />
+
+      {accontoTarget && (
+        <AccontoModal
+          fattura={accontoTarget}
+          onClose={() => setAccontoTarget(null)}
+          onSaved={load}
+        />
+      )}
+    </div>
+  );
+}
+
+function AccontoModal({
+  fattura,
+  onClose,
+  onSaved,
+}: {
+  fattura: Fattura;
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const giaPagato = totalePagato(fattura);
+  const residuoCorrente = residuo(fattura);
+  const [importo, setImporto] = useState(
+    residuoCorrente > 0 ? String(residuoCorrente) : "",
+  );
+  const [data, setData] = useState(new Date().toISOString().slice(0, 10));
+  const [metodoPagamento, setMetodoPagamento] = useState("");
+  const [note, setNote] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  const submit = async () => {
+    const importoNum = parseFloat(importo);
+    if (!importoNum || importoNum <= 0) return;
+    setSaving(true);
+    const res = await fetch("/api/acconti", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        fatturaId: fattura.id,
+        importo: importoNum,
+        data,
+        metodoPagamento: metodoPagamento || null,
+        note: note || null,
+      }),
+    });
+    setSaving(false);
+    if (!res.ok) return;
+    onSaved();
+    onClose();
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+      <div className="glass-modal rounded-2xl w-full max-w-md p-6 space-y-4">
+        <div>
+          <h2 className="text-lg font-bold text-gray-900">Registra Acconto</h2>
+          <p className="text-xs text-gray-500 mt-0.5">
+            Fattura {fattura.numero ?? "—"} · {fattura.cliente?.nome ?? "—"}
+          </p>
+        </div>
+
+        <div className="bg-orange-50 border border-orange-200 rounded-lg p-3 text-sm space-y-1">
+          <div className="flex justify-between text-gray-700">
+            <span>Importo fattura</span>
+            <span className="font-semibold">{fmt(fattura.importo)}</span>
+          </div>
+          <div className="flex justify-between text-gray-700">
+            <span>Già ricevuto</span>
+            <span className="font-semibold text-emerald-700">
+              {fmt(giaPagato)}
+            </span>
+          </div>
+          <div className="flex justify-between font-bold text-gray-900 border-t border-orange-200 pt-1">
+            <span>Residuo da incassare</span>
+            <span className="text-orange-700">{fmt(residuoCorrente)}</span>
+          </div>
+        </div>
+
+        {fattura.acconti && fattura.acconti.length > 0 && (
+          <div className="space-y-1">
+            <p className="text-xs font-medium text-gray-600">
+              Acconti registrati
+            </p>
+            <div className="max-h-32 overflow-y-auto space-y-1">
+              {fattura.acconti.map((a) => (
+                <div
+                  key={a.id}
+                  className="flex items-center justify-between text-xs bg-gray-50 rounded px-2 py-1"
+                >
+                  <span className="text-gray-700">
+                    {new Date(a.data).toLocaleDateString("it-IT")}
+                    {a.metodoPagamento ? ` · ${a.metodoPagamento}` : ""}
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className="font-semibold text-gray-900">
+                      {fmt(a.importo)}
+                    </span>
+                    <button
+                      onClick={async () => {
+                        if (!confirm("Eliminare questo acconto?")) return;
+                        await fetch(`/api/acconti/${a.id}`, {
+                          method: "DELETE",
+                        });
+                        onSaved();
+                        onClose();
+                      }}
+                      className="text-gray-400 hover:text-red-600"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <div className="space-y-3">
+          <div>
+            <label className="text-xs font-medium text-gray-600 block mb-1">
+              Importo acconto (€) *
+            </label>
+            <input
+              type="number"
+              step="0.01"
+              value={importo}
+              onChange={(e) => setImporto(e.target.value)}
+              placeholder="0.00"
+              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-300"
+            />
+          </div>
+          <div>
+            <label className="text-xs font-medium text-gray-600 block mb-1">
+              Data *
+            </label>
+            <input
+              type="date"
+              value={data}
+              onChange={(e) => setData(e.target.value)}
+              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-300"
+            />
+          </div>
+          <div>
+            <label className="text-xs font-medium text-gray-600 block mb-1">
+              Metodo Pagamento
+            </label>
+            <input
+              type="text"
+              value={metodoPagamento}
+              onChange={(e) => setMetodoPagamento(e.target.value)}
+              placeholder="Bonifico, Contanti, ..."
+              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-300"
+            />
+          </div>
+          <div>
+            <label className="text-xs font-medium text-gray-600 block mb-1">
+              Note
+            </label>
+            <textarea
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              rows={2}
+              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-300"
+            />
+          </div>
+        </div>
+
+        <div className="flex gap-3 pt-2">
+          <button
+            onClick={onClose}
+            className="flex-1 border border-gray-200 text-gray-600 text-sm font-medium py-2.5 rounded-xl hover:bg-gray-50"
+          >
+            Annulla
+          </button>
+          <button
+            onClick={submit}
+            disabled={saving}
+            className="glass-btn-primary flex-1 text-white text-sm font-medium py-2.5 rounded-xl disabled:opacity-50"
+          >
+            {saving ? "Salvataggio..." : "Registra"}
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

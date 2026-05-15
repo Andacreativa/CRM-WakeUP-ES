@@ -45,6 +45,20 @@ model Fattura {
   createdAt     DateTime       @default(now())
   altriIngressi AltroIngresso[]
   spese         Spesa[]
+  acconti       Acconto[]
+}
+
+model Acconto {
+  id               Int      @id @default(autoincrement())
+  fatturaId        Int
+  fattura          Fattura  @relation(fields: [fatturaId], references: [id], onDelete: Cascade)
+  importo          Float
+  data             DateTime
+  metodoPagamento  String?
+  note             String?
+  createdAt        DateTime @default(now())
+
+  @@index([fatturaId])
 }
 
 model AltroIngresso {

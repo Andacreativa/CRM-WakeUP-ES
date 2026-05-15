@@ -50,8 +50,14 @@ export default function BilancioPage() {
         (await fetch(`/api/spese?${params}`)).json() as Promise<any>,
         (await fetch(`/api/altri-ingressi?${params}`)).json() as Promise<any>,
       ]);
-      const fatture: { mese: number; importo: number; pagato?: boolean }[] =
-        Array.isArray(rawF) ? rawF : [];
+      const fatture: {
+        mese: number;
+        importo: number;
+        pagato?: boolean;
+        acconti?: { importo: number }[];
+      }[] = Array.isArray(rawF) ? rawF : [];
+      const sumAcc = (f: { acconti?: { importo: number }[] }) =>
+        (f.acconti ?? []).reduce((s, a) => s + a.importo, 0);
       const spese: { mese: number; importo: number }[] = Array.isArray(rawS)
         ? rawS
         : [];
@@ -71,10 +77,12 @@ export default function BilancioPage() {
       );
       const totAltri = altri.reduce((s: number, a) => s + (a?.importo ?? 0), 0);
 
-      const totFattureIncassate = fatture.reduce(
-        (s: number, f) => (f?.pagato ? s + (f?.importo ?? 0) : s),
-        0,
-      );
+      const totFattureIncassate = fatture.reduce((s: number, f) => {
+        const acc = sumAcc(f);
+        return (
+          s + (f?.pagato || acc >= (f?.importo ?? 0) ? (f?.importo ?? 0) : acc)
+        );
+      }, 0);
       const totAltriIncassati = altri.reduce(
         (s: number, a) => (a?.incassato ? s + (a?.importo ?? 0) : s),
         0,

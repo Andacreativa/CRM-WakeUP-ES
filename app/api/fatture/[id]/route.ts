@@ -45,7 +45,10 @@ export async function PATCH(
         scadenza: body.scadenza ? new Date(body.scadenza) : null,
       }),
     },
-    include: { cliente: true },
+    include: {
+      cliente: true,
+      acconti: { orderBy: { data: "desc" } },
+    },
   });
 
   const beforeType = getSplitType(before.commerciale);

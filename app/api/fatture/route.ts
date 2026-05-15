@@ -13,7 +13,10 @@ export async function GET(request: Request) {
       ...(anno && anno > 0 ? { anno } : {}),
       ...(azienda ? { azienda } : {}),
     },
-    include: { cliente: true },
+    include: {
+      cliente: true,
+      acconti: { orderBy: { data: "desc" } },
+    },
     orderBy: [
       { anno: "desc" },
       { data: "desc" },

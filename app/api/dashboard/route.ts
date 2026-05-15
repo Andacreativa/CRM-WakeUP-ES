@@ -27,7 +27,7 @@ export async function GET(request: Request) {
       altriAnnoPrec,
       speseAnnoPrec,
     ] = await Promise.all([
-      prisma.fattura.findMany({ where: whereBase }),
+      prisma.fattura.findMany({ where: whereBase, include: { acconti: true } }),
       prisma.altroIngresso.findMany({ where: whereBase }),
       prisma.spesa.findMany({ where: whereBase }),
       prisma.cliente.count(),
@@ -46,12 +46,14 @@ export async function GET(request: Request) {
       0,
     );
     const totaleEntrate = totaleFatture + totaleAltriIngressi;
-    const totaleFatturePagate = fatture
-      .filter((f) => f.pagato)
-      .reduce((s: number, f) => s + f.importo, 0);
-    const totaleFattureInAttesa = fatture
-      .filter((f) => !f.pagato)
-      .reduce((s: number, f) => s + f.importo, 0);
+    const totaleFatturePagate = fatture.reduce((s: number, f) => {
+      const sum = (f.acconti ?? []).reduce((a, b) => a + b.importo, 0);
+      return s + (f.pagato || sum >= f.importo ? f.importo : sum);
+    }, 0);
+    const totaleFattureInAttesa = fatture.reduce((s: number, f) => {
+      const sum = (f.acconti ?? []).reduce((a, b) => a + b.importo, 0);
+      return s + (f.pagato || sum >= f.importo ? 0 : f.importo - sum);
+    }, 0);
     const totaleSpese = spese.reduce((s: number, e) => s + e.importo, 0);
     const bilancio = totaleEntrate - totaleSpese;
 

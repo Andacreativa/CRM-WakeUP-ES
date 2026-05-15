@@ -225,18 +225,31 @@ export function fattureToExcel(
     anno: number;
     importo: number;
     pagato: boolean;
+    acconti?: { importo: number }[];
   }[],
   MESI: string[],
 ) {
-  return fatture.map((f) => ({
-    Cliente: f.cliente?.nome ?? "",
-    Paese: f.cliente?.paese ?? "",
-    Azienda: f.azienda,
-    Mese: MESI[f.mese - 1],
-    Anno: f.anno,
-    Importo: f.importo,
-    Stato: f.pagato ? "Pagato" : "In Attesa",
-  }));
+  return fatture.map((f) => {
+    const accRicevuto = (f.acconti ?? []).reduce((s, a) => s + a.importo, 0);
+    const residuo = Math.max(0, f.importo - accRicevuto);
+    const stato =
+      f.pagato || accRicevuto >= f.importo
+        ? "Pagato"
+        : accRicevuto > 0
+          ? "Acconto"
+          : "In Attesa";
+    return {
+      Cliente: f.cliente?.nome ?? "",
+      Paese: f.cliente?.paese ?? "",
+      Azienda: f.azienda,
+      Mese: MESI[f.mese - 1],
+      Anno: f.anno,
+      Importo: f.importo,
+      "Acconto Ricevuto": accRicevuto,
+      Residuo: f.pagato || accRicevuto >= f.importo ? 0 : residuo,
+      Stato: stato,
+    };
+  });
 }
 
 export function fattureToPDF(
@@ -246,25 +259,44 @@ export function fattureToPDF(
     mese: number;
     importo: number;
     pagato: boolean;
+    acconti?: { importo: number }[];
   }[],
   MESI: string[],
   title: string,
 ) {
-  const cols = ["Cliente", "Paese", "Azienda", "Mese", "Importo", "Stato"];
-  const rows: CellInput[][] = fatture.map((f) => [
-    f.cliente?.nome ?? "",
-    f.cliente?.paese ?? "",
-    f.azienda,
-    MESI[f.mese - 1],
-    fmt(f.importo),
-    {
-      content: f.pagato ? "Pagato" : "In Attesa",
-      styles: {
-        textColor: f.pagato ? GREEN : ORANGE,
-        fontStyle: "bold",
+  const cols = [
+    "Cliente",
+    "Paese",
+    "Azienda",
+    "Mese",
+    "Importo",
+    "Residuo",
+    "Stato",
+  ];
+  const rows: CellInput[][] = fatture.map((f) => {
+    const accRicevuto = (f.acconti ?? []).reduce((s, a) => s + a.importo, 0);
+    const isPagato = f.pagato || accRicevuto >= f.importo;
+    const residuo = isPagato ? 0 : Math.max(0, f.importo - accRicevuto);
+    const isAcconto = !isPagato && accRicevuto > 0;
+    const statoLabel = isPagato ? "Pagato" : isAcconto ? "Acconto" : "In Attesa";
+    const statoColor: [number, number, number] = isPagato
+      ? GREEN
+      : isAcconto
+        ? ORANGE
+        : ORANGE;
+    return [
+      f.cliente?.nome ?? "",
+      f.cliente?.paese ?? "",
+      f.azienda,
+      MESI[f.mese - 1],
+      fmt(f.importo),
+      accRicevuto > 0 && !isPagato ? fmt(residuo) : "—",
+      {
+        content: statoLabel,
+        styles: { textColor: statoColor, fontStyle: "bold" as const },
       },
-    },
-  ]);
+    ];
+  });
   return { cols, rows, title };
 }
 
