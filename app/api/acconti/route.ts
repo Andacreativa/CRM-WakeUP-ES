@@ -41,14 +41,7 @@ export async function POST(request: Request) {
       fattura.acconti.reduce((s, a) => s + a.importo, 0) + importo;
     const residuo = Math.max(0, fattura.importo - totalePagato);
 
-    let pagato = fattura.pagato;
-    if (!pagato && totalePagato >= fattura.importo) {
-      await prisma.fattura.update({
-        where: { id: fatturaId },
-        data: { pagato: true },
-      });
-      pagato = true;
-    }
+    const pagato = fattura.pagato;
 
     return NextResponse.json({ acconto, totalePagato, residuo, pagato });
   } catch (e) {

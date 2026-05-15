@@ -70,7 +70,8 @@ const totalePagato = (f: Fattura) =>
   (f.acconti ?? []).reduce((s, a) => s + a.importo, 0);
 const residuo = (f: Fattura) => Math.max(0, f.importo - totalePagato(f));
 const statoCalcolato = (f: Fattura): "pagato" | "acconto" | "attesa" => {
-  if (f.pagato || totalePagato(f) >= f.importo) return "pagato";
+  if (f.pagato) return "pagato";
+  if (totalePagato(f) >= f.importo) return "pagato";
   if (totalePagato(f) > 0) return "acconto";
   return "attesa";
 };
@@ -135,6 +136,7 @@ export default function FatturePage() {
   const [page, setPage] = useState(1);
   const [showImport, setShowImport] = useState(false);
   const [accontoTarget, setAccontoTarget] = useState<Fattura | null>(null);
+  const [togglingId, setTogglingId] = useState<number | null>(null);
 
   const load = async () => {
     const params = new URLSearchParams();
@@ -189,28 +191,74 @@ export default function FatturePage() {
       scadenza: form.scadenza || null,
       aziendaNota: form.azienda === "Altro" ? form.aziendaNota : null,
     };
-    if (editing)
-      await fetch(`/api/fatture/${editing.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-    else
-      await fetch("/api/fatture", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
+    console.log(
+      `[save] ${editing ? "PATCH" : "POST"} /api/fatture${editing ? "/" + editing.id : ""}`,
+      payload,
+    );
+    const url = editing ? `/api/fatture/${editing.id}` : "/api/fatture";
+    const method = editing ? "PATCH" : "POST";
+    const res = await fetch(url, {
+      method,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    const body = await res
+      .json()
+      .catch(() => ({ error: "non-JSON response" }));
+    if (!res.ok) {
+      console.error(
+        `[save] ${method} FAILED status=${res.status}`,
+        body,
+      );
+      alert(
+        `Errore salvataggio (${res.status}): ${body.error ?? "errore"}${body.stage ? ` [stage=${body.stage}]` : ""}`,
+      );
+      return;
+    }
+    console.log(`[save] OK pagato=${body.pagato}`);
     setShowForm(false);
+    if (editing) {
+      setFatture((prev) =>
+        prev.map((x) => (x.id === editing.id ? { ...x, ...body } : x)),
+      );
+    }
     load();
   };
   const togglePagato = async (f: Fattura) => {
-    await fetch(`/api/fatture/${f.id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ pagato: !f.pagato }),
-    });
-    load();
+    if (togglingId === f.id) return;
+    setTogglingId(f.id);
+    try {
+      const newPagato = !f.pagato;
+      console.log(
+        `[togglePagato] fattura #${f.id} (${f.numero}) ${f.pagato} → ${newPagato}`,
+      );
+      const res = await fetch(`/api/fatture/${f.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ pagato: newPagato }),
+      });
+      const body = await res
+        .json()
+        .catch(() => ({ error: "non-JSON response" }));
+      if (!res.ok) {
+        console.error(
+          `[togglePagato] PATCH FAILED status=${res.status}`,
+          body,
+        );
+        alert(
+          `Errore aggiornamento stato (${res.status}): ${body.error ?? "errore"}${body.stage ? ` [stage=${body.stage}]` : ""}`,
+        );
+      } else {
+        console.log(
+          `[togglePagato] OK pagato=${body.pagato} (server response)`,
+        );
+        setFatture((prev) =>
+          prev.map((x) => (x.id === f.id ? { ...x, pagato: body.pagato } : x)),
+        );
+      }
+    } finally {
+      setTogglingId(null);
+    }
   };
   const del = async (id: number) => {
     if (!confirm("Eliminare questa fattura?")) return;
@@ -485,7 +533,7 @@ export default function FatturePage() {
             )}
             {paged.map((f, i) => (
               <tr
-                key={f.id}
+                key={`${f.id}-${f.pagato}-${totalePagato(f)}`}
                 className={`border-b border-gray-50 transition-colors ${i % 2 === 1 ? "bg-[#F9F9F9]" : "bg-white"}`}
               >
                 <td className="px-4 py-3 text-sm font-mono font-medium text-gray-700 whitespace-nowrap">
@@ -543,8 +591,16 @@ export default function FatturePage() {
                     if (stato === "pagato") {
                       return (
                         <button
-                          onClick={() => togglePagato(f)}
-                          className="inline-flex items-center gap-1 text-xs font-medium px-3 py-1 rounded-full transition-colors bg-emerald-100 text-emerald-700 hover:bg-emerald-200"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (f.acconti && f.acconti.length > 0) {
+                              setAccontoTarget(f);
+                            } else {
+                              togglePagato(f);
+                            }
+                          }}
+                          disabled={togglingId === f.id}
+                          className="inline-flex items-center gap-1 text-xs font-medium px-3 py-1 rounded-full transition-colors bg-emerald-100 text-emerald-700 hover:bg-emerald-200 disabled:opacity-60 disabled:cursor-wait"
                         >
                           <Check className="w-3 h-3" /> Pagato
                         </button>
@@ -562,8 +618,12 @@ export default function FatturePage() {
                     }
                     return (
                       <button
-                        onClick={() => togglePagato(f)}
-                        className="inline-flex items-center gap-1 text-xs font-medium px-3 py-1 rounded-full transition-colors bg-amber-100 text-amber-700 hover:bg-amber-200"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          togglePagato(f);
+                        }}
+                        disabled={togglingId === f.id}
+                        className="inline-flex items-center gap-1 text-xs font-medium px-3 py-1 rounded-full transition-colors bg-amber-100 text-amber-700 hover:bg-amber-200 disabled:opacity-60 disabled:cursor-wait"
                       >
                         <X className="w-3 h-3" /> In Attesa
                       </button>
