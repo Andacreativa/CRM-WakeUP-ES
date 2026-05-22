@@ -24,6 +24,7 @@ export const CATEGORIE_SPESA = [
   "Fornitori",
   "Soci",
   "Costi Bancari",
+  "Ufficio",
   "Altro",
 ];
 
@@ -61,6 +62,7 @@ export const CATEGORIE_COLORI: Record<string, string> = {
   Fornitori: "#D4E8A0", // verde oliva chiaro
   Tasse: "#FFC9A0", // pesca pastello (non specificato, coerente)
   "Costi Aziendali": "#C8E6F0", // azzurro tenue (non specificato)
+  Ufficio: "#FFE0B0", // ambra pastello
   Altro: "#EDEDED", // grigio neutro
 };
 
@@ -80,6 +82,7 @@ export const CATEGORIE_COLORI_CHART: Record<string, string> = {
   Fornitori: "#8DB84A",
   Tasse: "#FF9940",
   "Costi Aziendali": "#5BA9D8",
+  Ufficio: "#F5A623",
   Altro: "#B0B0B0",
 };
 
