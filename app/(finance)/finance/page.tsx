@@ -321,13 +321,13 @@ export default function Dashboard() {
               Nessuna spesa
             </div>
           ) : (
-            <ResponsiveContainer width="100%" height={220}>
-              <PieChart>
+            <ResponsiveContainer width="100%" height={380}>
+              <PieChart margin={{ top: 20, right: 20, bottom: 20, left: 20 }}>
                 {}
                 <Pie
                   data={data.categorieSpese ?? []}
                   cx="50%"
-                  cy="50%"
+                  cy="42%"
                   innerRadius={55}
                   outerRadius={80}
                   dataKey="value"
@@ -346,7 +346,12 @@ export default function Dashboard() {
                 <Legend
                   iconType="circle"
                   iconSize={8}
-                  wrapperStyle={{ fontSize: 11, color: "#1f2937" }}
+                  verticalAlign="bottom"
+                  wrapperStyle={{
+                    fontSize: 11,
+                    color: "#1f2937",
+                    paddingTop: 20,
+                  }}
                 />
               </PieChart>
             </ResponsiveContainer>
