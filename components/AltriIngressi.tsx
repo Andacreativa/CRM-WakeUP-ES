@@ -54,7 +54,12 @@ export default function AltriIngressi({ anno, azienda, onChanged }: Props) {
     const data = (await (
       await fetch(`/api/altri-ingressi?${params}`)
     ).json()) as any;
-    setRows(Array.isArray(data) ? data : []);
+    const arr: AltroIngresso[] = Array.isArray(data) ? data : [];
+    arr.sort((a, b) => {
+      if (b.anno !== a.anno) return b.anno - a.anno;
+      return b.mese - a.mese;
+    });
+    setRows(arr);
   };
   useEffect(() => {
     load();
