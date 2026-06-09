@@ -44,6 +44,7 @@ model Fattura {
   inviata       Boolean        @default(false)
   dataInvio     DateTime?
   checkInvio    String         @default("in_attesa")
+  origine       String         @default("finance")
   metodo        String?
   commerciale   String?
   scadenza      DateTime?

@@ -53,6 +53,7 @@ export async function POST(request: Request) {
       pagato: body.pagato || false,
       inviata: body.inviata || false,
       dataInvio: body.dataInvio ? new Date(body.dataInvio) : null,
+      origine: body.origine || "finance",
       metodo: body.metodo || null,
       commerciale: body.commerciale || null,
       scadenza: body.scadenza ? new Date(body.scadenza) : null,

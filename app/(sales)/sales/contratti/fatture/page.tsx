@@ -281,6 +281,7 @@ export default function FattureContrattiPage() {
       scadenza: form.scadenza || null,
       dataInvio: form.dataInvio || null,
       aziendaNota: form.azienda === "Altro" ? form.aziendaNota : null,
+      origine: "sales",
     };
     const url = editing ? `/api/fatture/${editing.id}` : "/api/fatture";
     const method = editing ? "PATCH" : "POST";
@@ -402,6 +403,12 @@ export default function FattureContrattiPage() {
   const totaleNonEmesse = filtered
     .filter((f) => !f.inviata)
     .reduce((s, f) => s + (f?.importo ?? 0), 0);
+  const totaleIncassate = filtered
+    .filter((f) => f.pagato)
+    .reduce((s, f) => s + (f?.importo ?? 0), 0);
+  const totaleNonIncassate = filtered
+    .filter((f) => !f.pagato)
+    .reduce((s, f) => s + (f?.importo ?? 0), 0);
 
   return (
     <div className="space-y-6">
@@ -490,7 +497,7 @@ export default function FattureContrattiPage() {
       </div>
 
       {/* KPI */}
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
         {[
           { label: "Totale", val: fmt(totale), color: "text-gray-900" },
           {
@@ -502,6 +509,16 @@ export default function FattureContrattiPage() {
             label: "Non Emesse",
             val: fmt(totaleNonEmesse),
             color: "text-gray-500",
+          },
+          {
+            label: "Incassate",
+            val: fmt(totaleIncassate),
+            color: "text-emerald-600",
+          },
+          {
+            label: "Non Incassate",
+            val: fmt(totaleNonIncassate),
+            color: "text-amber-600",
           },
         ].map((k) => (
           <div key={k.label} className="glass-card rounded-2xl p-4">
@@ -809,6 +826,7 @@ export default function FattureContrattiPage() {
           pageSize={pageSize}
           onPage={setPage}
           labelSuffix="fatture"
+          accentColor={BRAND}
         />
       )}
 
