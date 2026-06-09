@@ -27,11 +27,16 @@ export async function GET(request: Request) {
       altriAnnoPrec,
       speseAnnoPrec,
     ] = await Promise.all([
-      prisma.fattura.findMany({ where: whereBase, include: { acconti: true } }),
+      prisma.fattura.findMany({
+        where: { ...whereBase, origine: { not: "sales" } },
+        include: { acconti: true },
+      }),
       prisma.altroIngresso.findMany({ where: whereBase }),
       prisma.spesa.findMany({ where: whereBase }),
       prisma.cliente.count(),
-      prisma.fattura.findMany({ where: wherePrec }),
+      prisma.fattura.findMany({
+        where: { ...wherePrec, origine: { not: "sales" } },
+      }),
       prisma.altroIngresso.findMany({ where: wherePrec }),
       prisma.spesa.findMany({ where: wherePrec }),
     ]);
@@ -65,6 +70,7 @@ export async function GET(request: Request) {
       where: {
         pagato: false,
         scadenza: { not: null },
+        origine: { not: "sales" },
         ...(isAllYears ? {} : { anno }),
       },
       include: { cliente: true },
@@ -107,7 +113,7 @@ export async function GET(request: Request) {
 
     // Ultime fatture — ordine data decrescente (anno/mese, poi createdAt come tiebreak)
     const ultimeFatture = await prisma.fattura.findMany({
-      where: whereBase,
+      where: { ...whereBase, origine: { not: "sales" } },
       include: { cliente: true },
       orderBy: [{ anno: "desc" }, { mese: "desc" }, { createdAt: "desc" }],
       take: 5,
