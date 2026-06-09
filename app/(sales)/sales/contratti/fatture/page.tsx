@@ -269,6 +269,7 @@ export default function FattureContrattiPage() {
   };
 
   const save = async () => {
+    console.log("[save] chiamato", form);
     if (!form.importo) return;
     const ivaPct = form.tipoIva === "igic7" ? 7 : 0;
     const payload = {
@@ -283,14 +284,15 @@ export default function FattureContrattiPage() {
     };
     const url = editing ? `/api/fatture/${editing.id}` : "/api/fatture";
     const method = editing ? "PATCH" : "POST";
+    console.log("[save] payload:", payload);
     const res = await fetch(url, {
       method,
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     });
-    const body = await res
-      .json()
-      .catch(() => ({ error: "non-JSON response" }));
+    console.log("[save] status:", res.status);
+    const body = await res.json().catch(() => ({}));
+    console.log("[save] body:", body);
     if (!res.ok) {
       alert(
         `Errore salvataggio (${res.status}): ${body.error ?? "errore"}${body.stage ? ` [stage=${body.stage}]` : ""}`,
@@ -946,16 +948,21 @@ export default function FattureContrattiPage() {
                   <label className="text-xs font-medium text-gray-600 block mb-1">
                     Importo (€) *
                   </label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={form.importo}
-                    onChange={(e) =>
-                      setForm((f) => ({ ...f, importo: e.target.value }))
-                    }
-                    placeholder="0.00"
-                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-300"
-                  />
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">
+                      €
+                    </span>
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={form.importo}
+                      onChange={(e) =>
+                        setForm((f) => ({ ...f, importo: e.target.value }))
+                      }
+                      placeholder="0.00"
+                      className="w-full border border-gray-200 rounded-lg pl-7 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-300"
+                    />
+                  </div>
                 </div>
               </div>
               <div>
