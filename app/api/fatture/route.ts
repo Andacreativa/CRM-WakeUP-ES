@@ -10,6 +10,7 @@ export async function GET(request: Request) {
 
   const fatture = await prisma.fattura.findMany({
     where: {
+      origine: { not: "sales" },
       ...(anno && anno > 0 ? { anno } : {}),
       ...(azienda ? { azienda } : {}),
     },
