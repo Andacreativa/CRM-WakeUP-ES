@@ -340,6 +340,52 @@ export default function ContattiPage() {
               </div>
             </div>
 
+            <div>
+              <label className="text-xs font-medium text-gray-600 block mb-1">
+                Paese
+              </label>
+              <div className="flex gap-2">
+                {(["Spagna", "Italia"] as const).map((p) => {
+                  const active = form.paese === p;
+                  return (
+                    <button
+                      key={p}
+                      type="button"
+                      onClick={() =>
+                        setForm((f) => {
+                          const stripped = (f.partitaIva ?? "")
+                            .replace(/^IT/i, "")
+                            .trim();
+                          return {
+                            ...f,
+                            paese: p,
+                            partitaIva:
+                              p === "Italia" ? `IT${stripped}` : stripped,
+                          };
+                        })
+                      }
+                      className="flex-1 text-sm py-2 rounded-lg border font-semibold transition-all"
+                      style={
+                        active
+                          ? {
+                              background: BRAND,
+                              color: "#fff",
+                              borderColor: BRAND,
+                            }
+                          : {
+                              background: "#fff",
+                              borderColor: "#e2e8f0",
+                              color: "#94a3b8",
+                            }
+                      }
+                    >
+                      {p}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
             <div className="space-y-3">
               <div className="grid grid-cols-2 gap-3">
                 <div className="col-span-2">

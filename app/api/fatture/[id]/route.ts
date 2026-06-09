@@ -52,6 +52,14 @@ export async function PATCH(
         ...(body.scadenza !== undefined && {
           scadenza: body.scadenza ? new Date(body.scadenza) : null,
         }),
+        ...(body.contrattoId !== undefined && {
+          contrattoId: body.contrattoId ?? null,
+        }),
+        ...(body.inviata !== undefined && { inviata: body.inviata }),
+        ...(body.dataInvio !== undefined && {
+          dataInvio: body.dataInvio ? new Date(body.dataInvio) : null,
+        }),
+        ...(body.checkInvio !== undefined && { checkInvio: body.checkInvio }),
       },
       include: {
         cliente: true,

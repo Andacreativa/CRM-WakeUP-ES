@@ -31,6 +31,8 @@ model Fattura {
   data          DateTime?
   clienteId     Int?
   cliente       Cliente?       @relation(fields: [clienteId], references: [id], onDelete: SetNull)
+  contrattoId   Int?
+  contratto     Contratto?     @relation(fields: [contrattoId], references: [id], onDelete: SetNull)
   azienda       String         @default("Spagna")
   aziendaNota   String?
   mese          Int
@@ -39,6 +41,9 @@ model Fattura {
   tipoIva       String         @default("iva")
   iva           Float          @default(21)
   pagato        Boolean        @default(false)
+  inviata       Boolean        @default(false)
+  dataInvio     DateTime?
+  checkInvio    String         @default("in_attesa")
   metodo        String?
   commerciale   String?
   scadenza      DateTime?
@@ -46,6 +51,8 @@ model Fattura {
   altriIngressi AltroIngresso[]
   spese         Spesa[]
   acconti       Acconto[]
+
+  @@index([contrattoId])
 }
 
 model Acconto {
@@ -271,4 +278,5 @@ model Contratto {
   note                 String?
   createdAt            DateTime    @default(now())
   updatedAt            DateTime    @updatedAt
+  fatture              Fattura[]
 }

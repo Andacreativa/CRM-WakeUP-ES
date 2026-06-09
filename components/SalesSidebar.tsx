@@ -7,6 +7,7 @@ import {
   Users,
   FileText,
   FileSignature,
+  Receipt,
   Home,
   LogOut,
   Menu,
@@ -24,6 +25,7 @@ const navItems = [
   { href: "/sales/contatti", label: "Contatti", icon: Users },
   { href: "/sales/preventivi", label: "Preventivi", icon: FileText },
   { href: "/sales/contratti", label: "Contratti", icon: FileSignature },
+  { href: "/sales/contratti/fatture", label: "Fatture", icon: Receipt },
 ];
 
 export default function SalesSidebar() {
