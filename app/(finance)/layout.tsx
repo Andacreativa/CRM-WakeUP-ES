@@ -11,7 +11,7 @@ export default function FinanceLayout({
       <Providers>
         <Sidebar />
         <main className="flex-1 md:ml-60 min-h-screen p-4 pt-14 md:p-8">
-          {children}
+          <div className="max-w-[1100px] mx-auto px-6">{children}</div>
         </main>
       </Providers>
     </div>
