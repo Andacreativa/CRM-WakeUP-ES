@@ -127,24 +127,20 @@ export default function BilancioPage() {
   const meseCorrente = oggi.getMonth() + 1;
   const mesiTrascorsi =
     anno < annoCorrente ? 12 : anno === annoCorrente ? meseCorrente : 0;
-  const meseLabel = MESI[Math.max(0, mesiTrascorsi - 1)] ?? "";
-  const periodoStipendiLabel =
-    mesiTrascorsi === 12
-      ? `gen-dic`
-      : mesiTrascorsi > 0
-        ? `gen-${meseLabel.slice(0, 3).toLowerCase()}`
-        : "—";
-  const contributoStipendi = 2000 * mesiTrascorsi;
+  const contributoStipendi = 4000 * mesiTrascorsi;
+  const contributoStipendiSubLabel =
+    "(nomina, seguridad social, irpf, cont comunidad, imp personali)";
 
   // Spese Ufficio: €390/mese × mesi trascorsi nell'anno (attive dal 2026)
   const UFFICIO_START_YEAR = 2026;
   const UFFICIO_RATE = 390;
   const ufficioMesi = anno >= UFFICIO_START_YEAR ? mesiTrascorsi : 0;
   const ufficioCosto = ufficioMesi * UFFICIO_RATE;
-  const ufficioSubLabel =
-    ufficioMesi > 0 ? `(€390/mese da gen · ${ufficioMesi} mesi)` : "—";
+  const ufficioSubLabel = "(alquiler spazio di lavoro 3pp)";
 
-  const costiGestione = baseFatturato * 0.15;
+  const costiGestione = baseFatturato * 0.2;
+  const costiGestioneSubLabel =
+    "(banca, commercialista, tasse, studio paghe, spese materiale, spese rappresentanza ecc...)";
   const totaleCostiVirtuali = contributoStipendi + ufficioCosto + costiGestione;
   const margineNettoStimato = baseFatturato - totaleCostiVirtuali;
   const modalitaLabel =
@@ -181,14 +177,14 @@ export default function BilancioPage() {
         { Voce: `Modalità calcolo: ${modalitaLabel}`, Valore: "" },
         { Voce: fatturatoLabel, Valore: baseFatturato },
         {
-          Voce: `Contributi costo dipendenti (€2.000 × ${mesiTrascorsi} mesi · ${periodoStipendiLabel})`,
+          Voce: `Contributi costo dipendenti ${contributoStipendiSubLabel}`,
           Valore: contributoStipendi,
         },
         {
           Voce: `Spese Ufficio ${ufficioSubLabel}`,
           Valore: ufficioCosto,
         },
-        { Voce: "Costi Gestione Aziendale (15%)", Valore: costiGestione },
+        { Voce: `Costi Gestione Aziendale ${costiGestioneSubLabel}`, Valore: costiGestione },
         { Voce: "Totale Costi Virtuali", Valore: totaleCostiVirtuali },
         { Voce: "Margine Netto Stimato", Valore: margineNettoStimato },
       ];
@@ -288,7 +284,7 @@ export default function BilancioPage() {
       },
       {
         label: "Contributi costo dipendenti",
-        sub: `(€2.000 × ${mesiTrascorsi} mesi · ${periodoStipendiLabel})`,
+        sub: contributoStipendiSubLabel,
         value: fmt(contributoStipendi),
         color: [220, 38, 38], // red-600
         separator: "thin",
@@ -302,7 +298,7 @@ export default function BilancioPage() {
       },
       {
         label: "Costi Gestione Aziendale",
-        sub: `(15% ${modalita === "incassato" ? "incassato" : "fatturato"})`,
+        sub: costiGestioneSubLabel,
         value: fmt(costiGestione),
         color: [220, 38, 38],
         separator: "thin",
@@ -709,7 +705,7 @@ export default function BilancioPage() {
                 <td className="py-2 text-gray-700">
                   Contributi costo dipendenti
                   <span className="text-xs text-gray-500 ml-1">
-                    (€2.000 × {mesiTrascorsi} mesi · {periodoStipendiLabel})
+                    {contributoStipendiSubLabel}
                   </span>
                 </td>
                 <td className="py-2 text-right font-medium text-red-600 tabular-nums">
@@ -731,7 +727,7 @@ export default function BilancioPage() {
                 <td className="py-2 text-gray-700">
                   Costi Gestione Aziendale
                   <span className="text-xs text-gray-500 ml-1">
-                    (15% {modalita === "incassato" ? "incassato" : "fatturato"})
+                    {costiGestioneSubLabel}
                   </span>
                 </td>
                 <td className="py-2 text-right font-medium text-red-600 tabular-nums">
