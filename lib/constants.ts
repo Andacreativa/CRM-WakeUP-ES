@@ -98,7 +98,8 @@ export function fmt(n: number | null | undefined): string {
   const abs = Math.abs(value);
   const [intPart, decPart] = abs.toFixed(2).split(".");
   const intWithSep = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
-  return `${negative ? "-" : ""}${intWithSep},${decPart} €`;
+  // Non-breaking space per evitare che il simbolo € vada a capo su colonne strette
+  return `${negative ? "-" : ""}${intWithSep},${decPart} €`;
 }
 
 // Anni disponibili dal 2024 all'anno corrente, ordine decrescente

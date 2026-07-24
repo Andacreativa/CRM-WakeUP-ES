@@ -34,8 +34,11 @@ interface Preventivo {
   note: string | null;
   condizioni: string | null;
   dataScadenza: string | null;
+  lingua: string;
   createdAt: string;
 }
+
+type Lingua = "it" | "es" | "en";
 
 interface Contatto {
   id: number;
@@ -98,7 +101,20 @@ const newVoce = (): Voce => ({
   tipo: "mensile",
 });
 
-const emptyForm = {
+const emptyForm: {
+  oggetto: string;
+  nomeCliente: string;
+  emailCliente: string;
+  aziendaCliente: string;
+  azienda: string;
+  iva: number;
+  feeCommerciale: number;
+  status: string;
+  note: string;
+  condizioni: string;
+  dataScadenza: string;
+  lingua: Lingua;
+} = {
   oggetto: "",
   nomeCliente: "",
   emailCliente: "",
@@ -110,6 +126,7 @@ const emptyForm = {
   note: "",
   condizioni: DEFAULT_CONDIZIONI,
   dataScadenza: "",
+  lingua: "it",
 };
 
 export default function PreventiviPage() {
@@ -121,6 +138,7 @@ export default function PreventiviPage() {
   const [voci, setVoci] = useState<Voce[]>([newVoce()]);
   const [filtroStatus, setFiltroStatus] = useState("tutti");
   const [genContratto, setGenContratto] = useState<Preventivo | null>(null);
+  const [downloadingId, setDownloadingId] = useState<number | null>(null);
 
   const load = async () => {
     const [p, c]: any[] = await Promise.all([
@@ -162,6 +180,11 @@ export default function PreventiviPage() {
       note: p.note || "",
       condizioni: p.condizioni || DEFAULT_CONDIZIONI,
       dataScadenza: p.dataScadenza ? p.dataScadenza.slice(0, 10) : "",
+      lingua: (p.lingua === "es"
+        ? "es"
+        : p.lingua === "en"
+          ? "en"
+          : "it") as Lingua,
     });
     try {
       const parsed: (VocePreventivoData & { tipo?: TipoVoce })[] = JSON.parse(
@@ -238,22 +261,75 @@ export default function PreventiviPage() {
     load();
   };
 
-  const downloadPDF = (p: Preventivo) => {
+  const downloadPDF = async (p: Preventivo) => {
+    if (downloadingId === p.id) return;
+    setDownloadingId(p.id);
+    try {
+    const lingua: Lingua = (p.lingua === "es"
+      ? "es"
+      : p.lingua === "en"
+        ? "en"
+        : "it") as Lingua;
+
+    let oggetto = p.oggetto;
+    let vociJson = p.voci;
+    let condizioni = p.condizioni;
+    let note = p.note;
+
+    if (lingua !== "it") {
+      try {
+        const vociParsed = JSON.parse(p.voci);
+        const res = await fetch("/api/translate-preventivo", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            targetLang: lingua,
+            oggetto: p.oggetto,
+            condizioni: p.condizioni ?? "",
+            note: p.note ?? "",
+            voci: vociParsed,
+          }),
+        });
+        if (res.ok) {
+          const t = await res.json();
+          oggetto = t.oggetto ?? oggetto;
+          condizioni = t.condizioni ?? condizioni;
+          note = t.note ?? note;
+          vociJson = JSON.stringify(t.voci ?? vociParsed);
+        } else {
+          const err = await res.json().catch(() => ({}));
+          alert(
+            `Traduzione fallita (${res.status}): ${err.error ?? "errore"}\nPDF generato con testo originale.`,
+          );
+        }
+      } catch (e) {
+        console.error("[downloadPDF] translate error:", e);
+        alert(
+          "Errore traduzione. PDF generato con testo originale.\n" +
+            (e instanceof Error ? e.message : String(e)),
+        );
+      }
+    }
+
     exportPreventivoPDF({
       numero: p.numero,
       nomeCliente: p.nomeCliente,
       emailCliente: p.emailCliente,
       aziendaCliente: p.aziendaCliente,
       azienda: p.azienda,
-      oggetto: p.oggetto,
-      voci: p.voci,
+      oggetto,
+      voci: vociJson,
       iva: p.iva,
       subtotale: p.subtotale,
       totale: p.totale,
-      condizioni: p.condizioni,
-      note: p.note,
+      condizioni,
+      note,
       createdAt: p.createdAt,
+      lingua,
     });
+    } finally {
+      setDownloadingId(null);
+    }
   };
 
   const filtered = (preventivi ?? []).filter(
@@ -466,8 +542,13 @@ export default function PreventiviPage() {
                       )}
                       <button
                         onClick={() => downloadPDF(p)}
-                        title="Scarica PDF"
-                        className="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                        disabled={downloadingId === p.id}
+                        title={
+                          downloadingId === p.id
+                            ? "Traduzione in corso..."
+                            : "Scarica PDF"
+                        }
+                        className="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors disabled:opacity-50 disabled:cursor-wait"
                       >
                         <Download className="w-4 h-4" />
                       </button>
@@ -594,6 +675,48 @@ export default function PreventiviPage() {
                     );
                   })}
                 </div>
+              </div>
+            </div>
+
+            {/* Lingua PDF */}
+            <div>
+              <label className="text-xs font-medium text-gray-600 block mb-1">
+                Lingua PDF
+              </label>
+              <div className="flex gap-2">
+                {(
+                  [
+                    { v: "it", l: "Italiano" },
+                    { v: "es", l: "Español" },
+                    { v: "en", l: "English" },
+                  ] as const
+                ).map(({ v, l }) => {
+                  const active = form.lingua === v;
+                  return (
+                    <button
+                      key={v}
+                      onClick={() =>
+                        setForm((f) => ({ ...f, lingua: v as Lingua }))
+                      }
+                      className="flex-1 text-sm py-2 rounded-lg border font-semibold transition-all"
+                      style={
+                        active
+                          ? {
+                              background: BRAND,
+                              color: "#fff",
+                              borderColor: BRAND,
+                            }
+                          : {
+                              background: "#fff",
+                              borderColor: "#e2e8f0",
+                              color: "#94a3b8",
+                            }
+                      }
+                    >
+                      {l}
+                    </button>
+                  );
+                })}
               </div>
             </div>
 

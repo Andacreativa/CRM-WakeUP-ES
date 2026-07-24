@@ -254,6 +254,7 @@ model Preventivo {
   note           String?
   condizioni     String?
   dataScadenza   DateTime?
+  lingua         String       @default("it") // it | es | en
   createdAt      DateTime     @default(now())
   contratti      Contratto[]
 }

@@ -23,6 +23,7 @@ export interface PreventivoPDFData {
   condizioni?: string | null;
   note?: string | null;
   createdAt: string | Date;
+  lingua?: "it" | "es" | "en";
 }
 
 // ── Excel ──────────────────────────────────────────────────────────────────
@@ -301,7 +302,131 @@ export function fattureToPDF(
 }
 
 // ── Preventivo PDF ────────────────────────────────────────────────────────
+const PREVENTIVO_T = {
+  it: {
+    title: "PROPOSTA COMMERCIALE",
+    preparatoDa: "PREPARATO DA",
+    destinatario: "DESTINATARIO",
+    dataEmissione: "DATA EMISSIONE",
+    nPreventivo: "N. PREVENTIVO",
+    validita: "VALIDITÀ OFFERTA",
+    validitaValue: "30 giorni dalla data di emissione",
+    footerNote:
+      "Il presente preventivo ha validità 30 giorni dalla data di emissione.",
+    pag: "Pag.",
+    perimetro: "PERIMETRO DEI SERVIZI",
+    scopeHeaders: ["#", "Servizio", "Descrizione sintetica"] as string[],
+    piano: "PIANO TARIFFARIO",
+    mensiliTitle: "Servizi mensili ricorrenti",
+    mensiliHeaders: ["Servizio", "Mesi", "Costo mensile", "Totale"] as string[],
+    tantumTitle: "Servizi una tantum",
+    tantumHeaders: [
+      "Servizio",
+      "Q.tà",
+      "Prezzo unitario",
+      "Totale",
+    ] as string[],
+    importoMensile: "Importo mensile ricorrente",
+    mesi: "mesi",
+    subtotale: "Subtotale",
+    iva: "IVA",
+    totale: "TOTALE",
+    condizioni: "CONDIZIONI COMMERCIALI",
+    firma: "FIRMA E ACCETTAZIONE",
+    firmaDesc:
+      "Per accettazione della presente proposta, si prega di restituire il documento firmato.",
+    perAnda: "Per Anda Agencia de Publicidad SL",
+    leo: "Leonardo Mestre, Amministratore",
+    per: "Per",
+    firmaLabel: "Firma",
+    locale: "it-IT",
+  },
+  es: {
+    title: "PROPUESTA COMERCIAL",
+    preparatoDa: "PREPARADO POR",
+    destinatario: "DESTINATARIO",
+    dataEmissione: "FECHA DE EMISIÓN",
+    nPreventivo: "N.º PROPUESTA",
+    validita: "VALIDEZ DE LA OFERTA",
+    validitaValue: "30 días desde la fecha de emisión",
+    footerNote:
+      "La presente propuesta tiene validez de 30 días desde la fecha de emisión.",
+    pag: "Pág.",
+    perimetro: "ÁMBITO DE LOS SERVICIOS",
+    scopeHeaders: ["#", "Servicio", "Descripción breve"] as string[],
+    piano: "PLAN TARIFARIO",
+    mensiliTitle: "Servicios mensuales recurrentes",
+    mensiliHeaders: [
+      "Servicio",
+      "Meses",
+      "Coste mensual",
+      "Total",
+    ] as string[],
+    tantumTitle: "Servicios únicos",
+    tantumHeaders: [
+      "Servicio",
+      "Cant.",
+      "Precio unitario",
+      "Total",
+    ] as string[],
+    importoMensile: "Importe mensual recurrente",
+    mesi: "meses",
+    subtotale: "Subtotal",
+    iva: "IVA",
+    totale: "TOTAL",
+    condizioni: "CONDICIONES COMERCIALES",
+    firma: "FIRMA Y ACEPTACIÓN",
+    firmaDesc:
+      "Para aceptación de la presente propuesta, se ruega devolver el documento firmado.",
+    perAnda: "Por Anda Agencia de Publicidad SL",
+    leo: "Leonardo Mestre, Administrador",
+    per: "Por",
+    firmaLabel: "Firma",
+    locale: "es-ES",
+  },
+  en: {
+    title: "COMMERCIAL PROPOSAL",
+    preparatoDa: "PREPARED BY",
+    destinatario: "RECIPIENT",
+    dataEmissione: "ISSUE DATE",
+    nPreventivo: "PROPOSAL No.",
+    validita: "OFFER VALIDITY",
+    validitaValue: "30 days from issue date",
+    footerNote: "This proposal is valid for 30 days from the issue date.",
+    pag: "Page",
+    perimetro: "SCOPE OF SERVICES",
+    scopeHeaders: ["#", "Service", "Brief description"] as string[],
+    piano: "PRICING PLAN",
+    mensiliTitle: "Recurring monthly services",
+    mensiliHeaders: [
+      "Service",
+      "Months",
+      "Monthly cost",
+      "Total",
+    ] as string[],
+    tantumTitle: "One-time services",
+    tantumHeaders: ["Service", "Qty", "Unit price", "Total"] as string[],
+    importoMensile: "Recurring monthly amount",
+    mesi: "months",
+    subtotale: "Subtotal",
+    iva: "VAT",
+    totale: "TOTAL",
+    condizioni: "COMMERCIAL TERMS",
+    firma: "SIGNATURE & ACCEPTANCE",
+    firmaDesc:
+      "For acceptance of this proposal, please return the signed document.",
+    perAnda: "For Anda Agencia de Publicidad SL",
+    leo: "Leonardo Mestre, Administrator",
+    per: "For",
+    firmaLabel: "Signature",
+    locale: "en-US",
+  },
+};
+
 export async function exportPreventivoPDF(p: PreventivoPDFData) {
+  const lang: "it" | "es" | "en" =
+    p.lingua === "es" ? "es" : p.lingua === "en" ? "en" : "it";
+  const T = PREVENTIVO_T[lang];
   const { default: jsPDF } = await import("jspdf");
   const { default: autoTable } = await import("jspdf-autotable");
   const firmaCanvas = await loadFirmaInvertita();
@@ -347,11 +472,11 @@ export async function exportPreventivoPDF(p: PreventivoPDFData) {
   doc.setLineWidth(0.6);
   doc.line(ML, 63, W - MR, 63);
 
-  // "PROPOSTA COMMERCIALE"
+  // Title
   doc.setFontSize(22);
   doc.setFont("helvetica", "bold");
   doc.setTextColor(...WHITE);
-  doc.text("PROPOSTA COMMERCIALE", ML, 83);
+  doc.text(T.title, ML, 83);
 
   // oggetto
   doc.setFontSize(13);
@@ -373,7 +498,7 @@ export async function exportPreventivoPDF(p: PreventivoPDFData) {
   doc.setFontSize(7);
   doc.setFont("helvetica", "bold");
   doc.setTextColor(...ACCENT);
-  doc.text("PREPARATO DA", c1, boxY + 12);
+  doc.text(T.preparatoDa, c1, boxY + 12);
 
   doc.setFontSize(9.5);
   doc.setFont("helvetica", "bold");
@@ -396,7 +521,7 @@ export async function exportPreventivoPDF(p: PreventivoPDFData) {
   doc.setFontSize(7);
   doc.setFont("helvetica", "bold");
   doc.setTextColor(...ACCENT);
-  doc.text("DESTINATARIO", c2, boxY + 12);
+  doc.text(T.destinatario, c2, boxY + 12);
 
   doc.setFontSize(10);
   doc.setFont("helvetica", "normal");
@@ -420,12 +545,12 @@ export async function exportPreventivoPDF(p: PreventivoPDFData) {
   doc.setFontSize(7);
   doc.setFont("helvetica", "bold");
   doc.setTextColor(...ACCENT);
-  doc.text("DATA EMISSIONE", c1, boxY + 44);
+  doc.text(T.dataEmissione, c1, boxY + 44);
 
   doc.setFontSize(9);
   doc.setFont("helvetica", "normal");
   doc.setTextColor(...WHITE);
-  const dateStr = new Date(p.createdAt).toLocaleDateString("it-IT", {
+  const dateStr = new Date(p.createdAt).toLocaleDateString(T.locale, {
     day: "2-digit",
     month: "long",
     year: "numeric",
@@ -436,7 +561,7 @@ export async function exportPreventivoPDF(p: PreventivoPDFData) {
   doc.setFontSize(7);
   doc.setFont("helvetica", "bold");
   doc.setTextColor(...ACCENT);
-  doc.text("N. PREVENTIVO", c2, boxY + 44);
+  doc.text(T.nPreventivo, c2, boxY + 44);
 
   doc.setFontSize(9);
   doc.setFont("helvetica", "normal");
@@ -447,22 +572,18 @@ export async function exportPreventivoPDF(p: PreventivoPDFData) {
   doc.setFontSize(7);
   doc.setFont("helvetica", "bold");
   doc.setTextColor(...ACCENT);
-  doc.text("VALIDITÀ OFFERTA", c1, boxY + 63);
+  doc.text(T.validita, c1, boxY + 63);
 
   doc.setFontSize(9);
   doc.setFont("helvetica", "normal");
   doc.setTextColor(...WHITE);
-  doc.text("30 giorni dalla data di emissione", c1, boxY + 70);
+  doc.text(T.validitaValue, c1, boxY + 70);
 
   // Footer note
   doc.setFontSize(8);
   doc.setFont("helvetica", "italic");
   doc.setTextColor(100, 100, 100);
-  doc.text(
-    "Il presente preventivo ha validità 30 giorni dalla data di emissione.",
-    ML,
-    278,
-  );
+  doc.text(T.footerNote, ML, 278);
 
   // Bottom accent bar
   doc.setFillColor(...ACCENT);
@@ -481,7 +602,7 @@ export async function exportPreventivoPDF(p: PreventivoPDFData) {
   const hTitle =
     p.oggetto.length > 55 ? p.oggetto.substring(0, 52) + "..." : p.oggetto;
   doc.text(`ANDA AGENCIA DE PUBLICIDAD SL  |  ${hTitle}`, ML, 9);
-  doc.text("Pag. 2", W - MR, 9, { align: "right" });
+  doc.text(`${T.pag} 2`, W - MR, 9, { align: "right" });
 
   let y = 26;
 
@@ -489,7 +610,7 @@ export async function exportPreventivoPDF(p: PreventivoPDFData) {
   doc.setFontSize(10);
   doc.setFont("helvetica", "bold");
   doc.setTextColor(...ACCENT);
-  doc.text("PERIMETRO DEI SERVIZI", ML, y);
+  doc.text(T.perimetro, ML, y);
   y += 5;
 
   let voci: VocePreventivoData[] = [];
@@ -500,7 +621,7 @@ export async function exportPreventivoPDF(p: PreventivoPDFData) {
   }
 
   autoTable(doc, {
-    head: [["#", "Servizio", "Descrizione sintetica"]],
+    head: [T.scopeHeaders],
     body: voci.map((v, i) => [String(i + 1), v.servizio, v.descrizione || "—"]),
     startY: y,
     styles: { fontSize: 9, cellPadding: 3.5, textColor: [40, 40, 40] },
@@ -522,7 +643,7 @@ export async function exportPreventivoPDF(p: PreventivoPDFData) {
   doc.setFontSize(10);
   doc.setFont("helvetica", "bold");
   doc.setTextColor(...ACCENT);
-  doc.text("PIANO TARIFFARIO", ML, y);
+  doc.text(T.piano, ML, y);
   y += 5;
 
   const ivaAmt = (p.subtotale * p.iva) / 100;
@@ -546,9 +667,9 @@ export async function exportPreventivoPDF(p: PreventivoPDFData) {
     autoTable(doc, {
       head: [
         [
-          { content: "Servizi mensili ricorrenti", colSpan: 4, styles: { halign: "left", fillColor: ACCENT, textColor: WHITE } },
+          { content: T.mensiliTitle, colSpan: 4, styles: { halign: "left", fillColor: ACCENT, textColor: WHITE } },
         ],
-        ["Servizio", "Mesi", "Costo mensile", "Totale"],
+        T.mensiliHeaders,
       ],
       body: mensili.map((v) => [
         v.servizio,
@@ -577,9 +698,9 @@ export async function exportPreventivoPDF(p: PreventivoPDFData) {
     autoTable(doc, {
       head: [
         [
-          { content: "Servizi una tantum", colSpan: 4, styles: { halign: "left", fillColor: ACCENT, textColor: WHITE } },
+          { content: T.tantumTitle, colSpan: 4, styles: { halign: "left", fillColor: ACCENT, textColor: WHITE } },
         ],
-        ["Servizio", "Q.tà", "Prezzo unitario", "Totale"],
+        T.tantumHeaders,
       ],
       body: tantum.map((v) => [
         v.servizio,
@@ -608,20 +729,20 @@ export async function exportPreventivoPDF(p: PreventivoPDFData) {
   const summaryRows: (string | number)[][] = [];
   if (mensili.length > 0) {
     summaryRows.push([
-      "Importo mensile ricorrente",
-      `${fmt(importoMensile)} × ${durataMensile} mesi`,
+      T.importoMensile,
+      `${fmt(importoMensile)} × ${durataMensile} ${T.mesi}`,
       fmt(importoMensile * durataMensile),
     ]);
   }
   if (tantum.length > 0) {
-    summaryRows.push(["Servizi una tantum", "", fmt(totUnaTantum)]);
+    summaryRows.push([T.tantumTitle, "", fmt(totUnaTantum)]);
   }
-  summaryRows.push(["Subtotale", "", fmt(p.subtotale)]);
-  summaryRows.push([`IVA (${p.iva}%)`, "", fmt(ivaAmt)]);
+  summaryRows.push([T.subtotale, "", fmt(p.subtotale)]);
+  summaryRows.push([`${T.iva} (${p.iva}%)`, "", fmt(ivaAmt)]);
 
   autoTable(doc, {
     body: summaryRows,
-    foot: [["TOTALE", "", fmt(p.totale)]],
+    foot: [[T.totale, "", fmt(p.totale)]],
     startY: y,
     theme: "plain",
     styles: { fontSize: 9, cellPadding: 3, textColor: [40, 40, 40] },
@@ -644,7 +765,7 @@ export async function exportPreventivoPDF(p: PreventivoPDFData) {
     doc.setFontSize(10);
     doc.setFont("helvetica", "bold");
     doc.setTextColor(...ACCENT);
-    doc.text("CONDIZIONI COMMERCIALI", ML, y);
+    doc.text(T.condizioni, ML, y);
     y += 6;
 
     doc.setFontSize(8.5);
@@ -673,24 +794,20 @@ export async function exportPreventivoPDF(p: PreventivoPDFData) {
       p.oggetto.length > 55 ? p.oggetto.substring(0, 52) + "..." : p.oggetto;
     const pageN = doc.getNumberOfPages();
     doc.text(`ANDA AGENCIA DE PUBLICIDAD SL  |  ${hT}`, ML, 9);
-    doc.text(`Pag. ${pageN}`, W - MR, 9, { align: "right" });
+    doc.text(`${T.pag} ${pageN}`, W - MR, 9, { align: "right" });
     y = 26;
   }
 
   doc.setFontSize(10);
   doc.setFont("helvetica", "bold");
   doc.setTextColor(...ACCENT);
-  doc.text("FIRMA E ACCETTAZIONE", ML, y);
+  doc.text(T.firma, ML, y);
   y += 6;
 
   doc.setFontSize(8.5);
   doc.setFont("helvetica", "normal");
   doc.setTextColor(...DGRAY);
-  doc.text(
-    "Per accettazione della presente proposta, si prega di restituire il documento firmato.",
-    ML,
-    y,
-  );
+  doc.text(T.firmaDesc, ML, y);
   y += 6;
 
   // Firma Leonardo sopra la linea divisoria (lato sinistro - Anda)
@@ -718,13 +835,13 @@ export async function exportPreventivoPDF(p: PreventivoPDFData) {
   y += 5;
   doc.setFontSize(7.5);
   doc.setTextColor(100, 100, 100);
-  doc.text("Per Anda Agencia de Publicidad SL", ML, y);
-  doc.text("Leonardo Mestre, Amministratore", ML, y + 4.5);
+  doc.text(T.perAnda, ML, y);
+  doc.text(T.leo, ML, y + 4.5);
   const sigName = p.aziendaCliente
-    ? `Per ${p.aziendaCliente}`
-    : `Per ${p.nomeCliente}`;
+    ? `${T.per} ${p.aziendaCliente}`
+    : `${T.per} ${p.nomeCliente}`;
   doc.text(sigName, W - MR - 76, y);
-  doc.text("Firma", W - MR - 76, y + 4.5);
+  doc.text(T.firmaLabel, W - MR - 76, y + 4.5);
 
   // Bottom accent bar + footer text (sull'ultima pagina, dinamico)
   doc.setFillColor(...ACCENT);
@@ -735,13 +852,13 @@ export async function exportPreventivoPDF(p: PreventivoPDFData) {
   doc.setTextColor(120, 120, 120);
   const totalPages = doc.getNumberOfPages();
   doc.text(
-    `ANDA AGENCIA DE PUBLICIDAD SL  |  info@andacreativa.com  |  Pag. ${totalPages}`,
+    `ANDA AGENCIA DE PUBLICIDAD SL  |  info@andacreativa.com  |  ${T.pag} ${totalPages}`,
     W / 2,
     H - 10,
     { align: "center" },
   );
 
-  doc.save(`preventivo_${p.numero}.pdf`);
+  doc.save(`preventivo_${p.numero}_${lang}.pdf`);
 }
 
 // ── Spese helpers ──────────────────────────────────────────────────────────

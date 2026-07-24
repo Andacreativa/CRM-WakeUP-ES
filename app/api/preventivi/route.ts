@@ -104,6 +104,7 @@ export async function POST(request: Request) {
         note: body.note || null,
         condizioni: body.condizioni || null,
         dataScadenza: body.dataScadenza ? new Date(body.dataScadenza) : null,
+        lingua: body.lingua || "it",
       },
     });
 

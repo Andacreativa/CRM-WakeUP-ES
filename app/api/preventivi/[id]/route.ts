@@ -57,6 +57,7 @@ export async function PATCH(
         ...(body.dataScadenza !== undefined && {
           dataScadenza: body.dataScadenza ? new Date(body.dataScadenza) : null,
         }),
+        ...(body.lingua !== undefined && { lingua: body.lingua }),
       },
     });
 
