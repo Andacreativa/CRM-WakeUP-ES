@@ -137,6 +137,8 @@ export default function FatturePage() {
   const [showImport, setShowImport] = useState(false);
   const [accontoTarget, setAccontoTarget] = useState<Fattura | null>(null);
   const [togglingId, setTogglingId] = useState<number | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const [lastClickedId, setLastClickedId] = useState<number | null>(null);
 
   const load = async () => {
     const params = new URLSearchParams();
@@ -286,11 +288,47 @@ export default function FatturePage() {
     ? (clienti.find((c) => c.id === filtroClienteId) ?? null)
     : null;
 
+  // Cambio anno/azienda = dataset diverso: la selezione precedente non ha più senso
+  useEffect(() => {
+    setSelectedIds(new Set());
+    setLastClickedId(null);
+  }, [anno, azienda]);
+
   // Reset page se i filtri restringono il dataset
   useEffect(() => {
     setPage(1);
   }, [filtroMese, filtroClienteId, filtroPagato, anno, azienda, pageSize]);
   const paged = filtered.slice((page - 1) * pageSize, page * pageSize);
+
+  // ── Selezione righe per export ──────────────────────────────────────────
+  // La selezione vive solo sulle fatture attualmente filtrate: se un filtro
+  // nasconde una riga selezionata, quella riga esce anche dall'export.
+  const selected = filtered.filter((f) => selectedIds.has(f.id));
+  const selTotale = selected.reduce((s, f) => s + (f?.importo ?? 0), 0);
+  // Senza selezione gli export si comportano come prima: tutto il filtrato.
+  const exportList = selected.length > 0 ? selected : filtered;
+  const isParziale = exportList.length !== filtered.length;
+
+  const toggleRow = (f: Fattura, shift: boolean) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      const a = filtered.findIndex((x) => x.id === lastClickedId);
+      const b = filtered.findIndex((x) => x.id === f.id);
+      if (shift && lastClickedId != null && a !== -1 && b !== -1) {
+        const [from, to] = a < b ? [a, b] : [b, a];
+        const add = !prev.has(f.id);
+        for (let i = from; i <= to; i++) {
+          if (add) next.add(filtered[i].id);
+          else next.delete(filtered[i].id);
+        }
+        return next;
+      }
+      if (next.has(f.id)) next.delete(f.id);
+      else next.add(f.id);
+      return next;
+    });
+    setLastClickedId(f.id);
+  };
 
   const totale = filtered.reduce((s, f) => s + (f?.importo ?? 0), 0);
   const pagate = filtered.reduce(
@@ -304,6 +342,61 @@ export default function FatturePage() {
     0,
   );
 
+  const runExportExcel = (list: Fattura[]) => {
+    const annoLabel = anno > 0 ? String(anno) : "tutti";
+    const slug = clienteFiltrato
+      ? `_${clienteFiltrato.nome.replace(/\s+/g, "")}`
+      : "";
+    const sel = list.length !== filtered.length ? "_selezione" : "";
+    exportExcel(fattureToExcel(list, MESI), `fatture_${annoLabel}${slug}${sel}`);
+  };
+
+  const runExportPDF = (list: Fattura[]) => {
+    const aziendaLabel = azienda || "Tutte";
+    const annoStr = anno > 0 ? String(anno) : "tutti gli anni";
+    const annoFile = anno > 0 ? String(anno) : "tutti";
+    const parziale = list.length !== filtered.length;
+    const base = clienteFiltrato
+      ? `Fatture ${annoStr} — ${aziendaLabel} · ${clienteFiltrato.nome}`
+      : `Fatture ${annoStr} — ${aziendaLabel}`;
+    const titolo = parziale ? `${base} · selezione (${list.length})` : base;
+    const slug = clienteFiltrato
+      ? `_${clienteFiltrato.nome.replace(/\s+/g, "")}`
+      : "";
+    const sel = parziale ? "_selezione" : "";
+    const { cols, rows, title } = fattureToPDF(list, MESI, titolo);
+    const totImporto = list.reduce((s, f) => s + (f?.importo ?? 0), 0);
+    const totIncassato = list
+      .filter((f) => f?.pagato)
+      .reduce((s, f) => s + (f?.importo ?? 0), 0);
+    const totNonPagato = totImporto - totIncassato;
+    const perMese = Array.from({ length: 12 }, (_, i) =>
+      list.filter((f) => f.mese === i + 1).reduce((s, f) => s + (f?.importo ?? 0), 0),
+    );
+    exportPDF(title, cols, rows, `fatture_${annoFile}${slug}${sel}`, {
+      extraTables: [
+        {
+          columns: MESI,
+          rows: [perMese.map((v) => fmt(v))],
+        },
+      ],
+      footerCells: [
+        { label: "Totale fatture", value: String(rows.length) },
+        { label: "Totale importo", value: fmt(totImporto) },
+        {
+          label: "Totale incassato",
+          value: fmt(totIncassato),
+          color: [16, 185, 129],
+        },
+        {
+          label: "Totale non pagato",
+          value: fmt(totNonPagato),
+          color: [245, 158, 11],
+        },
+      ],
+    });
+  };
+
   const oggi = new Date();
   const isScaduta = (f: Fattura) =>
     !f.pagato && f.scadenza && new Date(f.scadenza) < oggi;
@@ -315,12 +408,18 @@ export default function FatturePage() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className={`space-y-6 ${selected.length > 0 ? "pb-24" : ""}`}>
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Fatture</h1>
           <p className="text-gray-500 text-sm mt-0.5">
             {filtered.length} fatture
+            {selected.length > 0 && (
+              <span className="text-pink-600 font-medium">
+                {" "}
+                · {selected.length} selezionate
+              </span>
+            )}
           </p>
         </div>
         <div className="flex items-center gap-3 flex-wrap">
@@ -334,71 +433,28 @@ export default function FatturePage() {
           />
           <PageSizeSelect pageSize={pageSize} onChange={setPageSize} />
           <button
-            onClick={() => {
-              const annoLabel = anno > 0 ? String(anno) : "tutti";
-              const slug = clienteFiltrato
-                ? `_${clienteFiltrato.nome.replace(/\s+/g, "")}`
-                : "";
-              exportExcel(
-                fattureToExcel(filtered, MESI),
-                `fatture_${annoLabel}${slug}`,
-              );
-            }}
-            className="flex items-center gap-1.5 border border-gray-200 text-gray-600 text-sm font-medium px-3 py-2 rounded-xl hover:bg-gray-50 transition-colors"
+            onClick={() => runExportExcel(exportList)}
+            title={
+              isParziale
+                ? `Esporta le ${exportList.length} fatture selezionate`
+                : "Esporta tutte le fatture filtrate"
+            }
+            className={`flex items-center gap-1.5 border text-sm font-medium px-3 py-2 rounded-xl transition-colors ${isParziale ? "border-pink-300 bg-pink-50 text-pink-700 hover:bg-pink-100" : "border-gray-200 text-gray-600 hover:bg-gray-50"}`}
           >
             <FileSpreadsheet className="w-4 h-4 text-emerald-600" /> Excel
+            {isParziale && ` (${exportList.length})`}
           </button>
           <button
-            onClick={() => {
-              const aziendaLabel = azienda || "Tutte";
-              const annoStr = anno > 0 ? String(anno) : "tutti gli anni";
-              const annoFile = anno > 0 ? String(anno) : "tutti";
-              const titolo = clienteFiltrato
-                ? `Fatture ${annoStr} — ${aziendaLabel} · ${clienteFiltrato.nome}`
-                : `Fatture ${annoStr} — ${aziendaLabel}`;
-              const slug = clienteFiltrato
-                ? `_${clienteFiltrato.nome.replace(/\s+/g, "")}`
-                : "";
-              const { cols, rows, title } = fattureToPDF(filtered, MESI, titolo);
-              const totImporto = filtered.reduce(
-                (s, f) => s + (f?.importo ?? 0),
-                0,
-              );
-              const totIncassato = filtered
-                .filter((f) => f?.pagato)
-                .reduce((s, f) => s + (f?.importo ?? 0), 0);
-              const totNonPagato = totImporto - totIncassato;
-              const perMese = Array.from({ length: 12 }, (_, i) =>
-                filtered
-                  .filter((f) => f.mese === i + 1)
-                  .reduce((s, f) => s + (f?.importo ?? 0), 0),
-              );
-              exportPDF(title, cols, rows, `fatture_${annoFile}${slug}`, {
-                extraTables: [
-                  {
-                    columns: MESI,
-                    rows: [perMese.map((v) => fmt(v))],
-                  },
-                ],
-                footerCells: [
-                  { label: "Totale fatture", value: String(rows.length) },
-                  { label: "Totale importo", value: fmt(totImporto) },
-                  {
-                    label: "Totale incassato",
-                    value: fmt(totIncassato),
-                    color: [16, 185, 129],
-                  },
-                  {
-                    label: "Totale non pagato",
-                    value: fmt(totNonPagato),
-                    color: [245, 158, 11],
-                  },
-                ],
-              });
-            }}
-            className="flex items-center gap-1.5 border border-gray-200 text-gray-600 text-sm font-medium px-3 py-2 rounded-xl hover:bg-gray-50 transition-colors"
+            onClick={() => runExportPDF(exportList)}
+            title={
+              isParziale
+                ? `Esporta le ${exportList.length} fatture selezionate`
+                : "Esporta tutte le fatture filtrate"
+            }
+            className={`flex items-center gap-1.5 border text-sm font-medium px-3 py-2 rounded-xl transition-colors ${isParziale ? "border-pink-300 bg-pink-50 text-pink-700 hover:bg-pink-100" : "border-gray-200 text-gray-600 hover:bg-gray-50"}`}
           >
             <Download className="w-4 h-4 text-red-500" /> PDF
+            {isParziale && ` (${exportList.length})`}
           </button>
           <button
             onClick={() => setShowImport(true)}
@@ -534,9 +590,26 @@ export default function FatturePage() {
             {paged.map((f, i) => (
               <tr
                 key={`${f.id}-${f.pagato}-${totalePagato(f)}`}
-                className={`border-b border-gray-50 transition-colors ${i % 2 === 1 ? "bg-[#F9F9F9]" : "bg-white"}`}
+                onMouseDown={(e) => {
+                  // shift+click: niente evidenziazione del testo mentre si estende la selezione
+                  if (e.shiftKey) e.preventDefault();
+                }}
+                onClick={(e) => toggleRow(f, e.shiftKey)}
+                title="Click per selezionare · Shift+click per un intervallo"
+                className={`border-b border-gray-50 transition-colors cursor-pointer ${
+                  selectedIds.has(f.id)
+                    ? "bg-pink-50 hover:bg-pink-100"
+                    : `${i % 2 === 1 ? "bg-[#F9F9F9]" : "bg-white"} hover:bg-gray-50`
+                }`}
               >
-                <td className="px-4 py-3 text-sm font-mono font-medium text-gray-700 whitespace-nowrap">
+                <td
+                  className="px-4 py-3 text-sm font-mono font-medium text-gray-700 whitespace-nowrap"
+                  style={
+                    selectedIds.has(f.id)
+                      ? { boxShadow: "inset 3px 0 0 0 #e8308a" }
+                      : undefined
+                  }
+                >
                   {f.numero ?? "—"}
                 </td>
                 <td className="px-4 py-3 text-sm font-medium text-gray-900">
@@ -630,7 +703,7 @@ export default function FatturePage() {
                     );
                   })()}
                 </td>
-                <td className="px-4 py-3">
+                <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
                   <div className="flex items-center gap-2 justify-end">
                     {statoCalcolato(f) !== "pagato" && (
                       <button
@@ -668,6 +741,60 @@ export default function FatturePage() {
           onPage={setPage}
           labelSuffix="fatture"
         />
+      )}
+
+      {/* Barra flottante selezione */}
+      {selected.length > 0 && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50">
+          <div className="flex items-center gap-4 bg-white border border-gray-200 shadow-xl shadow-gray-300/40 rounded-2xl pl-5 pr-3 py-2.5">
+            <div className="text-sm whitespace-nowrap">
+              <span className="font-semibold text-gray-900">
+                {selected.length}
+              </span>
+              <span className="text-gray-500">
+                {" "}
+                {selected.length === 1 ? "selezionata" : "selezionate"}
+              </span>
+              <span className="text-gray-300 mx-2">·</span>
+              <span className="font-semibold text-gray-900">
+                {fmt(selTotale)}
+              </span>
+            </div>
+            {selected.length < filtered.length && (
+              <button
+                onClick={() =>
+                  setSelectedIds(new Set(filtered.map((f) => f.id)))
+                }
+                className="text-sm font-medium text-pink-600 hover:text-pink-700 whitespace-nowrap"
+              >
+                Seleziona tutte ({filtered.length})
+              </button>
+            )}
+            <div className="w-px h-6 bg-gray-200" />
+            <button
+              onClick={() => {
+                setSelectedIds(new Set());
+                setLastClickedId(null);
+              }}
+              title="Annulla selezione"
+              className="p-1.5 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors"
+            >
+              <X className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => runExportExcel(selected)}
+              className="flex items-center gap-1.5 border border-gray-200 text-gray-700 text-sm font-medium px-3 py-1.5 rounded-xl hover:bg-gray-50 transition-colors"
+            >
+              <FileSpreadsheet className="w-4 h-4 text-emerald-600" /> Excel
+            </button>
+            <button
+              onClick={() => runExportPDF(selected)}
+              className="glass-btn-primary flex items-center gap-1.5 text-white text-sm font-medium px-3 py-1.5 rounded-xl transition-all"
+            >
+              <Download className="w-4 h-4" /> PDF
+            </button>
+          </div>
+        </div>
       )}
 
       {/* Tabella Altri Ingressi — stesso formato delle fatture */}
