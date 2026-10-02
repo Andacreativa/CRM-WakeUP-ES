@@ -60,6 +60,7 @@ model Fattura {
   richiesta     RichiestaFattura?
   commissioni   PagamentoMensile[] @relation("CommissioneFattura")
   solleciti     Sollecito[]
+  abbinamentiBancari AbbinamentoBancario[]
 
   @@index([contrattoId])
   @@index([commercialeId])
@@ -96,6 +97,7 @@ model Acconto {
   metodoPagamento  String?
   note             String?
   createdAt        DateTime @default(now())
+  abbinamentiBancari AbbinamentoBancario[]
 
   @@index([fatturaId])
 }
@@ -115,6 +117,7 @@ model AltroIngresso {
   fatturaId   Int?
   fattura     Fattura?  @relation(fields: [fatturaId], references: [id], onDelete: Cascade)
   createdAt   DateTime  @default(now())
+  abbinamentiBancari AbbinamentoBancario[]
 }
 
 model SpesaFissa {
@@ -145,6 +148,7 @@ model Spesa {
   fattura      Fattura? @relation(fields: [fatturaId], references: [id], onDelete: Cascade)
   createdAt    DateTime @default(now())
   pagamentoMensile PagamentoMensile?
+  abbinamentiBancari AbbinamentoBancario[]
 }
 
 model Fornitore {
@@ -456,4 +460,76 @@ model RichiestaFattura {
   @@index([clienteId])
   @@index([contrattoId])
   @@index([serieCodice])
+}
+
+// ─── Banca (Fase 3) ────────────────────────────────────────────────────
+// Estratto conto importato da file BBVA "Histórico movimientos" (XLSX).
+// Il file non viene conservato: restano hash, periodo e conteggi.
+model ImportBancario {
+  id             Int       @id @default(autoincrement())
+  banca          String    @default("BBVA")
+  nomeFile       String
+  hashFile       String
+  conto          String?
+  titolare       String?
+  periodoDa      DateTime?
+  periodoA       DateTime?
+  righeLette     Int       @default(0)
+  righeNuove     Int       @default(0)
+  righeDuplicate Int       @default(0)
+  createdAt      DateTime  @default(now())
+  movimenti      MovimentoBancario[]
+}
+
+// Singolo movimento dell'estratto. importo con segno (negativo = uscita).
+// impronta = riferimento univoco della banca (colonna REMESA) oppure hash
+// dei campi: lo stesso movimento caricato da due file non si duplica.
+// stato: da_abbinare | abbinato (collegato a record esistenti) |
+//        spesa_creata (la Spesa è nata da qui) | escluso
+model MovimentoBancario {
+  id            Int       @id @default(autoincrement())
+  importId      Int
+  import        ImportBancario @relation(fields: [importId], references: [id], onDelete: Cascade)
+  impronta      String    @unique
+  dataContabile DateTime
+  dataValore    DateTime?
+  codice        String?
+  concetto      String
+  beneficiario  String?
+  osservazioni  String?
+  importo       Float
+  saldo         Float?
+  stato         String    @default("da_abbinare")
+  nota          String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  abbinamenti   AbbinamentoBancario[]
+
+  @@index([dataContabile])
+  @@index([stato])
+  @@index([importId])
+}
+
+// Collegamento movimento ↔ record interno (una riga per record): Spesa per
+// le uscite; Fattura / Acconto / AltroIngresso per le entrate (Fase 4).
+model AbbinamentoBancario {
+  id              Int       @id @default(autoincrement())
+  movimentoId     Int
+  movimento       MovimentoBancario @relation(fields: [movimentoId], references: [id], onDelete: Cascade)
+  spesaId         Int?
+  spesa           Spesa?    @relation(fields: [spesaId], references: [id], onDelete: Cascade)
+  fatturaId       Int?
+  fattura         Fattura?  @relation(fields: [fatturaId], references: [id], onDelete: Cascade)
+  accontoId       Int?
+  acconto         Acconto?  @relation(fields: [accontoId], references: [id], onDelete: Cascade)
+  altroIngressoId Int?
+  altroIngresso   AltroIngresso? @relation(fields: [altroIngressoId], references: [id], onDelete: Cascade)
+  importo         Float
+  createdAt       DateTime  @default(now())
+
+  @@index([movimentoId])
+  @@index([spesaId])
+  @@index([fatturaId])
+  @@index([accontoId])
+  @@index([altroIngressoId])
 }
