@@ -4,7 +4,8 @@ import { INCLUDE_MOVIMENTO, centesimi, imparaBanca } from "@/lib/banca";
 
 type Ctx = { params: Promise<{ id: string }> };
 
-// POST { spesaIds: number[], forza?: boolean, impara?: boolean }: collega
+// POST { spesaIds: number[], forza?: boolean, impara?: boolean,
+//        registraCome?: "rimborsi" | "benefit", dipendenteId?: number }: collega
 // il movimento (uscita) a una o più Spese già registrate. Senza `forza`
 // la somma delle spese deve coincidere con l'importo del movimento.
 export async function POST(request: Request, { params }: Ctx) {
@@ -58,7 +59,38 @@ export async function POST(request: Request, { params }: Ctx) {
       );
     }
 
+    // Una spesa storica (es. "Soci" 500 €) che in realtà è un rimborso al socio:
+    // entra nel registro pagamenti e cambia categoria, su richiesta esplicita.
+    const registraCome =
+      body.registraCome === "rimborsi" || body.registraCome === "benefit" ? body.registraCome : null;
+    const dipendenteId = registraCome ? parseInt(body.dipendenteId, 10) || 0 : 0;
+    if (registraCome && (!dipendenteId || spese.length !== 1 || spese[0].pagamentoMensile)) {
+      return NextResponse.json(
+        { error: "Per registrare nel registro serve una sola spesa non ancora registrata e una persona" },
+        { status: 400 },
+      );
+    }
+
     const aggiornato = await prisma.$transaction(async (tx) => {
+      if (registraCome && dipendenteId) {
+        const sp = spese[0];
+        await tx.pagamentoMensile.create({
+          data: {
+            dipendenteId,
+            anno: sp.anno,
+            mese: sp.mese,
+            voce: registraCome,
+            importo: sp.importo,
+            data: mov.dataContabile,
+            note: mov.osservazioni ?? sp.descrizione ?? null,
+            spesaId: sp.id,
+          },
+        });
+        const categoria = registraCome === "rimborsi" ? "Rimborsi" : "Benefit";
+        if (sp.categoria !== categoria) {
+          await tx.spesa.update({ where: { id: sp.id }, data: { categoria } });
+        }
+      }
       await tx.abbinamentoBancario.createMany({
         data: spese.map((s) => ({ movimentoId: mov.id, spesaId: s.id, importo: s.importo })),
       });

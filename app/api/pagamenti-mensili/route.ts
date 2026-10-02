@@ -53,12 +53,19 @@ export async function POST(request: Request) {
 
     const data = body.data ? new Date(body.data) : new Date();
     const note = body.note?.trim() || null;
-    const descrizione = `${VOCI[voce].label} — ${nomeCompleto(d)}`;
+    const multiplo = !!VOCI[voce].multiplo;
+    if (multiplo && !note) {
+      return NextResponse.json({ error: "Serve una descrizione del rimborso" }, { status: 400 });
+    }
+    const descrizione = `${VOCI[voce].label} — ${nomeCompleto(d)}${multiplo && note ? ` — ${note}` : ""}`;
 
     const row = await prisma.$transaction(async (tx) => {
-      const esistente = await tx.pagamentoMensile.findFirst({
-        where: { dipendenteId, anno, mese, voce },
-      });
+      // Le voci "multiple" (rimborsi) non si sovrascrivono: ogni registrazione è una riga
+      const esistente = multiplo
+        ? null
+        : await tx.pagamentoMensile.findFirst({
+            where: { dipendenteId, anno, mese, voce },
+          });
       if (esistente) {
         if (esistente.spesaId) {
           await tx.spesa.update({

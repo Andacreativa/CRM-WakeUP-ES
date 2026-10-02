@@ -1,6 +1,6 @@
 "use client";
 
-import { ANNI, AZIENDE, BRAND } from "@/lib/constants";
+import { ANNI, AZIENDE, BRAND, CANALE_LABEL } from "@/lib/constants";
 
 interface Props {
   anno: number;
@@ -35,6 +35,7 @@ export default function FiltriBar({
 }: Props) {
   const labelMap: Record<string, string> = {
     "": "Tutte",
+    ...CANALE_LABEL,
     Altro: altroLabel ?? DEFAULT_ALTRO_LABEL,
   };
   const hide = new Set(hideOptions ?? []);

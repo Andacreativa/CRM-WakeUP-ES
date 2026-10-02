@@ -36,6 +36,11 @@ export interface ImpostazioniFatture {
   linguaDefault: "it" | "es" | "en";
   noteDefault: string;
   piePagina: string;
+  // Canale Social Media House: compenso mensile netto da raggiungere con le
+  // fatture ai clienti SMH (al netto della ritenuta) più una fattura diretta
+  smhNome: string;
+  smhCompensoMensile: number;
+  smhRitenuta: number; // percentuale trattenuta da SMH sulle fatture ai suoi clienti
   // Solleciti
   sollecitoOggettoIt: string;
   sollecitoTestoIt: string;
@@ -69,6 +74,9 @@ export const IMPOSTAZIONI_FATTURE_DEFAULT: ImpostazioniFatture = {
   linguaDefault: "it",
   noteDefault: "",
   piePagina: "",
+  smhNome: "SocialMediaHouse S.R.L.",
+  smhCompensoMensile: 2700,
+  smhRitenuta: 15,
   sollecitoOggettoIt: "Sollecito pagamento fattura {numero}",
   sollecitoTestoIt:
     "Gentile {cliente},\n\nle ricordiamo che la fattura {numero} di {importo}, con scadenza {scadenza}, risulta a oggi non saldata.\nLa preghiamo di provvedere al pagamento con bonifico sull'IBAN {iban}.\n\nCordiali saluti,\n{azienda}",

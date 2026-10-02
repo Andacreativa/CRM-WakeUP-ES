@@ -29,7 +29,7 @@ export async function POST(request: Request) {
     await prisma.$transaction(async (tx) => {
       for (const d of persone) {
         for (const voce of vociDiTipo(d.tipo)) {
-          if (VOCI[voce].auto) continue;
+          if (VOCI[voce].auto || VOCI[voce].multiplo) continue;
           if (giaFatte.has(`${d.id}:${voce}`)) continue;
           const importo = Math.round(importoDefault(d, voce) * 100) / 100;
           if (importo <= 0) continue;

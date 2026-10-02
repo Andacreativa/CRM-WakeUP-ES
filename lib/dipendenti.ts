@@ -21,7 +21,13 @@ export type Voce =
 
 export const VOCI: Record<
   Voce,
-  { label: string; breve: string; categoria: string; auto?: boolean }
+  {
+    label: string;
+    breve: string;
+    categoria: string;
+    auto?: boolean; // nasce dalle fatture, non si registra a mano
+    multiplo?: boolean; // più righe nello stesso mese, senza importo di default
+  }
 > = {
   stipendio: { label: "Stipendio", breve: "Stip.", categoria: "Stipendio" },
   seguridad: {
@@ -30,7 +36,12 @@ export const VOCI: Record<
     categoria: "Seguridad Social",
   },
   irpf: { label: "IRPF", breve: "IRPF", categoria: "Tasse" },
-  rimborsi: { label: "Rimborsi", breve: "Rimb.", categoria: "Rimborsi" },
+  rimborsi: {
+    label: "Rimborsi",
+    breve: "Rimb.",
+    categoria: "Rimborsi",
+    multiplo: true, // variabili: si inseriscono a mano quando capitano
+  },
   benefit: { label: "Benefit", breve: "Benefit", categoria: "Benefit" },
   commissioni: {
     label: "Commissioni",
@@ -73,8 +84,6 @@ export function importoDefault(d: DipendenteDefaults, voce: Voce): number {
       return d.seguridadSocial;
     case "irpf":
       return d.irpfImporto;
-    case "rimborsi":
-      return d.rimborsiMensili;
     case "benefit":
       return d.benefitMensili;
     default:

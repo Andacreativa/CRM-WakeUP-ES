@@ -203,7 +203,7 @@ export default function LeadPage() {
                         value={l.stato}
                         onChange={(e) => cambiaStato(l, e.target.value)}
                         className="text-[11px] font-semibold px-2 py-1 rounded-md border-0 outline-none cursor-pointer"
-                        style={{ background: st.bg, color: st.color }}
+                        style={{ background: st.color, color: "#fff" }}
                       >
                         {STATI_LEAD.map((s) => (
                           <option key={s.value} value={s.value}>{s.label}</option>

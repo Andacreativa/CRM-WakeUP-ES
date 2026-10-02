@@ -46,10 +46,10 @@ function classifica(f: Fattura): Stato {
 }
 
 const STATI: Record<Stato, { label: string; pill: string }> = {
-  scaduta: { label: "Scaduta", pill: "bg-red-50 text-red-700 border-red-200" },
-  urgente: { label: "Urgente", pill: "bg-amber-50 text-amber-700 border-amber-200" },
-  prossima: { label: "Prossima", pill: "bg-blue-50 text-blue-700 border-blue-200" },
-  ok: { label: "Lontana", pill: "bg-gray-50 text-gray-500 border-gray-200" },
+  scaduta: { label: "Scaduta", pill: "pill-late" },
+  urgente: { label: "Urgente", pill: "pill-wait" },
+  prossima: { label: "Prossima", pill: "pill-info" },
+  ok: { label: "Lontana", pill: "pill-off" },
 };
 
 const sumAcc = (f: Fattura) => (f.acconti ?? []).reduce((s, a) => s + a.importo, 0);
@@ -388,7 +388,7 @@ export default function ScadenzePage() {
                             <span className="text-gray-400">({n}{ultimo.canale !== "email" ? ` · ${ultimo.canale}` : ""})</span>
                           </>
                         ) : f.stato === "scaduta" ? (
-                          <span className="text-[11px] font-semibold px-2 py-0.5 rounded-md bg-red-50 text-red-700 border border-red-200">
+                          <span className="pill-late text-[11px] font-semibold px-2 py-0.5 rounded-md">
                             mai sollecitata
                           </span>
                         ) : (

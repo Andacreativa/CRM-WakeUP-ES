@@ -18,8 +18,6 @@ import {
   CATEGORIE_SPESA,
   CATEGORIE_COLORI,
   CATEGORIA_TEXT,
-  AZIENDE,
-  AZIENDA_COLORI,
 } from "@/lib/constants";
 import FiltriBar from "@/components/FiltriBar";
 import { useAnno } from "@/lib/anno-context";
@@ -49,7 +47,7 @@ interface Fornitore {
 
 const MESI_NUMS = Array.from({ length: 12 }, (_, i) => i + 1);
 const emptyForm = {
-  azienda: AZIENDE[0],
+  azienda: "Spagna",
   aziendaNota: "",
   fornitore: "",
   fornitoreId: "" as string | number,
@@ -257,6 +255,7 @@ export default function SpesePage() {
             onAzienda={setAzienda}
             includeAllYears
             hideOptions={["Altro"]}
+            showAzienda={false}
           />
           <PageSizeSelect pageSize={pageSize} onChange={setPageSize} />
           <button
@@ -367,7 +366,6 @@ export default function SpesePage() {
                   "Fornitore",
                   "Descrizione",
                   "Categoria",
-                  "Azienda",
                   "Mese",
                   "Importo",
                   "",
@@ -385,7 +383,7 @@ export default function SpesePage() {
               {filtered.length === 0 && (
                 <tr>
                   <td
-                    colSpan={7}
+                    colSpan={6}
                     className="text-center text-gray-400 py-12 text-sm"
                   >
                     Nessuna spesa trovata
@@ -412,29 +410,6 @@ export default function SpesePage() {
                       }}
                     >
                       {s.categoria}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3">
-                    <span
-                      className="text-xs font-semibold px-2.5 py-0.5 rounded-full"
-                      style={{
-                        background:
-                          s.azienda === "Spagna"
-                            ? "#fef2f2"
-                            : s.azienda === "Italia"
-                              ? "#f0fdf4"
-                              : "#f8fafc",
-                        color:
-                          s.azienda === "Spagna"
-                            ? "#ef4444"
-                            : s.azienda === "Italia"
-                              ? "#22c55e"
-                              : "#64748b",
-                      }}
-                    >
-                      {s.azienda === "Altro" && s.aziendaNota
-                        ? s.aziendaNota
-                        : s.azienda}
                     </span>
                   </td>
                   <td className="px-4 py-3 text-sm text-gray-600">
@@ -483,45 +458,6 @@ export default function SpesePage() {
               {editing ? "Modifica Spesa" : "Nuova Spesa"}
             </h2>
             <div className="space-y-3">
-              <div>
-                <label className="text-xs font-medium text-gray-600 block mb-1">
-                  Azienda *
-                </label>
-                <div className="flex gap-2">
-                  {AZIENDE.filter((a) => a !== "Altro").map((a) => {
-                    const col = AZIENDA_COLORI[a];
-                    const active = form.azienda === a;
-                    return (
-                      <button
-                        key={a}
-                        onClick={() =>
-                          setForm((f) => ({
-                            ...f,
-                            azienda: a,
-                            aziendaNota: "",
-                          }))
-                        }
-                        className="flex-1 text-sm py-2 rounded-lg border font-semibold transition-all"
-                        style={
-                          active
-                            ? {
-                                background: col.bg,
-                                color: col.text,
-                                borderColor: col.border,
-                              }
-                            : {
-                                background: "#fff",
-                                borderColor: "#e2e8f0",
-                                color: "#94a3b8",
-                              }
-                        }
-                      >
-                        {a}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="text-xs font-medium text-gray-600 block mb-1">

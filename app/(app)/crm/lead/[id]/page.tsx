@@ -143,7 +143,7 @@ export default function LeadDettaglioPage() {
               value={lead.stato}
               onChange={(e) => cambiaStato(e.target.value)}
               className="text-xs font-semibold px-2.5 py-1 rounded-md border-0 outline-none cursor-pointer"
-              style={{ background: st.bg, color: st.color }}
+              style={{ background: st.color, color: "#fff" }}
             >
               {STATI_LEAD.map((s) => (
                 <option key={s.value} value={s.value}>{s.label}</option>
@@ -381,7 +381,7 @@ function Attivita({ lead, onChanged }: { lead: Lead; onChanged: () => void }) {
                   <span className="text-sm font-semibold text-gray-900">{a.oggetto ?? TIPI_ATTIVITA.find((t) => t.value === a.tipo)?.label}</span>
                   <span className="text-[11px] text-gray-400">{new Date(a.data).toLocaleString("it-IT", { dateStyle: "short", timeStyle: "short" })}</span>
                   {a.esito && (
-                    <span className={cn("text-[10px] font-semibold px-1.5 py-0.5 rounded", a.esito === "positivo" ? "bg-emerald-50 text-emerald-700" : a.esito === "negativo" ? "bg-red-50 text-red-700" : "bg-gray-100 text-gray-600")}>
+                    <span className={cn("text-[10px] font-semibold px-1.5 py-0.5 rounded", a.esito === "positivo" ? "pill-ok" : a.esito === "negativo" ? "pill-late" : "pill-off")}>
                       {a.esito}
                     </span>
                   )}

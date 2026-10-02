@@ -13,7 +13,6 @@ import {
   vociDiTipo,
 } from "@/lib/dipendenti";
 import Avatar from "@/components/Avatar";
-import { cn } from "@/lib/utils";
 
 interface Persona {
   id: number;
@@ -259,6 +258,43 @@ export default function PagamentiPage() {
                           </td>
                         );
                       }
+                      if (VOCI[v].multiplo) {
+                        // Rimborsi: più righe nel mese, ognuna con data e descrizione
+                        return (
+                          <td key={v} className="px-4 py-3 text-right">
+                            <div className="inline-flex flex-col items-end gap-1">
+                              {righe.map((r) => (
+                                <button
+                                  key={r.id}
+                                  onClick={() => setModal({ persona: p, voce: v, esistente: r })}
+                                  className="inline-flex items-center gap-1.5 text-xs text-gray-700 hover:text-pink-600"
+                                  title={r.note ?? "Modifica o elimina"}
+                                >
+                                  <span className="text-[10px] text-gray-400 tabular-nums">
+                                    {r.data
+                                      ? new Date(r.data).toLocaleDateString("it-IT", { day: "2-digit", month: "2-digit" })
+                                      : ""}
+                                  </span>
+                                  <span className="max-w-[140px] truncate text-gray-500">{r.note ?? "rimborso"}</span>
+                                  <span className="font-semibold">{fmt(r.importo)}</span>
+                                </button>
+                              ))}
+                              {righe.length > 1 && (
+                                <div className="text-sm font-semibold text-gray-900 border-t border-gray-200 pt-1">
+                                  {fmt(somma)}
+                                </div>
+                              )}
+                              <button
+                                onClick={() => setModal({ persona: p, voce: v, esistente: null })}
+                                className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-1 rounded-md border border-dashed border-gray-300 text-gray-500 hover:border-pink-400 hover:text-pink-600 whitespace-nowrap"
+                              >
+                                <Plus className="w-3 h-3" />
+                                {righe.length ? "aggiungi" : "rimborso"}
+                              </button>
+                            </div>
+                          </td>
+                        );
+                      }
                       const esistente = righe[0] ?? null;
                       const def = importoDefault(p, v);
                       return (
@@ -432,8 +468,15 @@ function PagamentoModal({
           <input type="date" value={data} onChange={(e) => setData(e.target.value)} className={inputCls} />
         </div>
         <div>
-          <label className="text-xs font-medium text-gray-600 block mb-1">Note</label>
-          <input value={note} onChange={(e) => setNote(e.target.value)} className={inputCls} />
+          <label className="text-xs font-medium text-gray-600 block mb-1">
+            {VOCI[voce].multiplo ? "Descrizione *" : "Note"}
+          </label>
+          <input
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            className={inputCls}
+            placeholder={VOCI[voce].multiplo ? "Es. rimborso carta, viaggio Milano…" : undefined}
+          />
         </div>
         {err && <div className="text-sm text-red-600">{err}</div>}
         <div className="flex items-center justify-between gap-2 pt-1">
@@ -453,7 +496,7 @@ function PagamentoModal({
             </button>
             <button
               onClick={salva}
-              disabled={busy || !importo}
+              disabled={busy || !importo || (!!VOCI[voce].multiplo && !note.trim())}
               className="glass-btn-primary text-white text-sm font-medium px-5 py-2 rounded-xl disabled:opacity-60"
             >
               {busy ? "Salvataggio…" : esistente ? "Salva" : "Registra"}

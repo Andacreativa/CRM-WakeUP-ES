@@ -33,6 +33,23 @@ export const CATEGORIE_SPESA = [
 
 export const AZIENDE = ["Spagna", "Italia", "Altro"];
 
+// Canale di fatturazione. Il campo `azienda` dei record resta com'è
+// (Spagna = fattura diretta di Anda, Italia = fatturata tramite Social
+// Media House); nell'interfaccia si chiama "canale" e "Altro" non si usa più.
+export const CANALI: string[] = ["Spagna", "Italia"];
+export const CANALE_LABEL: Record<string, string> = {
+  Spagna: "Diretta",
+  Italia: "Tramite SMH",
+  Altro: "Altro",
+};
+export const canaleLabel = (
+  azienda: string | null | undefined,
+  nota?: string | null,
+): string => {
+  if (azienda === "Altro" && nota) return nota;
+  return CANALE_LABEL[azienda ?? ""] ?? azienda ?? "";
+};
+
 // Categorie degli altri ingressi (entrate non da fattura)
 export const CATEGORIE_INGRESSO: { value: string; label: string }[] = [
   { value: "cashback", label: "Cashback" },

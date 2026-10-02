@@ -38,6 +38,14 @@ export async function POST(request: Request, { params }: Ctx) {
     const anno = parseInt(body.anno, 10) || def.anno;
     const azienda = AZIENDE.includes(body.azienda) ? body.azienda : "Spagna";
     const dataIt = mov.dataContabile.toLocaleDateString("it-IT", { timeZone: "UTC" });
+    // Rimborsi e benefit a una persona in anagrafica entrano anche nel registro
+    const voceRegistro =
+      categoria === "Rimborsi" ? "rimborsi" : categoria === "Benefit" ? "benefit" : null;
+    const dipendenteId = voceRegistro ? parseInt(body.dipendenteId, 10) || 0 : 0;
+    if (dipendenteId) {
+      const d = await prisma.dipendente.findUnique({ where: { id: dipendenteId } });
+      if (!d) return NextResponse.json({ error: "Persona non trovata" }, { status: 404 });
+    }
 
     const aggiornato = await prisma.$transaction(async (tx) => {
       const spesa = await tx.spesa.create({
@@ -56,6 +64,20 @@ export async function POST(request: Request, { params }: Ctx) {
       await tx.abbinamentoBancario.create({
         data: { movimentoId: mov.id, spesaId: spesa.id, importo: spesa.importo },
       });
+      if (voceRegistro && dipendenteId) {
+        await tx.pagamentoMensile.create({
+          data: {
+            dipendenteId,
+            anno,
+            mese,
+            voce: voceRegistro,
+            importo: spesa.importo,
+            data: mov.dataContabile,
+            note: String(body.descrizione ?? "").trim() || mov.osservazioni || null,
+            spesaId: spesa.id,
+          },
+        });
+      }
       return tx.movimentoBancario.update({
         where: { id: mov.id },
         data: { stato: "spesa_creata" },

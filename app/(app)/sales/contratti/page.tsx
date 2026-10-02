@@ -47,9 +47,9 @@ interface Voce {
 
 const STATI = ["bozza", "inviato", "firmato"] as const;
 const STATO_COLORI: Record<string, { bg: string; text: string }> = {
-  bozza: { bg: "#f3f4f6", text: "#6b7280" },
-  inviato: { bg: "#fef3c7", text: "#b45309" },
-  firmato: { bg: "#d1fae5", text: "#047857" },
+  bozza: { bg: "#9ca3af", text: "#ffffff" },
+  inviato: { bg: "#f59e0b", text: "#ffffff" },
+  firmato: { bg: "#22c55e", text: "#ffffff" },
 };
 
 const uid = () => Math.random().toString(36).slice(2, 9);
@@ -237,7 +237,7 @@ export default function ContrattiPage() {
                   <td className="px-4 py-3 text-sm text-gray-900">
                     {nome}
                     {!c.cliente && (
-                      <span className="ml-2 text-[10px] text-amber-700 bg-amber-100 px-1.5 py-0.5 rounded">
+                      <span className="pill-wait ml-2 text-[10px] font-semibold px-1.5 py-0.5 rounded">
                         non collegato
                       </span>
                     )}

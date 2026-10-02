@@ -141,7 +141,7 @@ export default function ReportModal({ open, onClose, initialAnno }: Props) {
         entrate: [
           {
             id: uid(),
-            label: "Fatture Italia",
+            label: "Fatture tramite SMH",
             totale: it.totale,
             pagate: it.pagate,
             nonPagate: it.nonPagate,
@@ -149,7 +149,7 @@ export default function ReportModal({ open, onClose, initialAnno }: Props) {
           },
           {
             id: uid(),
-            label: "Fatture Spagna",
+            label: "Fatture dirette",
             totale: sp.totale,
             pagate: sp.pagate,
             nonPagate: sp.nonPagate,

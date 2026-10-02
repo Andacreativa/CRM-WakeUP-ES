@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { VOCI, nomeCompleto, type Voce } from "@/lib/dipendenti";
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -23,8 +24,18 @@ export async function PATCH(request: Request, { params }: Ctx) {
     return NextResponse.json({ error: "Importo non valido" }, { status: 400 });
   }
   const row = await prisma.$transaction(async (tx) => {
-    if (p.spesaId && body.importo !== undefined) {
-      await tx.spesa.update({ where: { id: p.spesaId }, data: { importo } });
+    if (p.spesaId && (body.importo !== undefined || body.note !== undefined)) {
+      const d = await tx.dipendente.findUnique({ where: { id: p.dipendenteId } });
+      const nota = body.note !== undefined ? body.note?.trim() || null : p.note;
+      await tx.spesa.update({
+        where: { id: p.spesaId },
+        data: {
+          importo,
+          ...(VOCI[p.voce as Voce]?.multiplo && d
+            ? { descrizione: `${VOCI[p.voce as Voce].label} — ${nomeCompleto(d)}${nota ? ` — ${nota}` : ""}` }
+            : {}),
+        },
+      });
     }
     return tx.pagamentoMensile.update({
       where: { id: pagamentoId },

@@ -230,7 +230,7 @@ export default function DipendentiPage() {
                 ["Stipendio netto", "text-right"],
                 ["Seg. Social", "text-right"],
                 ["IRPF", "text-right"],
-                ["Rimborsi / Benefit", "text-right"],
+                ["Benefit", "text-right"],
                 ["Commissione", "text-right"],
                 ["", ""],
               ].map(([h, al], i) => (
@@ -315,7 +315,7 @@ export default function DipendentiPage() {
                 <td className="px-4 py-3 text-sm text-gray-700 text-right">
                   {d.tipo === "dipendente"
                     ? "—"
-                    : `${fmt(d.rimborsiMensili)} / ${fmt(d.benefitMensili)}`}
+                    : fmt(d.benefitMensili)}
                 </td>
                 <td className="px-4 py-3 text-sm text-gray-700 text-right">
                   {d.tipo === "commerciale"
@@ -702,23 +702,6 @@ export default function DipendentiPage() {
                       />
                     </div>
                   )}
-                  {form.tipo === "socio_dipendente" && (
-                    <div>
-                      <label className="text-xs font-medium text-gray-600 block mb-1">
-                        Rimborsi mensili di default (€)
-                      </label>
-                      <input
-                        type="number"
-                        step="0.01"
-                        value={form.rimborsiMensili}
-                        onChange={(e) =>
-                          setForm((f) => ({ ...f, rimborsiMensili: e.target.value }))
-                        }
-                        placeholder="0.00"
-                        className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-300"
-                      />
-                    </div>
-                  )}
                   <div>
                     <label className="text-xs font-medium text-gray-600 block mb-1">
                       Benefit mensili di default (€)
@@ -737,7 +720,8 @@ export default function DipendentiPage() {
                 </div>
                 <p className="text-[11px] text-gray-400">
                   Gli importi di default vengono proposti ogni mese nel registro pagamenti e
-                  restano modificabili voce per voce.
+                  restano modificabili voce per voce. I rimborsi non hanno un default: si
+                  inseriscono a mano nel registro quando capitano, anche più volte al mese.
                 </p>
               </div>
             )}

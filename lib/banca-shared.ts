@@ -53,7 +53,7 @@ export const REGOLE_BANCA_DEFAULT: RegolaBanca[] = [
   },
   {
     pattern: "REEMBOLSO.*SOCIO|GASTOS DE SOCIO|ANTICIPOS DE GASTOS",
-    categoria: "Soci",
+    categoria: "Rimborsi",
     fornitore: "",
   },
   {
@@ -103,5 +103,9 @@ export interface Suggerimento {
   descrizione: string;
   escludi: boolean;
   origine: "memoria" | "regola" | "default";
+  // Persona in anagrafica citata nel movimento (nomine, rimborsi soci):
+  // con categoria Rimborsi o Benefit la spesa finisce anche nel registro.
+  dipendenteId: number | null;
+  dipendenteNome: string | null;
   candidati: CandidatoSpesa[];
 }

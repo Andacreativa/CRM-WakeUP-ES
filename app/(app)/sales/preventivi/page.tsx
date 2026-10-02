@@ -61,23 +61,23 @@ const STATUS_OPTIONS = [
   {
     value: "attesa",
     label: "In Attesa",
-    bg: "#fef9c3",
-    text: "#a16207",
-    border: "#fde047",
+    bg: "#f59e0b",
+    text: "#ffffff",
+    border: "#f59e0b",
   },
   {
     value: "accettato",
     label: "Accettato",
-    bg: "#dcfce7",
-    text: "#166534",
-    border: "#86efac",
+    bg: "#22c55e",
+    text: "#ffffff",
+    border: "#22c55e",
   },
   {
     value: "rifiutato",
     label: "Rifiutato",
-    bg: "#fee2e2",
-    text: "#991b1b",
-    border: "#fca5a5",
+    bg: "#ef4444",
+    text: "#ffffff",
+    border: "#ef4444",
   },
 ];
 

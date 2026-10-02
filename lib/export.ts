@@ -1,4 +1,4 @@
-import { fmt } from "./constants";
+import { fmt, canaleLabel } from "./constants";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 export interface VocePreventivoData {
@@ -242,7 +242,7 @@ export function fattureToExcel(
     return {
       Cliente: f.cliente?.nome ?? "",
       Paese: f.cliente?.paese ?? "",
-      Azienda: f.azienda,
+      Canale: canaleLabel(f.azienda),
       Mese: MESI[f.mese - 1],
       Anno: f.anno,
       Importo: f.importo,
@@ -268,7 +268,7 @@ export function fattureToPDF(
   const cols = [
     "Cliente",
     "Paese",
-    "Azienda",
+    "Canale",
     "Mese",
     "Importo",
     "Residuo",
@@ -288,7 +288,7 @@ export function fattureToPDF(
     return [
       f.cliente?.nome ?? "",
       f.cliente?.paese ?? "",
-      f.azienda,
+      canaleLabel(f.azienda),
       MESI[f.mese - 1],
       fmt(f.importo),
       accRicevuto > 0 && !isPagato ? fmt(residuo) : "—",
@@ -876,7 +876,6 @@ export function speseToExcel(
   return spese.map((s) => ({
     Fornitore: s.fornitore,
     Categoria: s.categoria,
-    Azienda: s.azienda,
     Mese: MESI[s.mese - 1],
     Anno: s.anno,
     Importo: s.importo,
@@ -1748,4 +1747,150 @@ export async function exportContrattoPDF(c: ContrattoPDFData) {
   doc.line(ML, y, ML + 76, y);
 
   doc.save(`contratto_${c.numero}.pdf`);
+}
+
+// ─── Rapporto Social Media House ────────────────────────────────────────
+// Fatture emesse ai clienti di SMH: su ciascuna SMH trattiene una
+// percentuale; il netto che resta concorre al compenso mensile fisso, e la
+// differenza è la fattura diretta da emettere a SMH per quel mese.
+export interface RapportoSmhInput {
+  numero: string | null;
+  cliente: { nome: string } | null;
+  mese: number;
+  anno: number;
+  importo: number;
+  pagato: boolean;
+}
+export interface RapportoSmhOpts {
+  compensoMensile: number;
+  ritenuta: number; // percentuale
+  nomeSmh: string;
+  titolo: string;
+}
+export interface RapportoSmh {
+  titolo: string;
+  cols: string[];
+  rows: CellInput[][];
+  riepilogo: { columns: string[]; rows: CellInput[][] };
+  footerCells: FooterCell[];
+  excel: { fatture: Record<string, unknown>[]; riepilogo: Record<string, unknown>[] };
+}
+
+export function rapportoSmh(
+  fatture: RapportoSmhInput[],
+  MESI: string[],
+  opts: RapportoSmhOpts,
+): RapportoSmh {
+  const r2 = (n: number) => Math.round(n * 100) / 100;
+  const rit = (lordo: number) => r2((lordo * opts.ritenuta) / 100);
+  const sorted = [...fatture].sort(
+    (a, b) =>
+      a.anno - b.anno || a.mese - b.mese || (a.numero ?? "").localeCompare(b.numero ?? ""),
+  );
+  const cols = ["Numero", "Cliente", "Mese", "Importo", `Ritenuta ${opts.ritenuta}%`, "Netto", "Stato"];
+  const rows: CellInput[][] = sorted.map((f) => {
+    const r = rit(f.importo);
+    return [
+      f.numero ?? "—",
+      f.cliente?.nome ?? "",
+      `${MESI[f.mese - 1]} ${f.anno}`,
+      fmt(f.importo),
+      fmt(r),
+      fmt(r2(f.importo - r)),
+      {
+        content: f.pagato ? "Pagata" : "In attesa",
+        styles: { textColor: f.pagato ? GREEN : ORANGE, fontStyle: "bold" as const },
+      },
+    ];
+  });
+
+  // Riepilogo per mese
+  const perMese = new Map<string, { anno: number; mese: number; n: number; lordo: number }>();
+  for (const f of sorted) {
+    const k = `${f.anno}-${f.mese}`;
+    const m = perMese.get(k) ?? { anno: f.anno, mese: f.mese, n: 0, lordo: 0 };
+    m.n += 1;
+    m.lordo = r2(m.lordo + f.importo);
+    perMese.set(k, m);
+  }
+  const riepilogoCols = [
+    "Mese",
+    "Fatture",
+    "Lordo clienti SMH",
+    `Ritenuta ${opts.ritenuta}%`,
+    "Netto",
+    "Compenso mensile",
+    `Fattura diretta a ${opts.nomeSmh}`,
+  ];
+  let totLordo = 0;
+  let totRit = 0;
+  let totNetto = 0;
+  let totDiretta = 0;
+  const riepilogoRows: CellInput[][] = [];
+  const riepilogoExcel: Record<string, unknown>[] = [];
+  for (const m of perMese.values()) {
+    const r = rit(m.lordo);
+    const netto = r2(m.lordo - r);
+    const diretta = Math.max(0, r2(opts.compensoMensile - netto));
+    totLordo = r2(totLordo + m.lordo);
+    totRit = r2(totRit + r);
+    totNetto = r2(totNetto + netto);
+    totDiretta = r2(totDiretta + diretta);
+    riepilogoRows.push([
+      `${MESI[m.mese - 1]} ${m.anno}`,
+      String(m.n),
+      fmt(m.lordo),
+      fmt(r),
+      fmt(netto),
+      fmt(opts.compensoMensile),
+      { content: fmt(diretta), styles: { fontStyle: "bold" as const, textColor: PINK } },
+    ]);
+    riepilogoExcel.push({
+      Mese: `${MESI[m.mese - 1]} ${m.anno}`,
+      Fatture: m.n,
+      "Lordo clienti SMH": m.lordo,
+      [`Ritenuta ${opts.ritenuta}%`]: r,
+      Netto: netto,
+      "Compenso mensile": opts.compensoMensile,
+      [`Fattura diretta a ${opts.nomeSmh}`]: diretta,
+    });
+  }
+
+  return {
+    titolo: opts.titolo,
+    cols,
+    rows,
+    riepilogo: { columns: riepilogoCols, rows: riepilogoRows },
+    footerCells: [
+      { label: "Fatture clienti SMH", value: String(sorted.length) },
+      { label: "Lordo", value: fmt(totLordo) },
+      { label: `Ritenuta ${opts.ritenuta}%`, value: fmt(totRit), color: ORANGE },
+      { label: "Netto", value: fmt(totNetto), color: GREEN },
+      { label: `Fattura diretta a ${opts.nomeSmh}`, value: fmt(totDiretta), color: PINK },
+    ],
+    excel: {
+      fatture: sorted.map((f) => {
+        const r = rit(f.importo);
+        return {
+          Numero: f.numero ?? "",
+          Cliente: f.cliente?.nome ?? "",
+          Mese: MESI[f.mese - 1],
+          Anno: f.anno,
+          Importo: f.importo,
+          [`Ritenuta ${opts.ritenuta}%`]: r,
+          Netto: r2(f.importo - r),
+          Stato: f.pagato ? "Pagata" : "In attesa",
+        };
+      }),
+      riepilogo: riepilogoExcel,
+    },
+  };
+}
+
+export async function exportRapportoSmhExcel(r: RapportoSmh, filename: string) {
+  const XLSX = await import("xlsx");
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(r.excel.fatture), "Fatture clienti SMH");
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(r.excel.riepilogo), "Riepilogo");
+  XLSX.writeFile(wb, `${filename}.xlsx`);
 }

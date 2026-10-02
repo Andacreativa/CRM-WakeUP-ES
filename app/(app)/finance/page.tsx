@@ -26,7 +26,7 @@ import {
   AlertTriangle,
 } from "lucide-react";
 import Link from "next/link";
-import { fmt, MESI, CATEGORIE_COLORI_CHART } from "@/lib/constants";
+import { fmt, MESI, CATEGORIE_COLORI_CHART, canaleLabel } from "@/lib/constants";
 import FiltriBar from "@/components/FiltriBar";
 import { useAnno } from "@/lib/anno-context";
 
@@ -408,7 +408,7 @@ export default function Dashboard() {
                       {f.cliente?.nome ?? "—"}
                     </p>
                     <p className="text-xs text-gray-400">
-                      {MESI[f.mese - 1] ?? ""} · {f.azienda ?? ""}
+                      {MESI[f.mese - 1] ?? ""} · {canaleLabel(f.azienda)}
                     </p>
                   </div>
                   <div className="text-right">
@@ -416,7 +416,7 @@ export default function Dashboard() {
                       {fmt(f.importo ?? 0)}
                     </p>
                     <span
-                      className={`text-xs font-medium px-2 py-0.5 rounded-full ${f.pagato ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}`}
+                      className={`text-xs font-semibold px-2 py-0.5 rounded-full ${f.pagato ? "pill-ok" : "pill-wait"}`}
                     >
                       {f.pagato ? "Pagato" : "In attesa"}
                     </span>

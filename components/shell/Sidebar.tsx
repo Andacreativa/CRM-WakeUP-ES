@@ -25,8 +25,7 @@ function parseOpenMap(raw: string | null): Record<string, boolean> {
 export default function Sidebar({ username }: { username: string }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { collapsed, setCollapsed, mobileOpen, setMobileOpen, setInfoOpen } =
-    useShell();
+  const { collapsed, setCollapsed, mobileOpen, setMobileOpen } = useShell();
   const match = resolveNav(pathname);
 
   // Sottomenu aperti manualmente (oltre a quello della voce attiva),
@@ -53,23 +52,11 @@ export default function Sidebar({ username }: { username: string }) {
         aria-label="Menu principale"
       >
         <div className="sb-head">
-          <button
-            type="button"
-            className="sb-brand"
-            onClick={() => setInfoOpen(true)}
-            title="Dati aziendali"
-          >
+          <div className="sb-brand">
             <span className="sb-logo">
-              <img src="/logo anda.png" alt="Anda" />
+              <img src="/logo-anda-wide.png" alt="Anda Agencia de Publicidad SL" />
             </span>
-            {!collapsed && (
-              <span className="sb-brand-text">
-                Anda Agencia de
-                <br />
-                Publicidad SL
-              </span>
-            )}
-          </button>
+          </div>
         </div>
 
         <nav className="sb-nav">

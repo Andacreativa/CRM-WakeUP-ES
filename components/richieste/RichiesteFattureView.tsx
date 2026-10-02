@@ -15,7 +15,7 @@ import {
   Clock,
   Receipt,
 } from "lucide-react";
-import { fmt, MESI, AZIENDE, AZIENDA_COLORI, ANNI } from "@/lib/constants";
+import { fmt, MESI, CANALI, AZIENDA_COLORI, ANNI, canaleLabel } from "@/lib/constants";
 import { useAnno } from "@/lib/anno-context";
 import { PageSizeSelect, PageNav } from "@/components/Pagination";
 import { cn } from "@/lib/utils";
@@ -128,7 +128,7 @@ const emptyForm = () => ({
   nomeCliente: "",
   contrattoId: "",
   responsabile: "",
-  azienda: AZIENDE[0],
+  azienda: CANALI[0],
   aziendaNota: "",
   voci: [{ descrizione: "", importo: "" }] as { descrizione: string; importo: string }[],
   tipoIva: "igic_exenta",
@@ -456,10 +456,10 @@ export default function RichiesteFattureView({
           ))}
         </select>
         <select value={azienda} onChange={(e) => setAzienda(e.target.value)} className={selectCls}>
-          <option value="">Tutte le aziende</option>
-          {AZIENDE.map((a) => (
+          <option value="">Tutti i canali</option>
+          {CANALI.map((a) => (
             <option key={a} value={a}>
-              {a}
+              {canaleLabel(a)}
             </option>
           ))}
         </select>
@@ -552,7 +552,7 @@ export default function RichiesteFattureView({
                         style={{ background: col.bg, color: col.text }}
                         title={r.aziendaNota ?? undefined}
                       >
-                        {r.azienda === "Altro" && r.aziendaNota ? r.aziendaNota : r.azienda}
+                        {canaleLabel(r.azienda, r.aziendaNota)}
                       </span>
                     </td>
                     <td className="px-4 py-3 text-sm text-gray-700 whitespace-nowrap">
@@ -575,8 +575,8 @@ export default function RichiesteFattureView({
                         className={cn(
                           "inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-1 rounded-md border transition-colors whitespace-nowrap",
                           validata
-                            ? "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100"
-                            : "bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100",
+                            ? "pill-ok"
+                            : "pill-wait",
                         )}
                         title="Clicca per cambiare"
                       >
@@ -589,7 +589,7 @@ export default function RichiesteFattureView({
                         <div className="flex items-center gap-1">
                           <Link
                             href="/finance/fatture"
-                            className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-1 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100"
+                            className="pill-ok inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-1 rounded-md border"
                           >
                             <Check className="w-3 h-3" />
                             Emessa {r.fattura?.numero ? `N° ${r.fattura.numero}` : ""}
@@ -605,7 +605,7 @@ export default function RichiesteFattureView({
                       ) : r.emessa ? (
                         <button
                           onClick={() => toggle(r, "emessa")}
-                          className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-1 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100"
+                          className="pill-ok inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-1 rounded-md border"
                           title="Segnata emessa a mano: clicca per annullare"
                         >
                           <Check className="w-3 h-3" /> Emessa
@@ -638,8 +638,8 @@ export default function RichiesteFattureView({
                           className={cn(
                             "inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-1 rounded-md border whitespace-nowrap",
                             r.incassataEff
-                              ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                              : "bg-amber-50 text-amber-700 border-amber-200",
+                              ? "pill-ok"
+                              : "pill-wait",
                             r.fatturaId ? "cursor-default" : "hover:opacity-80",
                           )}
                           title={
@@ -757,9 +757,9 @@ export default function RichiesteFattureView({
                 />
               </div>
               <div>
-                <label className={labelCls}>Azienda</label>
+                <label className={labelCls}>Canale</label>
                 <div className="flex gap-2">
-                  {AZIENDE.map((a) => {
+                  {CANALI.map((a) => {
                     const active = form.azienda === a;
                     const col = AZIENDA_COLORI[a];
                     return (
@@ -774,19 +774,11 @@ export default function RichiesteFattureView({
                             : { background: "#fff", borderColor: "#e2e8f0", color: "#94a3b8" }
                         }
                       >
-                        {a}
+                        {canaleLabel(a)}
                       </button>
                     );
                   })}
                 </div>
-                {form.azienda === "Altro" && (
-                  <input
-                    value={form.aziendaNota}
-                    onChange={(e) => setForm((f) => ({ ...f, aziendaNota: e.target.value }))}
-                    className={cn(inputCls, "mt-2")}
-                    placeholder="Specifica l'azienda"
-                  />
-                )}
               </div>
             </div>
 

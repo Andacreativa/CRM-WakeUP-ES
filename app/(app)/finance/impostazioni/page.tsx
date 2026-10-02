@@ -254,6 +254,35 @@ export default function ImpostazioniPage() {
       </Sezione>
 
       <Sezione
+        titolo="Canale Social Media House"
+        sotto="Fatture ai clienti di SMH: la ritenuta si toglie da ogni fattura, il netto concorre al compenso mensile e la differenza è la fattura diretta da emettere a SMH (vedi Rapporto SMH in Fatture › Esporta)"
+      >
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <Testo cfg={cfg} set={set} k="smhNome" label="Nome dell'intermediario" />
+          <div>
+            <label className={labelCls}>Compenso mensile netto (€)</label>
+            <input
+              type="number"
+              step="0.01"
+              className={inputCls}
+              value={cfg.smhCompensoMensile}
+              onChange={(e) => set("smhCompensoMensile", parseFloat(e.target.value) || 0)}
+            />
+          </div>
+          <div>
+            <label className={labelCls}>Ritenuta SMH (%)</label>
+            <input
+              type="number"
+              step="0.1"
+              className={inputCls}
+              value={cfg.smhRitenuta}
+              onChange={(e) => set("smhRitenuta", parseFloat(e.target.value) || 0)}
+            />
+          </div>
+        </div>
+      </Sezione>
+
+      <Sezione
         titolo="Solleciti"
         sotto="Testi usati dal bottone Sollecita nelle scadenze. Segnaposto: {cliente} {numero} {importo} {scadenza} {iban} {azienda}"
       >

@@ -84,6 +84,7 @@ interface Edit {
   fornitoreId: number | null;
   descrizione: string;
   candidatoId: number; // 0 = crea una nuova spesa
+  dipendenteId: number | null; // rimborsi/benefit: persona del registro
 }
 
 type Vista = "movimenti" | "importazioni" | "regole";
@@ -115,7 +116,9 @@ const editDaSuggerimento = (s: Suggerimento): Edit => ({
   fornitoreId: s.fornitoreId,
   descrizione: s.descrizione,
   candidatoId: s.candidati[0] && s.candidati[0].punteggio >= 50 ? s.candidati[0].id : 0,
+  dipendenteId: s.dipendenteId,
 });
+const CON_REGISTRO = new Set(["Rimborsi", "Benefit"]);
 
 function Pills<T extends string>({
   value,
@@ -167,6 +170,7 @@ export default function BancaView() {
   const [rows, setRows] = useState<Movimento[]>([]);
   const [importazioni, setImportazioni] = useState<Importazione[]>([]);
   const [fornitori, setFornitori] = useState<{ id: number; nome: string }[]>([]);
+  const [persone, setPersone] = useState<{ id: number; nome: string }[]>([]);
   const [edits, setEdits] = useState<Record<number, Edit>>({});
   const [sel, setSel] = useState<Set<number>>(new Set());
   const [loading, setLoading] = useState(true);
@@ -209,6 +213,16 @@ export default function BancaView() {
     fetch("/api/fornitori")
       .then((r) => r.json())
       .then((j) => setFornitori(Array.isArray(j) ? j.map((f) => ({ id: f.id, nome: f.nome })) : []))
+      .catch(() => {});
+    fetch("/api/dipendenti?attivi=1")
+      .then((r) => r.json())
+      .then((j) =>
+        setPersone(
+          Array.isArray(j)
+            ? j.map((d) => ({ id: d.id, nome: `${d.nome}${d.cognome ? ` ${d.cognome}` : ""}` }))
+            : [],
+        ),
+      )
       .catch(() => {});
   }, []);
 
@@ -264,7 +278,15 @@ export default function BancaView() {
       ? await fetch(`/api/banca/movimenti/${r.id}/abbina`, {
           method: "POST",
           headers,
-          body: JSON.stringify({ spesaIds: [e.candidatoId] }),
+          body: JSON.stringify({
+            spesaIds: [e.candidatoId],
+            // spesa storica da registrare come rimborso/benefit della persona
+            ...(CON_REGISTRO.has(e.categoria) &&
+            e.dipendenteId &&
+            !r.suggerimento?.candidati.find((c) => c.id === e.candidatoId)?.registro
+              ? { registraCome: e.categoria === "Rimborsi" ? "rimborsi" : "benefit", dipendenteId: e.dipendenteId }
+              : {}),
+          }),
         })
       : await fetch(`/api/banca/movimenti/${r.id}/crea-spesa`, {
           method: "POST",
@@ -274,6 +296,7 @@ export default function BancaView() {
             fornitore: e.fornitore,
             fornitoreId: e.fornitoreId,
             descrizione: e.descrizione,
+            dipendenteId: CON_REGISTRO.has(e.categoria) ? e.dipendenteId : null,
           }),
         });
     const j = await res.json();
@@ -726,6 +749,23 @@ export default function BancaView() {
                                       placeholder="Fornitore"
                                       className={inputCls}
                                     />
+                                    {e && CON_REGISTRO.has(e.categoria) && (
+                                      <select
+                                        value={e.dipendenteId ?? 0}
+                                        onChange={(ev) =>
+                                          setEdit(r.id, { dipendenteId: parseInt(ev.target.value) || null })
+                                        }
+                                        className={cn(inputCls, e.dipendenteId && "border-emerald-300 bg-emerald-50")}
+                                        title="Persona del registro pagamenti"
+                                      >
+                                        <option value={0}>Registro: nessuna persona</option>
+                                        {persone.map((d) => (
+                                          <option key={d.id} value={d.id}>
+                                            Registro: {d.nome}
+                                          </option>
+                                        ))}
+                                      </select>
+                                    )}
                                     {((s && s.origine !== "default") || e?.fornitoreId) && (
                                       <div className="text-[10px] text-gray-400">
                                         {s && s.origine !== "default"
@@ -758,6 +798,9 @@ export default function BancaView() {
                                       <div className="text-[10px] text-emerald-700 mt-0.5 truncate" title={candidato.descrizione ?? undefined}>
                                         {candidato.registro ? "Già nel registro pagamenti" : "Già registrata in Spese"}
                                         {candidato.descrizione ? ` · ${candidato.descrizione}` : ""}
+                                        {!candidato.registro && e && CON_REGISTRO.has(e.categoria) && e.dipendenteId
+                                          ? ` · entra nel registro come ${e.categoria.toLowerCase()} di ${persone.find((d) => d.id === e.dipendenteId)?.nome ?? "persona"}`
+                                          : ""}
                                       </div>
                                     )}
                                   </>
@@ -772,9 +815,9 @@ export default function BancaView() {
                                 <span
                                   className={cn(
                                     "text-[11px] font-semibold px-2 py-0.5 rounded-md",
-                                    collegato(r) && "bg-emerald-50 text-emerald-700",
-                                    r.stato === "escluso" && "bg-gray-100 text-gray-500",
-                                    daRivedere && "bg-amber-50 text-amber-700",
+                                    collegato(r) && "pill-ok",
+                                    r.stato === "escluso" && "pill-off",
+                                    daRivedere && "pill-wait",
                                   )}
                                 >
                                   {STATO_MOVIMENTO_LABEL[r.stato]}

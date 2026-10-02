@@ -196,7 +196,7 @@ export default function ClienteDettaglioPage() {
                         <td className="px-5 py-2.5 text-sm text-gray-700">{MESI[f.mese - 1]} {f.anno}</td>
                         <td className="px-5 py-2.5 text-sm text-gray-500">{f.scadenza ? new Date(f.scadenza).toLocaleDateString("it-IT") : "—"}</td>
                         <td className="px-5 py-2.5">
-                          <span className={cn("text-[11px] font-semibold px-2 py-0.5 rounded-md", stato === "pagata" ? "bg-emerald-50 text-emerald-700" : stato === "acconto" ? "bg-blue-50 text-blue-700" : "bg-amber-50 text-amber-700")}>{stato}</span>
+                          <span className={cn("text-[11px] font-semibold px-2 py-0.5 rounded-md", stato === "pagata" ? "pill-ok" : stato === "acconto" ? "pill-partial" : "pill-wait")}>{stato}</span>
                         </td>
                         <td className="px-5 py-2.5 text-sm font-semibold text-gray-900 text-right">{fmt(f.importo)}</td>
                       </tr>
@@ -223,7 +223,7 @@ export default function ClienteDettaglioPage() {
                       <span className="text-xs text-gray-400 ml-2">{MESI[r.mese - 1]} {r.anno}</span>
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
-                      <span className={cn("text-[11px] font-semibold px-2 py-0.5 rounded-md", r.fatturaId || r.emessa ? "bg-emerald-50 text-emerald-700" : r.validazione === "ok" ? "bg-blue-50 text-blue-700" : "bg-amber-50 text-amber-700")}>
+                      <span className={cn("text-[11px] font-semibold px-2 py-0.5 rounded-md", r.fatturaId || r.emessa ? "pill-ok" : r.validazione === "ok" ? "pill-info" : "pill-wait")}>
                         {r.fatturaId || r.emessa ? "emessa" : r.validazione === "ok" ? "da fare" : "da validare"}
                       </span>
                       <span className="font-semibold text-gray-900">{fmt(r.totale)}</span>
@@ -290,7 +290,7 @@ export default function ClienteDettaglioPage() {
                 return (
                   <Link key={l.id} href={`/crm/lead/${l.id}`} className="flex items-center justify-between text-sm hover:text-pink-600">
                     <span className="truncate">{l.codice ?? ""} {l.azienda ?? l.nome}</span>
-                    <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded" style={{ background: st.bg, color: st.color }}>{st.label}</span>
+                    <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded" style={{ background: st.color, color: "#fff" }}>{st.label}</span>
                   </Link>
                 );
               })}
@@ -375,7 +375,7 @@ function Referenti({
               <div className="min-w-0">
                 <span className="font-semibold text-gray-900">{r.nome}{r.cognome ? ` ${r.cognome}` : ""}</span>
                 {r.ruolo && <span className="text-gray-500"> · {r.ruolo}</span>}
-                {r.principale && <span className="ml-2 text-[10px] font-semibold px-1.5 py-0.5 rounded bg-amber-50 text-amber-700">principale</span>}
+                {r.principale && <span className="pill-wait ml-2 text-[10px] font-semibold px-1.5 py-0.5 rounded">principale</span>}
                 <div className="text-xs text-gray-500">{[r.email, r.telefono].filter(Boolean).join(" · ") || "—"}</div>
               </div>
               <div className="flex items-center gap-1 shrink-0">

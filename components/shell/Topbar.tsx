@@ -1,8 +1,10 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { Building2, Calendar, ChevronRight, LogOut, Menu } from "lucide-react";
 import { ANNI } from "@/lib/constants";
+import { IMPOSTAZIONI_FATTURE_DEFAULT } from "@/lib/impostazioni";
 import { useAnno } from "@/lib/anno-context";
 import { resolveNav } from "@/lib/nav";
 import { useShell } from "./ShellContext";
@@ -13,6 +15,18 @@ export default function Topbar() {
   const { setMobileOpen, setInfoOpen } = useShell();
   const { anno, setAnno } = useAnno();
   const { section, item, tab } = resolveNav(pathname);
+  // Nome esteso dell'azienda: segue la ragione sociale salvata in Impostazioni
+  const [ragioneSociale, setRagioneSociale] = useState(
+    IMPOSTAZIONI_FATTURE_DEFAULT.ragioneSociale,
+  );
+  useEffect(() => {
+    fetch("/api/impostazioni/fatture")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((j) => {
+        if (j?.ragioneSociale) setRagioneSociale(String(j.ragioneSociale));
+      })
+      .catch(() => {});
+  }, []);
 
   const logout = async () => {
     await fetch("/api/auth/logout", { method: "POST" });
@@ -66,7 +80,7 @@ export default function Topbar() {
             <option value={0}>Tutti gli anni</option>
           </select>
         </label>
-        <span className="topbar-app">ANDA</span>
+        <span className="topbar-app">{ragioneSociale}</span>
         <button
           type="button"
           className="topbar-btn"

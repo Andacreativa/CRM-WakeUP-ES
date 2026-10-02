@@ -489,6 +489,8 @@ export function suggerisci(m: MovimentoLike, ctx: ContestoSuggerimenti): Suggeri
     descrizione: pulisci(m.osservazioni) || pulisci(m.concetto),
     escludi,
     origine,
+    dipendenteId: persona?.id ?? null,
+    dipendenteNome: persona?.nome ?? null,
     candidati: candidati.slice(0, 5),
   };
 }
