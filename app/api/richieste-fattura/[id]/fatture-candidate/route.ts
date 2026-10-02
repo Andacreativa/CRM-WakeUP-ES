@@ -16,6 +16,7 @@ export async function GET(
   const fatture = await prisma.fattura.findMany({
     where: {
       origine: { not: "sales" },
+      annullata: false,
       richiesta: null,
       ...(r.clienteId ? { clienteId: r.clienteId } : { anno: r.anno }),
     },

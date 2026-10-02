@@ -553,7 +553,7 @@ export async function caricaContestoEntrate(db: Db, anni: number[]): Promise<Con
   const anniEstesi = Array.from(new Set(anni.flatMap((a) => [a - 1, a, a + 1])));
   const fatture = anniEstesi.length
     ? await db.fattura.findMany({
-        where: { anno: { in: anniEstesi }, origine: { not: "sales" } },
+        where: { anno: { in: anniEstesi }, origine: { not: "sales" }, annullata: false },
         include: {
           cliente: { select: { id: true, nome: true } },
           acconti: { select: { importo: true } },

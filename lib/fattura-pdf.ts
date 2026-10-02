@@ -191,7 +191,14 @@ async function caricaLogoRifilato(
   }
 }
 
+const nomeFilePDF = (f: { id: number; numero: string | null }) =>
+  `fattura_${(f.numero ?? String(f.id)).replace(/[^\w.-]+/g, "_")}.pdf`;
+
 export async function exportFatturaPDF(f: FatturaDettaglio, cfg: ImpostazioniFatture) {
+  (await creaFatturaPDF(f, cfg)).save(nomeFilePDF(f));
+}
+
+async function creaFatturaPDF(f: FatturaDettaglio, cfg: ImpostazioniFatture) {
   const lingua: Lingua = cfg.linguaDefault === "es" || cfg.linguaDefault === "en" ? cfg.linguaDefault : "it";
   const L = T[lingua];
   const { default: jsPDF } = await import("jspdf");
@@ -386,7 +393,7 @@ export async function exportFatturaPDF(f: FatturaDettaglio, cfg: ImpostazioniFat
   doc.setTextColor(...LIGHT);
   doc.text(doc.splitTextToSize(pie, W - ML - MR) as string[], W / 2, H - 12, { align: "center" });
 
-  doc.save(`fattura_${(f.numero ?? String(f.id)).replace(/[^\w.-]+/g, "_")}.pdf`);
+  return doc;
 }
 
 // ── Email ────────────────────────────────────────────────────────────────
@@ -405,9 +412,19 @@ const MAIL = {
   },
 };
 
-// Come per i solleciti: il messaggio lo manda il programma di posta di chi
-// usa l'app. Spagnolo per i clienti spagnoli, italiano per gli altri.
-export function mailtoFattura(f: FatturaDettaglio, cfg: ImpostazioniFatture): string | null {
+// Destinatario, oggetto e testo del messaggio che accompagna la fattura.
+// Spagnolo per i clienti spagnoli, italiano per gli altri (come i solleciti).
+export function messaggioFattura(
+  f: {
+    numero: string | null;
+    data: string | Date | null;
+    scadenza: string | Date | null;
+    importo: number;
+    iva: number;
+    cliente: { nome: string; paese: string; email?: string | null } | null;
+  },
+  cfg: ImpostazioniFatture,
+): { a: string; oggetto: string; testo: string } | null {
   if (!f.cliente?.email) return null;
   const es = (f.cliente.paese ?? "").toLowerCase() === "spagna";
   const M = es ? MAIL.es : MAIL.it;
@@ -423,7 +440,11 @@ export function mailtoFattura(f: FatturaDettaglio, cfg: ImpostazioniFatture): st
     iban: cfg.iban,
     azienda: cfg.ragioneSociale,
   };
-  return `mailto:${f.cliente.email}?subject=${encodeURIComponent(compilaTesto(M.oggetto, v))}&body=${encodeURIComponent(compilaTesto(M.testo, v))}`;
+  return {
+    a: f.cliente.email,
+    oggetto: compilaTesto(M.oggetto, v),
+    testo: compilaTesto(M.testo, v),
+  };
 }
 
 // ── Azioni pronte per i bottoni (lista e pannello) ───────────────────────
@@ -443,20 +464,47 @@ export async function scaricaFatturaPDF(id: number) {
   await exportFatturaPDF(f, cfg);
 }
 
-// Scarica il PDF da allegare, apre il programma di posta con il messaggio
-// pronto e segna la fattura come inviata. Restituisce la data d'invio.
+// Manda la fattura al cliente e la segna come inviata; restituisce la data
+// d'invio (null se non parte). Con la casella aziendale collegata l'email
+// parte da lì con il PDF allegato; altrimenti si scarica il PDF e si apre il
+// programma di posta con il messaggio pronto.
 export async function inviaFatturaMail(id: number): Promise<string | null> {
-  const [f, cfg] = await caricaFatturaECfg(id);
-  const href = mailtoFattura(f, cfg);
-  if (!href) return null;
+  const [[f, cfg], posta] = await Promise.all([
+    caricaFatturaECfg(id),
+    fetch("/api/mail")
+      .then((r) => (r.ok ? r.json() : null))
+      .catch(() => null) as Promise<{ configurata: boolean; mittente: string | null } | null>,
+  ]);
+  const msg = messaggioFattura(f, cfg);
+  if (!msg) return null;
+
+  if (posta?.configurata) {
+    if (
+      !confirm(
+        `Inviare la fattura ${f.numero ?? ""} a ${msg.a}?\n\nParte da ${posta.mittente} con il PDF allegato.`,
+      )
+    )
+      return null;
+    const doc = await creaFatturaPDF(f, cfg);
+    const pdf = doc.output("datauristring").split("base64,")[1] ?? "";
+    const res = await fetch(`/api/fatture/${id}/email`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ pdf, filename: nomeFilePDF(f) }),
+    });
+    const j = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(j.error ?? "Invio non riuscito");
+    return String(j.dataInvio);
+  }
+
   if (
     !confirm(
-      `Inviare la fattura ${f.numero ?? ""} a ${f.cliente?.email}?\n\nSi scarica il PDF da allegare e si apre il programma di posta con il messaggio pronto.`,
+      `Inviare la fattura ${f.numero ?? ""} a ${msg.a}?\n\nSi scarica il PDF da allegare e si apre il programma di posta con il messaggio pronto.`,
     )
   )
     return null;
   await exportFatturaPDF(f, cfg);
-  window.location.href = href;
+  window.location.href = `mailto:${msg.a}?subject=${encodeURIComponent(msg.oggetto)}&body=${encodeURIComponent(msg.testo)}`;
   const dataInvio = new Date().toISOString();
   await fetch(`/api/fatture/${id}`, {
     method: "PATCH",

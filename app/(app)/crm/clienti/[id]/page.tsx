@@ -117,7 +117,7 @@ export default function ClienteDettaglioPage() {
           </p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
-          <Link href="/finance/fatture?tab=da-emettere" className="btn btn-secondary">
+          <Link href="/sales/richieste" className="btn btn-secondary">
             <Receipt className="w-4 h-4" /> Richiesta fattura
           </Link>
           <button onClick={() => setEdit(true)} className="btn btn-primary">
@@ -212,7 +212,7 @@ export default function ClienteDettaglioPage() {
             <section className="glass-card rounded-2xl overflow-hidden">
               <div className="px-5 py-3 border-b border-gray-100 flex items-center justify-between">
                 <h2 className="text-sm font-semibold text-gray-900">Richieste di fattura</h2>
-                <Link href="/finance/fatture?tab=da-emettere" className="text-xs font-semibold text-brand hover:text-brand">Da emettere</Link>
+                <Link href="/sales/richieste" className="text-xs font-semibold text-brand hover:text-brand">Richieste fattura</Link>
               </div>
               <div className="divide-y divide-gray-50">
                 {c.richiesteFattura.map((r) => (

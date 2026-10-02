@@ -51,6 +51,10 @@ model Fattura {
   // come «Contab.» di Northstar; la scriverà il collegamento quando ci sarà.
   presentata    Boolean        @default(false)
   presentataIl  DateTime?
+  // Annullata: la fattura resta nel registro (il numero non si riusa) ma
+  // esce da totali, scadenze e riconciliazione. Non si elimina.
+  annullata     Boolean        @default(false)
+  annullataIl   DateTime?
   origine       String         @default("finance")
   metodo        String?
   commerciale   String? // storico (testo libero); oggi si usa commercialeId

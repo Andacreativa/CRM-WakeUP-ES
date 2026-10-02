@@ -57,7 +57,7 @@ export async function costruisciBoard(prisma: PrismaClient, anno: number) {
   const anni = anno > 0 ? [anno] : [];
   const [fatture, movimenti, ctx] = await Promise.all([
     prisma.fattura.findMany({
-      where: { ...(anno > 0 ? { anno: { in: [anno - 1, anno] } } : {}), origine: { not: "sales" } },
+      where: { ...(anno > 0 ? { anno: { in: [anno - 1, anno] } } : {}), origine: { not: "sales" }, annullata: false },
       include: {
         cliente: { select: { id: true, nome: true } },
         acconti: { select: { id: true, importo: true } },

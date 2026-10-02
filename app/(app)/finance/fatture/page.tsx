@@ -18,13 +18,13 @@ import {
   PencilLine,
   Upload,
   Wallet,
+  Ban,
   Send,
   Mail,
   MailOpen,
   ExternalLink,
 } from "lucide-react";
 import { fmt, MESI, CANALI, canaleLabel } from "@/lib/constants";
-import RichiesteFattureView from "@/components/richieste/RichiesteFattureView";
 import { matchQ } from "@/lib/utils";
 import { useAnno } from "@/lib/anno-context";
 import {
@@ -64,8 +64,9 @@ const numeroKey = (n: string | null): number => {
 
 // Sotto-tab della pagina (come "Fatture emesse" di Northstar). Bozze e
 // proforma arrivano con la creazione fatture: per ora sono segnaposto.
-type TabFatture = "emesse" | "bozze" | "da-emettere" | "proforma";
-const TAB_VALIDE: TabFatture[] = ["emesse", "bozze", "da-emettere", "proforma"];
+// Le fatture da emettere stanno solo in Sales › Richieste fattura.
+type TabFatture = "emesse" | "bozze" | "proforma";
+const TAB_VALIDE: TabFatture[] = ["emesse", "bozze", "proforma"];
 
 // Filtri e pagina della lista, ricordati mentre si apre una fattura: al
 // ritorno dal pannello si ritrova la lista dov'era.
@@ -104,6 +105,8 @@ export default function FatturePage() {
   // richiedere un confine Suspense alla pagina.
   useEffect(() => {
     const t = new URLSearchParams(window.location.search).get("tab");
+    // Vecchi indirizzi della linguetta «Da emettere»
+    if (t === "da-emettere") return router.replace("/sales/richieste");
     if (t && (TAB_VALIDE as string[]).includes(t)) setTab(t as TabFatture);
     try {
       const salvata = sessionStorage.getItem(CHIAVE_LISTA);
@@ -120,7 +123,7 @@ export default function FatturePage() {
     } catch {
       /* niente da ripristinare */
     }
-  }, []);
+  }, [router]);
   const ricordaLista = () => {
     try {
       sessionStorage.setItem(
@@ -192,7 +195,7 @@ export default function FatturePage() {
   }, []);
 
   const load = async () => {
-    const params = new URLSearchParams();
+    const params = new URLSearchParams({ annullate: "1" });
     if (anno > 0) params.set("anno", String(anno));
     if (azienda) params.set("azienda", azienda);
     const [f, c] = await Promise.all([
@@ -260,8 +263,8 @@ export default function FatturePage() {
     try {
       const dataInvio = await inviaFatturaMail(f.id);
       if (dataInvio) patchRiga(f.id, { inviata: true, dataInvio });
-    } catch {
-      alert("Non sono riuscito a preparare l'invio della fattura.");
+    } catch (e) {
+      alert(e instanceof Error ? e.message : "Non sono riuscito a inviare la fattura.");
     }
   };
 
@@ -297,10 +300,11 @@ export default function FatturePage() {
   // ── Selezione righe per export ──────────────────────────────────────────
   // La selezione vive solo sulle fatture attualmente filtrate: se un filtro
   // nasconde una riga selezionata, quella riga esce anche dall'export.
-  const selected = filtered.filter((f) => selectedIds.has(f.id));
+  const attive = filtered.filter((f) => !f.annullata);
+  const selected = attive.filter((f) => selectedIds.has(f.id));
   const selTotale = selected.reduce((s, f) => s + (f?.importo ?? 0), 0);
   // Esporta: le spuntate, oppure tutte quelle del filtro
-  const exportList = tutte || selected.length === 0 ? filtered : selected;
+  const exportList = tutte || selected.length === 0 ? attive : selected;
 
   const toggleRow = (f: Fattura, shift: boolean) => {
     setSelectedIds((prev) => {
@@ -323,14 +327,14 @@ export default function FatturePage() {
     setLastClickedId(f.id);
   };
 
-  const totale = filtered.reduce((s, f) => s + (f?.importo ?? 0), 0);
-  const pagate = filtered.reduce(
+  const totale = attive.reduce((s, f) => s + (f?.importo ?? 0), 0);
+  const pagate = attive.reduce(
     (s, f) =>
       s +
       (statoCalcolato(f) === "pagato" ? (f?.importo ?? 0) : totalePagato(f)),
     0,
   );
-  const daIncassare = filtered.reduce(
+  const daIncassare = attive.reduce(
     (s, f) => s + (statoCalcolato(f) === "pagato" ? 0 : residuo(f)),
     0,
   );
@@ -340,7 +344,7 @@ export default function FatturePage() {
     const slug = clienteFiltrato
       ? `_${clienteFiltrato.nome.replace(/\s+/g, "")}`
       : "";
-    const sel = list.length !== filtered.length ? "_selezione" : "";
+    const sel = list.length !== attive.length ? "_selezione" : "";
     exportExcel(fattureToExcel(list, MESI), `fatture_${annoLabel}${slug}${sel}`);
   };
 
@@ -348,7 +352,7 @@ export default function FatturePage() {
     const aziendaLabel = azienda ? canaleLabel(azienda) : "Tutti i canali";
     const annoStr = anno > 0 ? String(anno) : "tutti gli anni";
     const annoFile = anno > 0 ? String(anno) : "tutti";
-    const parziale = list.length !== filtered.length;
+    const parziale = list.length !== attive.length;
     const base = clienteFiltrato
       ? `Fatture ${annoStr} — ${aziendaLabel} · ${clienteFiltrato.nome}`
       : `Fatture ${annoStr} — ${aziendaLabel}`;
@@ -414,7 +418,7 @@ export default function FatturePage() {
 
   const oggi = new Date();
   const isInScadenza = (f: Fattura) => {
-    if (!f.scadenza || f.pagato) return false;
+    if (!f.scadenza || f.pagato || f.annullata) return false;
     const d = new Date(f.scadenza);
     const giorni = Math.ceil((d.getTime() - oggi.getTime()) / 86400000);
     return giorni >= 0 && giorni <= 7;
@@ -424,7 +428,7 @@ export default function FatturePage() {
     <div className={`space-y-6 ${exportMode ? "pb-24" : ""}`}>
       <div className="flex items-start justify-between flex-wrap gap-3">
         <div>
-          <h1 className="page-title">Fatture emesse</h1>
+          <h1 className="page-title">Fatture</h1>
           <p className="page-sub">
             Fatture attive create a mano o dalle richieste. Bozze e proforma arrivano con la
             creazione fatture.
@@ -461,7 +465,6 @@ export default function FatturePage() {
         options={[
           { val: "emesse", label: "Emesse" },
           { val: "bozze", label: "Bozze" },
-          { val: "da-emettere", label: "Da emettere" },
           { val: "proforma", label: "Proforma" },
         ]}
       />
@@ -560,12 +563,12 @@ export default function FatturePage() {
                 <th className="w-10 px-3 py-3">
                   <input
                     type="checkbox"
-                    checked={filtered.length > 0 && selected.length === filtered.length}
+                    checked={attive.length > 0 && selected.length === attive.length}
                     onChange={() =>
                       setSelectedIds(
-                        selected.length === filtered.length
+                        selected.length === attive.length
                           ? new Set()
-                          : new Set(filtered.map((f) => f.id)),
+                          : new Set(attive.map((f) => f.id)),
                       )
                     }
                     className="accent-pink-600"
@@ -581,13 +584,12 @@ export default function FatturePage() {
               <th className="text-right">Importo</th>
               <th className="text-center">Stato</th>
               <th className="text-center">
-                <span
-                  className="inline-flex items-center gap-1.5"
+                <img
+                  src="/verifactu-logo.png"
+                  alt="VeriFactu"
                   title="Presentata all'Agencia Tributaria (VeriFactu). Per ora la spunta si mette a mano."
-                >
-                  Presentata
-                  <img src="/verifactu-logo.png" alt="VeriFactu" className="h-3.5 w-auto" />
-                </span>
+                  className="inline-block h-4 w-auto"
+                />
               </th>
               <th />
             </tr>
@@ -610,7 +612,7 @@ export default function FatturePage() {
                   // shift+click: niente evidenziazione del testo mentre si estende la selezione
                   if (e.shiftKey) e.preventDefault();
                 }}
-                onClick={(e) => exportMode && toggleRow(f, e.shiftKey)}
+                onClick={(e) => exportMode && !f.annullata && toggleRow(f, e.shiftKey)}
                 title={exportMode ? "Click per selezionare · Shift+click per un intervallo" : undefined}
                 className={`${exportMode ? "cursor-pointer" : ""} ${
                   exportMode && selectedIds.has(f.id)
@@ -623,6 +625,7 @@ export default function FatturePage() {
                     <input
                       type="checkbox"
                       checked={selectedIds.has(f.id)}
+                      disabled={f.annullata}
                       onChange={() => toggleRow(f, false)}
                       className="accent-pink-600"
                       aria-label={`Seleziona la fattura ${f.numero ?? f.id}`}
@@ -673,7 +676,11 @@ export default function FatturePage() {
                     <span className="text-gray-400">—</span>
                   )}
                 </td>
-                <td className="font-semibold text-gray-900 text-right whitespace-nowrap">
+                <td
+                  className={`font-semibold text-right whitespace-nowrap ${
+                    f.annullata ? "text-gray-400 line-through" : "text-gray-900"
+                  }`}
+                >
                   {fmt(f.importo)}
                 </td>
                 <td className="text-center">
@@ -684,6 +691,17 @@ export default function FatturePage() {
                       ricordaLista();
                       router.push(`/finance/fatture/${f.id}`);
                     };
+                    if (stato === "annullata") {
+                      return (
+                        <button
+                          onClick={apri}
+                          className="pill-off"
+                          title={`Annullata${f.annullataIl ? ` il ${dataIt(f.annullataIl)}` : ""}: resta nel registro, fuori dai totali`}
+                        >
+                          <Ban /> Annullata
+                        </button>
+                      );
+                    }
                     if (stato === "pagato") {
                       const conIncassi = f.acconti && f.acconti.length > 0;
                       return (
@@ -833,7 +851,7 @@ export default function FatturePage() {
       {exportMode && (
         <ExportBar
           selected={selected.length}
-          total={filtered.length}
+          total={attive.length}
           unit="fatture"
           importo={fmt(tutte ? totale : selTotale)}
           tutte={tutte}
@@ -870,7 +888,6 @@ export default function FatturePage() {
         </>
       )}
 
-      {tab === "da-emettere" && <RichiesteFattureView mode="finance" embedded />}
       {(tab === "bozze" || tab === "proforma") && (
         <div className="glass-card rounded-2xl p-12 text-center text-sm text-gray-400">
           {tab === "bozze" ? (

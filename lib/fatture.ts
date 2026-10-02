@@ -37,6 +37,8 @@ export interface Fattura {
   dataInvio: string | null;
   presentata: boolean;
   presentataIl: string | null;
+  annullata: boolean;
+  annullataIl: string | null;
   metodo: string | null;
   commerciale: string | null;
   commercialeId: number | null;
@@ -56,7 +58,7 @@ export interface FatturaDettaglio extends Fattura {
   } | null;
 }
 
-export type StatoFattura = "pagato" | "acconto" | "attesa";
+export type StatoFattura = "pagato" | "acconto" | "attesa" | "annullata";
 
 export const totalePagato = (f: { acconti?: { importo: number }[] }) =>
   (f.acconti ?? []).reduce((s, a) => s + a.importo, 0);
@@ -65,8 +67,11 @@ export const residuo = (f: { importo: number; acconti?: { importo: number }[] })
 export const statoCalcolato = (f: {
   pagato: boolean;
   importo: number;
+  annullata?: boolean;
   acconti?: { importo: number }[];
 }): StatoFattura => {
+  // Annullata: resta nel registro ma non è né incassata né da incassare
+  if (f.annullata) return "annullata";
   if (f.pagato) return "pagato";
   if (totalePagato(f) >= f.importo) return "pagato";
   if (totalePagato(f) > 0) return "acconto";
@@ -78,8 +83,10 @@ export const statoCalcolato = (f: {
 export const incassoDaBanca = (a: { note: string | null }) =>
   (a.note ?? "").startsWith("Incasso da banca");
 
-export const isScaduta =(f: { pagato: boolean; scadenza: string | null }, oggi = new Date()) =>
-  !f.pagato && !!f.scadenza && new Date(f.scadenza) < oggi;
+export const isScaduta = (
+  f: { pagato: boolean; annullata?: boolean; scadenza: string | null },
+  oggi = new Date(),
+) => !f.pagato && !f.annullata && !!f.scadenza && new Date(f.scadenza) < oggi;
 
 export const dataIt = (d: string | Date | null | undefined) =>
   d ? new Date(d).toLocaleDateString("it-IT") : "—";

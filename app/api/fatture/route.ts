@@ -8,10 +8,13 @@ export async function GET(request: Request) {
   const annoParam = searchParams.get("anno");
   const anno = annoParam ? parseInt(annoParam) : null;
   const azienda = searchParams.get("azienda") || undefined;
+  // Le annullate servono solo al registro Fatture: Bilancio e Scadenze non le contano
+  const conAnnullate = searchParams.get("annullate") === "1";
 
   const fatture = await prisma.fattura.findMany({
     where: {
       origine: { not: "sales" },
+      ...(conAnnullate ? {} : { annullata: false }),
       ...(anno && anno > 0 ? { anno } : {}),
       ...(azienda ? { azienda } : {}),
     },

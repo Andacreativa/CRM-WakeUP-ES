@@ -10,7 +10,7 @@ export async function GET(_: Request, { params }: Ctx) {
     where: { id: parseInt(id, 10) },
     include: {
       fatture: {
-        where: { origine: { not: "sales" } },
+        where: { origine: { not: "sales" }, annullata: false },
         orderBy: [{ anno: "desc" }, { mese: "desc" }, { id: "desc" }],
         select: {
           id: true,

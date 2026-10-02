@@ -26,6 +26,12 @@ export async function POST(request: Request) {
     if (!fattura) {
       return NextResponse.json({ error: "Fattura non trovata" }, { status: 404 });
     }
+    if (fattura.annullata) {
+      return NextResponse.json(
+        { error: "La fattura è annullata: non si registrano incassi" },
+        { status: 409 },
+      );
+    }
 
     const acconto = await prisma.acconto.create({
       data: {

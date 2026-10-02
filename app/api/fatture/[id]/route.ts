@@ -54,9 +54,23 @@ export async function PATCH(
     stage = "find-before";
     const before = await prisma.fattura.findUnique({
       where: { id: fatturaId },
+      include: { _count: { select: { acconti: true } } },
     });
     if (!before) {
       return NextResponse.json({ error: "Not found" }, { status: 404 });
+    }
+    // Una fattura con incassi non si annulla: prima si tolgono gli incassi
+    if (body.annullata === true && (before.pagato || before._count.acconti > 0)) {
+      return NextResponse.json(
+        { error: "La fattura ha incassi o è segnata incassata: non si può annullare" },
+        { status: 409 },
+      );
+    }
+    if (before.annullata && body.pagato === true) {
+      return NextResponse.json(
+        { error: "La fattura è annullata: ripristinala prima di incassarla" },
+        { status: 409 },
+      );
     }
 
     stage = "update";
@@ -98,6 +112,10 @@ export async function PATCH(
           dataInvio: body.dataInvio ? new Date(body.dataInvio) : null,
         }),
         ...(body.checkInvio !== undefined && { checkInvio: body.checkInvio }),
+        ...(body.annullata !== undefined && {
+          annullata: !!body.annullata,
+          annullataIl: body.annullata ? new Date() : null,
+        }),
         ...(body.presentata !== undefined && {
           presentata: !!body.presentata,
           presentataIl: body.presentata ? new Date() : null,

@@ -6,6 +6,7 @@ import { useParams, useRouter } from "next/navigation";
 import {
   ArrowLeft,
   ArrowRight,
+  Ban,
   Calendar,
   Check,
   CircleCheck,
@@ -17,6 +18,7 @@ import {
   Pencil,
   Plus,
   Receipt,
+  RotateCcw,
   Trash2,
   Undo2,
   Wallet,
@@ -115,14 +117,16 @@ export default function FatturaPage() {
   const riportaInAttesa = () => {
     if (confirm(`Riportare la fattura ${numero} in attesa di incasso?`)) patch({ pagato: false });
   };
-  const elimina = async () => {
-    const avviso = f.acconti.length
-      ? `\nSi eliminano anche gli incassi registrati su questa fattura (${f.acconti.length}).`
-      : "";
-    if (!confirm(`Eliminare definitivamente la fattura ${numero}?${avviso}`)) return;
-    const res = await fetch(`/api/fatture/${f.id}`, { method: "DELETE" });
-    if (!res.ok) return alert("Eliminazione non riuscita.");
-    router.push("/finance/fatture");
+  // Una fattura emessa non si elimina: si annulla e resta nel registro
+  const annulla = () => {
+    if (f.acconti.length)
+      return alert("La fattura ha incassi registrati: eliminali prima di annullarla.");
+    if (confirm(`Annullare la fattura ${numero}? Resterà visibile come annullata, fuori dai totali.`))
+      patch({ annullata: true });
+  };
+  const ripristina = () => {
+    if (confirm(`Ripristinare la fattura ${numero}? Torna in attesa di incasso.`))
+      patch({ annullata: false });
   };
   const scaricaPdf = async () => {
     if (!cfg) return;
@@ -135,8 +139,8 @@ export default function FatturaPage() {
   const inviaMail = async () => {
     try {
       if (await inviaFatturaMail(f.id)) load();
-    } catch {
-      alert("Non sono riuscito a preparare l'invio della fattura.");
+    } catch (e) {
+      alert(e instanceof Error ? e.message : "Non sono riuscito a inviare la fattura.");
     }
   };
 
@@ -208,7 +212,11 @@ export default function FatturaPage() {
               <Clock className="w-3.5 h-3.5" /> Scadenza {dataIt(f.scadenza)}
             </span>
           )}
-          {stato === "pagato" ? (
+          {stato === "annullata" ? (
+            <span className="pill-off">
+              <Ban /> Annullata{f.annullataIl ? ` il ${dataIt(f.annullataIl)}` : ""}
+            </span>
+          ) : stato === "pagato" ? (
             <span className="pill-ok">
               <Check /> Incassato
             </span>
@@ -231,10 +239,12 @@ export default function FatturaPage() {
         <button onClick={indietro} className="btn btn-secondary">
           <ArrowLeft /> Indietro
         </button>
-        <button onClick={() => setForm("modifica")} className="btn btn-secondary">
-          <Pencil /> Modifica
-        </button>
-        {stato !== "pagato" && (
+        {!f.annullata && (
+          <button onClick={() => setForm("modifica")} className="btn btn-secondary">
+            <Pencil /> Modifica
+          </button>
+        )}
+        {(stato === "attesa" || stato === "acconto") && (
           <button onClick={segnaIncassata} className="btn btn-secondary">
             <CircleCheck /> Segna incassata
           </button>
@@ -248,9 +258,20 @@ export default function FatturaPage() {
             <Undo2 /> Riporta in attesa
           </button>
         )}
-        <button onClick={elimina} className="btn btn-secondary text-bad hover:text-bad">
-          <Trash2 /> Elimina
-        </button>
+        {(stato === "attesa" || stato === "acconto") && (
+          <button
+            onClick={annulla}
+            className="btn btn-secondary text-bad hover:text-bad"
+            title="La fattura resta nel registro come annullata"
+          >
+            <Ban /> Annulla
+          </button>
+        )}
+        {f.annullata && (
+          <button onClick={ripristina} className="btn btn-secondary">
+            <RotateCcw /> Ripristina
+          </button>
+        )}
         <button onClick={scaricaPdf} disabled={!cfg} className="btn btn-primary">
           <FileDown /> Scarica PDF
         </button>
@@ -261,18 +282,20 @@ export default function FatturaPage() {
         >
           <Copy /> Duplica
         </button>
-        <button
-          onClick={inviaMail}
-          disabled={!c?.email}
-          className="btn btn-secondary"
-          title={
-            c?.email
-              ? `Scarica il PDF e apre il messaggio per ${c.email}`
-              : "Il cliente non ha un indirizzo email: completare l'anagrafica"
-          }
-        >
-          <Mail /> {f.inviata ? "Reinvia email" : "Invia email"}
-        </button>
+        {!f.annullata && (
+          <button
+            onClick={inviaMail}
+            disabled={!c?.email}
+            className="btn btn-secondary"
+            title={
+              c?.email
+                ? `Invia la fattura a ${c.email}${f.inviata && f.dataInvio ? ` (già inviata il ${dataIt(f.dataInvio)})` : ""}`
+                : "Il cliente non ha un indirizzo email: completare l'anagrafica"
+            }
+          >
+            <Mail /> {f.inviata ? "Reinvia email" : "Invia email"}
+          </button>
+        )}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-[1.6fr_1fr] gap-4 items-start">
@@ -417,12 +440,14 @@ export default function FatturaPage() {
             </div>
           </section>
 
-          <Incassi
-            key={`${f.id}-${f.acconti.length}-${f.pagato}`}
-            f={f}
-            onRegistra={registraIncasso}
-            onElimina={eliminaIncasso}
-          />
+          {!f.annullata && (
+            <Incassi
+              key={`${f.id}-${f.acconti.length}-${f.pagato}`}
+              f={f}
+              onRegistra={registraIncasso}
+              onElimina={eliminaIncasso}
+            />
+          )}
         </div>
 
         {/* Colonna laterale */}
@@ -431,7 +456,7 @@ export default function FatturaPage() {
             <h2 className="card-title">Sorgente</h2>
             {f.richiesta ? (
               <Link
-                href="/finance/fatture?tab=da-emettere"
+                href="/sales/richieste"
                 className="flex items-center gap-2.5 rounded-lg bg-gray-50 px-3 py-2.5 text-[13px] text-gray-900 hover:bg-brand/10"
               >
                 <Receipt className="w-4 h-4 text-brand shrink-0" />

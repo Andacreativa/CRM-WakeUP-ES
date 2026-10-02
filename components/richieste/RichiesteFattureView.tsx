@@ -22,8 +22,8 @@ import { useAnno } from "@/lib/anno-context";
 import { PageSizeSelect, PageNav } from "@/components/Pagination";
 import { cn } from "@/lib/utils";
 
-// Vista "Fatture da emettere" (finance) / "Richieste fattura" (sales).
-// Stessa tabella, stesse azioni: cambia solo il titolo e il taglio del testo.
+// Richieste di fattura (Sales › Richieste fattura): validazione ed emissione,
+// con le colonne di «Fatture da emettere» di Northstar.
 
 interface ClienteMin {
   id: number;
@@ -148,13 +148,7 @@ const labelCls = "text-xs font-medium text-gray-600 block mb-1";
 const selectCls =
   "sel";
 
-export default function RichiesteFattureView({
-  mode,
-  embedded = false,
-}: {
-  mode: "finance" | "sales";
-  embedded?: boolean; // dentro la pagina Fatture: senza titolo proprio
-}) {
+export default function RichiesteFattureView() {
   const { anno } = useAnno();
   const [rows, setRows] = useState<Richiesta[]>([]);
   const [clienti, setClienti] = useState<ClienteMin[]>([]);
@@ -361,11 +355,6 @@ export default function RichiesteFattureView({
     }
   };
 
-  const titolo = mode === "finance" ? "Fatture da emettere" : "Richieste fattura";
-  const sottotitolo =
-    mode === "finance"
-      ? "Richieste validate e da convertire in fattura"
-      : "Richieste di fatturazione dai contratti e dal commerciale";
 
   return (
     <div className="space-y-6">
@@ -384,14 +373,12 @@ export default function RichiesteFattureView({
 
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-3">
-        {embedded ? (
-          <p className="text-sm text-gray-500">{sottotitolo}</p>
-        ) : (
-          <div>
-            <h1 className="page-title">{titolo}</h1>
-            <p className="page-sub">{sottotitolo}</p>
-          </div>
-        )}
+        <div>
+          <h1 className="page-title">Richieste fattura</h1>
+          <p className="page-sub">
+            Richieste di fatturazione dai contratti e dal commerciale: si validano e diventano fatture
+          </p>
+        </div>
         <div className="flex items-center gap-2 flex-wrap">
           <button
             onClick={() => setDaContratto(true)}
