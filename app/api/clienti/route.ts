@@ -6,7 +6,14 @@ export async function GET() {
     include: {
       fatture: {
         where: { origine: { not: "sales" } },
-        select: { importo: true, pagato: true, acconti: { select: { importo: true } } },
+        select: {
+          importo: true,
+          pagato: true,
+          anno: true,
+          mese: true,
+          data: true,
+          acconti: { select: { importo: true } },
+        },
       },
       _count: { select: { contatti: true, contratti: true } },
     },

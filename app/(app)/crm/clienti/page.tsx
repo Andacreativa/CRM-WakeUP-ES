@@ -1,40 +1,88 @@
 "use client";
 
-import SearchBox from "@/components/SearchBox";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Plus, Pencil, Trash2, Search, ExternalLink } from "lucide-react";
+import {
+  ArrowDown,
+  ArrowUp,
+  Building2,
+  CheckCircle2,
+  Clock,
+  Download,
+  ExternalLink,
+  Pencil,
+  Plus,
+  Trash2,
+  XCircle,
+} from "lucide-react";
 import { fmt } from "@/lib/constants";
 import { PageSizeSelect, PageNav } from "@/components/Pagination";
 import ClienteFormModal, { type ClienteBase } from "@/components/crm/ClienteFormModal";
-import { cn } from "@/lib/utils";
+import SearchBox from "@/components/SearchBox";
+import { cn, matchQ } from "@/lib/utils";
+
+// Lista clienti come in Northstar: KPI, scheda filtri con ricerca e chip
+// Stato/Paese, tabella ordinabile con stato Attivo/Inattivo e saldi,
+// esporta CSV, stato vuoto.
 
 interface Cliente extends ClienteBase {
   id: number;
-  fatture: { importo: number; pagato: boolean; acconti: { importo: number }[] }[];
+  createdAt: string;
+  fatture: {
+    importo: number;
+    pagato: boolean;
+    anno: number;
+    mese: number;
+    data: string | null;
+    acconti: { importo: number }[];
+  }[];
   _count: { contatti: number; contratti: number };
 }
+
+type Ordine = "nome" | "data" | "fatturato" | "daIncassare";
+
+const GIORNI_ATTIVO = 365; // fattura negli ultimi 12 mesi = cliente attivo
+const GIORNI_NUOVO = 180; // creato da meno di 6 mesi senza fatture = ancora attivo
 
 const stats = (c: Cliente) => {
   let fatturato = 0;
   let incassato = 0;
+  let ultima: number | null = null;
   for (const f of c.fatture) {
     fatturato += f.importo;
     const acc = f.acconti.reduce((s, a) => s + a.importo, 0);
     incassato += f.pagato ? f.importo : Math.min(f.importo, acc);
+    const t = f.data ? new Date(f.data).getTime() : new Date(f.anno, f.mese - 1, 1).getTime();
+    if (ultima == null || t > ultima) ultima = t;
   }
-  return { fatturato, incassato, daIncassare: Math.max(0, fatturato - incassato), n: c.fatture.length };
+  const giorno = 86400000;
+  const attivo =
+    (ultima != null && Date.now() - ultima < GIORNI_ATTIVO * giorno) ||
+    (c.fatture.length === 0 && Date.now() - new Date(c.createdAt).getTime() < GIORNI_NUOVO * giorno);
+  return {
+    fatturato,
+    incassato,
+    daIncassare: Math.max(0, fatturato - incassato),
+    n: c.fatture.length,
+    ultima,
+    attivo,
+  };
 };
 
 const selectCls =
-  "text-sm border border-gray-200 rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-brand/30";
+  "text-sm border border-gray-200 rounded-lg px-3 py-2 bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-brand/30";
+
+const paeseDi = (c: Cliente) => (["Italia", "Spagna"].includes(c.paese) ? c.paese : "Altri");
 
 export default function ClientiPage() {
   const router = useRouter();
   const [clienti, setClienti] = useState<Cliente[]>([]);
   const [q, setQ] = useState("");
   const [paese, setPaese] = useState("");
+  const [stato, setStato] = useState<"" | "attivi" | "inattivi">("");
+  const [ordine, setOrdine] = useState<Ordine>("nome");
+  const [disc, setDisc] = useState(false);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
   const [form, setForm] = useState<{ open: boolean; cliente: Cliente | null }>({ open: false, cliente: null });
@@ -46,30 +94,69 @@ export default function ClientiPage() {
   useEffect(() => {
     load();
   }, [load]);
-  useEffect(() => {
-    setPage(1);
-  }, [q, paese, pageSize]);
+  // Ogni cambio di filtro riparte dalla prima pagina
+  const conReset =
+    <T,>(set: (v: T) => void) =>
+    (v: T) => {
+      set(v);
+      setPage(1);
+    };
+
+  const righe = useMemo(() => clienti.map((c) => ({ c, s: stats(c) })), [clienti]);
 
   const filtered = useMemo(() => {
-    const s = q.trim().toLowerCase();
-    return clienti.filter(
-      (c) =>
-        (!paese || (paese === "Altri" ? !["Italia", "Spagna"].includes(c.paese) : c.paese === paese)) &&
-        (!s || [c.nome, c.email, c.partitaIva, c.citta].some((v) => (v ?? "").toLowerCase().includes(s))),
+    const rows = righe.filter(
+      ({ c, s }) =>
+        (!paese || paeseDi(c) === paese) &&
+        (!stato || (stato === "attivi" ? s.attivo : !s.attivo)) &&
+        matchQ(q, c.nome, c.email, c.partitaIva, c.citta, c.telefono),
     );
-  }, [clienti, q, paese]);
+    const dir = disc ? -1 : 1;
+    rows.sort((a, b) => {
+      switch (ordine) {
+        case "data":
+          return dir * (new Date(a.c.createdAt).getTime() - new Date(b.c.createdAt).getTime());
+        case "fatturato":
+          return dir * (a.s.fatturato - b.s.fatturato);
+        case "daIncassare":
+          return dir * (a.s.daIncassare - b.s.daIncassare);
+        default:
+          return dir * a.c.nome.localeCompare(b.c.nome, "it");
+      }
+    });
+    return rows;
+  }, [righe, q, paese, stato, ordine, disc]);
   const paged = filtered.slice((page - 1) * pageSize, page * pageSize);
 
   const tot = useMemo(() => {
-    let fatturato = 0;
+    let attivi = 0;
     let daIncassare = 0;
-    for (const c of clienti) {
-      const s = stats(c);
-      fatturato += s.fatturato;
+    let fatturato = 0;
+    for (const { s } of righe) {
+      if (s.attivo) attivi++;
       daIncassare += s.daIncassare;
+      fatturato += s.fatturato;
     }
-    return { fatturato, daIncassare };
-  }, [clienti]);
+    return { attivi, inattivi: righe.length - attivi, daIncassare, fatturato };
+  }, [righe]);
+
+  const filtriAttivi = [q.trim(), paese, stato].filter(Boolean).length;
+  const azzera = () => {
+    setQ("");
+    setPaese("");
+    setStato("");
+    setPage(1);
+  };
+
+  const ordina = (col: Ordine) => {
+    if (ordine === col) setDisc((d) => !d);
+    else {
+      setOrdine(col);
+      setDisc(col !== "nome");
+    }
+  };
+  const freccia = (col: Ordine) =>
+    ordine === col && disc ? <ArrowDown className="w-3 h-3" /> : <ArrowUp className="w-3 h-3" />;
 
   const del = async (c: Cliente) => {
     if (!confirm(`Eliminare ${c.nome}? Le fatture restano ma perdono il collegamento.`)) return;
@@ -77,93 +164,243 @@ export default function ClientiPage() {
     load();
   };
 
+  const esportaCsv = () => {
+    const esc = (v: unknown) => `"${String(v ?? "").replace(/"/g, '""')}"`;
+    const head = ["Cliente", "P.IVA", "Email", "Telefono", "Paese", "Città", "Imposta", "Stato", "Fatturato", "Incassato", "Da incassare", "Creato il"];
+    const lines = filtered.map(({ c, s }) =>
+      [
+        c.nome,
+        c.partitaIva,
+        c.email,
+        c.telefono,
+        c.paese,
+        c.citta,
+        c.tipoImposta,
+        s.attivo ? "Attivo" : "Inattivo",
+        s.fatturato.toFixed(2).replace(".", ","),
+        s.incassato.toFixed(2).replace(".", ","),
+        s.daIncassare.toFixed(2).replace(".", ","),
+        new Date(c.createdAt).toLocaleDateString("it-IT"),
+      ]
+        .map(esc)
+        .join(";"),
+    );
+    const blob = new Blob(["﻿" + [head.map(esc).join(";"), ...lines].join("\n")], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `clienti_${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  };
+
+  const kpi = [
+    { label: "Clienti totali", value: String(clienti.length), icon: Building2, cls: "bg-info/10 text-info" },
+    { label: "Attivi", value: String(tot.attivi), icon: CheckCircle2, cls: "bg-ok/10 text-ok" },
+    { label: "Inattivi", value: String(tot.inattivi), icon: XCircle, cls: "bg-off/15 text-off" },
+    { label: "Da incassare", value: fmt(tot.daIncassare), icon: Clock, cls: "bg-warn/10 text-warn" },
+  ];
+
+  const thCls = "text-[11px] font-semibold uppercase tracking-wide text-gray-500 px-3 py-3 whitespace-nowrap";
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Clienti</h1>
-          <p className="text-gray-500 text-sm mt-1">{clienti.length} in anagrafica</p>
+          <p className="text-gray-500 text-sm mt-1">
+            {clienti.length} totali · {tot.attivi} attivi · {fmt(tot.fatturato)} fatturati
+          </p>
         </div>
-        <button onClick={() => setForm({ open: true, cliente: null })} className="glass-btn-primary flex items-center gap-2 text-white text-sm font-medium px-4 py-2 rounded-xl">
-          <Plus className="w-4 h-4" /> Nuovo cliente
-        </button>
+        <div className="flex items-center gap-2 flex-wrap">
+          <button
+            onClick={esportaCsv}
+            className="flex items-center gap-1.5 border border-gray-200 bg-white text-gray-600 text-sm font-medium px-3 py-2 rounded-xl hover:bg-gray-50"
+            title="Scarica i clienti filtrati in CSV"
+          >
+            <Download className="w-4 h-4" /> Esporta CSV
+          </button>
+          <button
+            onClick={() => setForm({ open: true, cliente: null })}
+            className="glass-btn-primary flex items-center gap-2 text-white text-sm font-medium px-4 py-2 rounded-xl"
+          >
+            <Plus className="w-4 h-4" /> Nuovo cliente
+          </button>
+        </div>
       </div>
 
-      <div className="grid grid-cols-3 gap-4">
-        {[
-          { label: "Clienti", value: String(clienti.length), color: "#111827" },
-          { label: "Fatturato totale", value: fmt(tot.fatturato), color: "#22c55e" },
-          { label: "Da incassare", value: fmt(tot.daIncassare), color: "#f59e0b" },
-        ].map((k) => (
-          <div key={k.label} className="glass-card rounded-2xl p-4">
-            <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">{k.label}</p>
-            <p className="text-2xl font-bold mt-1" style={{ color: k.color }}>{k.value}</p>
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        {kpi.map((k) => (
+          <div key={k.label} className="glass-card rounded-2xl p-4 flex items-center gap-3">
+            <span className={cn("w-10 h-10 rounded-xl grid place-items-center shrink-0", k.cls)}>
+              <k.icon className="w-5 h-5" />
+            </span>
+            <div className="min-w-0">
+              <p className="text-2xl font-bold text-gray-900 leading-none">{k.value}</p>
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-500 mt-1">{k.label}</p>
+            </div>
           </div>
         ))}
       </div>
 
-      <div className="flex items-center gap-2 flex-wrap">
-        <SearchBox value={q} onChange={setQ} placeholder="Cerca nome, P.IVA, email, città…" />
-        <div className="flex gap-1 bg-gray-100 rounded-xl p-1">
-          {["", "Italia", "Spagna", "Altri"].map((p) => (
-            <button key={p} onClick={() => setPaese(p)} className="text-sm px-3 py-1.5 rounded-lg font-medium" style={paese === p ? { background: "#e8308a", color: "#fff" } : { color: "#6b7280" }}>
-              {p || "Tutti"}
+      {/* Filtri */}
+      <div className="glass-card rounded-2xl p-3 space-y-3">
+        <div className="flex items-center gap-2 flex-wrap">
+          <SearchBox value={q} onChange={conReset(setQ)} placeholder="Cerca nome, P.IVA, email, città, telefono…" className="w-80" />
+          <select value={ordine} onChange={(e) => {
+              ordina(e.target.value as Ordine);
+              setPage(1);
+            }} className={selectCls} title="Ordina per">
+            <option value="nome">Ordina: nome</option>
+            <option value="data">Ordina: data creazione</option>
+            <option value="fatturato">Ordina: fatturato</option>
+            <option value="daIncassare">Ordina: da incassare</option>
+          </select>
+          <PageSizeSelect pageSize={pageSize} onChange={conReset(setPageSize)} />
+          {filtriAttivi > 0 && (
+            <button onClick={azzera} className="text-xs font-semibold text-brand hover:underline ml-auto">
+              Azzera filtri ({filtriAttivi})
             </button>
-          ))}
+          )}
         </div>
-        <PageSizeSelect pageSize={pageSize} onChange={setPageSize} />
+        <div className="flex items-center gap-x-6 gap-y-2 flex-wrap">
+          <div className="chip-row">
+            <span className="chip-label">Stato</span>
+            {(
+              [
+                { v: "", l: "Tutti" },
+                { v: "attivi", l: "Attivi", dot: "#22c55e" },
+                { v: "inattivi", l: "Inattivi", dot: "#9ca3af" },
+              ] as const
+            ).map((o) => (
+              <button key={o.v} onClick={() => conReset(setStato)(o.v)} className={cn("chip", stato === o.v && "active")}>
+                {"dot" in o && <span className="kb-dot" style={{ background: stato === o.v ? "#fff" : o.dot }} />}
+                {o.l}
+              </button>
+            ))}
+          </div>
+          <div className="chip-row">
+            <span className="chip-label">Paese</span>
+            {["", "Italia", "Spagna", "Altri"].map((p) => (
+              <button key={p} onClick={() => conReset(setPaese)(p)} className={cn("chip", paese === p && "active")}>
+                {p || "Tutti"}
+              </button>
+            ))}
+          </div>
+        </div>
       </div>
 
-      <div className="glass-card rounded-2xl overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[900px]">
-            <thead>
-              <tr className="border-b border-gray-100 bg-gray-50">
-                {["Cliente", "Paese", "Città", "Imposta", "Fatturato", "Incassato", "Da incassare", ""].map((h) => (
-                  <th key={h} className={cn("text-[11px] font-semibold uppercase tracking-wide text-gray-500 px-4 py-3", ["Fatturato", "Incassato", "Da incassare"].includes(h) ? "text-right" : "text-left")}>
-                    {h}
+      {filtered.length === 0 ? (
+        <div className="empty-box">
+          <Building2 className="w-8 h-8" />
+          <h3>{clienti.length === 0 ? "Nessun cliente" : "Nessun cliente con questi filtri"}</h3>
+          <p>
+            {clienti.length === 0
+              ? "Inizia creando il primo cliente o convertendo un lead vinto."
+              : "Prova ad allargare la ricerca o azzera i filtri."}
+          </p>
+          {clienti.length === 0 ? (
+            <button
+              onClick={() => setForm({ open: true, cliente: null })}
+              className="glass-btn-primary inline-flex items-center gap-2 text-white text-sm font-medium px-4 py-2 rounded-xl"
+            >
+              <Plus className="w-4 h-4" /> Crea cliente
+            </button>
+          ) : (
+            <button onClick={azzera} className="text-sm font-semibold text-brand hover:underline">
+              Azzera filtri
+            </button>
+          )}
+        </div>
+      ) : (
+        <div className="glass-card rounded-2xl overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[900px]">
+              <thead>
+                <tr className="border-b border-gray-100 bg-gray-50">
+                  <th className={cn(thCls, "text-left th-sort", ordine === "data" && "active")} onClick={() => ordina("data")}>
+                    Data {freccia("data")}
                   </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="zebra">
-              {paged.length === 0 && (
-                <tr><td colSpan={8} className="text-center text-gray-400 py-12 text-sm">Nessun cliente</td></tr>
-              )}
-              {paged.map((c) => {
-                const s = stats(c);
-                return (
-                  <tr key={c.id} className="border-b border-gray-50 hover:bg-gray-50/60 cursor-pointer" onClick={() => router.push(`/crm/clienti/${c.id}`)}>
-                    <td className="px-4 py-3">
+                  <th className={cn(thCls, "text-left th-sort", ordine === "nome" && "active")} onClick={() => ordina("nome")}>
+                    Cliente {freccia("nome")}
+                  </th>
+                  <th className={cn(thCls, "text-left")}>Paese · Città</th>
+                  <th className={cn(thCls, "text-left")}>Imposta</th>
+                  <th className={cn(thCls, "text-left")}>Stato</th>
+                  <th className={cn(thCls, "text-right th-sort", ordine === "fatturato" && "active")} onClick={() => ordina("fatturato")}>
+                    Fatturato {freccia("fatturato")}
+                  </th>
+                  <th className={cn(thCls, "text-right")}>Incassato</th>
+                  <th className={cn(thCls, "text-right th-sort", ordine === "daIncassare" && "active")} onClick={() => ordina("daIncassare")}>
+                    Da incassare {freccia("daIncassare")}
+                  </th>
+                  <th className={thCls} />
+                </tr>
+              </thead>
+              <tbody className="zebra">
+                {paged.map(({ c, s }) => (
+                  <tr
+                    key={c.id}
+                    className="border-b border-gray-50 hover:bg-brand/5 cursor-pointer"
+                    onClick={() => router.push(`/crm/clienti/${c.id}`)}
+                  >
+                    <td className="px-3 py-3 text-xs text-gray-400 whitespace-nowrap">
+                      {new Date(c.createdAt).toLocaleDateString("it-IT", { day: "2-digit", month: "2-digit", year: "2-digit" })}
+                    </td>
+                    <td className="px-3 py-3">
                       <div className="text-sm font-semibold text-gray-900">{c.nome}</div>
-                      <div className="text-[11px] text-gray-400">
+                      <div className="text-[11px] text-gray-400 truncate max-w-[260px]">
                         {c.partitaIva ?? "P.IVA mancante"}
                         {c.email ? ` · ${c.email}` : ""}
                         {s.n > 0 && ` · ${s.n} fattur${s.n === 1 ? "a" : "e"}`}
                       </div>
                     </td>
-                    <td className="px-4 py-3 text-sm text-gray-600">{c.paese}</td>
-                    <td className="px-4 py-3 text-sm text-gray-600">{c.citta ?? "—"}</td>
-                    <td className="px-4 py-3">
-                      <span className="text-[11px] font-semibold px-2 py-0.5 rounded-md bg-gray-100 text-gray-600 whitespace-nowrap">{c.tipoImposta ?? "—"}</span>
+                    <td className="px-3 py-3 text-sm text-gray-600 whitespace-nowrap max-w-[200px] truncate">
+                      {c.paese}
+                      {c.citta && <span className="text-gray-400"> · {c.citta}</span>}
                     </td>
-                    <td className="px-4 py-3 text-sm font-semibold text-gray-900 text-right tabular-nums">{fmt(s.fatturato)}</td>
-                    <td className="px-4 py-3 text-sm text-ok text-right tabular-nums">{fmt(s.incassato)}</td>
-                    <td className={cn("px-4 py-3 text-sm text-right tabular-nums", s.daIncassare > 0 ? "text-warn font-semibold" : "text-gray-400")}>{fmt(s.daIncassare)}</td>
-                    <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                    <td className="px-3 py-3">
+                      <span className="text-[11px] font-semibold px-2 py-0.5 rounded-md bg-gray-100 text-gray-600 whitespace-nowrap">
+                        {c.tipoImposta ?? "—"}
+                      </span>
+                    </td>
+                    <td className="px-3 py-3">
+                      <span
+                        className={cn("text-[11px] font-semibold px-2 py-0.5 rounded-md", s.attivo ? "pill-ok" : "pill-off")}
+                        title={
+                          s.ultima
+                            ? `Ultima fattura: ${new Date(s.ultima).toLocaleDateString("it-IT")}`
+                            : "Nessuna fattura"
+                        }
+                      >
+                        {s.attivo ? "Attivo" : "Inattivo"}
+                      </span>
+                    </td>
+                    <td className="px-3 py-3 text-sm font-semibold text-gray-900 text-right tabular-nums">{fmt(s.fatturato)}</td>
+                    <td className="px-3 py-3 text-sm text-ok text-right tabular-nums">{fmt(s.incassato)}</td>
+                    <td className={cn("px-4 py-3 text-sm text-right tabular-nums", s.daIncassare > 0 ? "text-warn font-semibold" : "text-gray-400")}>
+                      {fmt(s.daIncassare)}
+                    </td>
+                    <td className="px-3 py-3" onClick={(e) => e.stopPropagation()}>
                       <div className="flex items-center gap-1 justify-end">
-                        <Link href={`/crm/clienti/${c.id}`} className="p-1.5 text-gray-400 hover:text-brand" title="Apri scheda"><ExternalLink className="w-4 h-4" /></Link>
-                        <button onClick={() => setForm({ open: true, cliente: c })} className="p-1.5 text-gray-400 hover:text-gray-700" title="Modifica"><Pencil className="w-4 h-4" /></button>
-                        <button onClick={() => del(c)} className="p-1.5 text-gray-400 hover:text-bad" title="Elimina"><Trash2 className="w-4 h-4" /></button>
+                        <Link href={`/crm/clienti/${c.id}`} className="p-1.5 text-gray-400 hover:text-brand" title="Apri scheda">
+                          <ExternalLink className="w-4 h-4" />
+                        </Link>
+                        <button onClick={() => setForm({ open: true, cliente: c })} className="p-1.5 text-gray-400 hover:text-gray-700" title="Modifica">
+                          <Pencil className="w-4 h-4" />
+                        </button>
+                        <button onClick={() => del(c)} className="p-1.5 text-gray-400 hover:text-bad" title="Elimina">
+                          <Trash2 className="w-4 h-4" />
+                        </button>
                       </div>
                     </td>
                   </tr>
-                );
-              })}
-            </tbody>
-          </table>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
-      </div>
+      )}
       {filtered.length > 0 && <PageNav total={filtered.length} page={page} pageSize={pageSize} onPage={setPage} labelSuffix="clienti" />}
 
       {form.open && (

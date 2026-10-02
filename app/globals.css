@@ -733,3 +733,361 @@ button.pill-wait:hover,
 a.pill-wait:hover {
   background: #fde68a;
 }
+
+/* ── Pipeline (kanban stile Northstar) ───────────────────────────────────── */
+.kb-board {
+  display: flex;
+  gap: 12px;
+  overflow-x: auto;
+  padding-bottom: 12px;
+  scrollbar-width: thin;
+}
+.kb-col {
+  flex: 1 1 0;
+  min-width: 205px;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-card);
+  border: 1px solid var(--border-light);
+  border-radius: 14px;
+  padding: 10px;
+  max-height: calc(100vh - 330px);
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease;
+}
+.kb-col.drag-over {
+  background: var(--brand-soft);
+  border-color: var(--brand);
+}
+.kb-col-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 4px 6px 10px;
+  border-bottom: 2px solid var(--border-light);
+  margin-bottom: 8px;
+}
+.kb-col-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--text-1);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.kb-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.kb-count {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 20px;
+  background: var(--bg-input);
+  color: var(--text-2);
+}
+.kb-col-value {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-3);
+  padding: 0 6px 8px;
+}
+.kb-cards {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-height: 60px;
+  padding-right: 2px;
+}
+.kb-card {
+  position: relative;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 11px;
+  cursor: grab;
+  transition:
+    border-color 0.15s ease,
+    transform 0.15s ease;
+}
+.kb-card:hover {
+  border-color: var(--brand);
+  transform: translateY(-1px);
+}
+.kb-card.dragging {
+  opacity: 0.45;
+}
+.kb-card.rotten-red {
+  border-left: 3px solid var(--color-bad);
+}
+.kb-card.rotten-yellow {
+  border-left: 3px solid var(--color-warn);
+}
+.kb-card-name {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text-1);
+  line-height: 1.3;
+  margin-bottom: 2px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.kb-card-sub {
+  font-size: 11px;
+  color: var(--text-3);
+  margin-bottom: 6px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.kb-card-next {
+  font-size: 11px;
+  color: var(--text-3);
+  margin-bottom: 6px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.kb-card-next.late {
+  color: var(--color-bad);
+  font-weight: 600;
+}
+.kb-card-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  padding-top: 6px;
+  border-top: 1px solid var(--border-light);
+}
+.kb-card-value {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-1);
+}
+.kb-prio {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--text-4);
+}
+.kb-prio.alta {
+  background: var(--color-bad);
+}
+.kb-prio.media {
+  background: var(--color-warn);
+}
+.kb-card-right {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.kb-card-date {
+  font-size: 10.5px;
+  color: var(--text-3);
+}
+.kb-avatar {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  font-size: 9px;
+  font-weight: 700;
+  color: #ffffff;
+  background: var(--brand);
+  display: inline-grid;
+  place-items: center;
+}
+.kb-empty {
+  text-align: center;
+  padding: 20px 10px;
+  color: var(--text-4);
+  font-size: 11px;
+  font-style: italic;
+  border: 2px dashed var(--border);
+  border-radius: 10px;
+}
+.kb-add {
+  color: var(--text-4);
+  padding: 2px;
+  border-radius: 6px;
+}
+.kb-add:hover {
+  color: var(--text-1);
+  background: var(--bg-input);
+}
+/* Sezioni finali: Vinta / Persa */
+.kb-terminals {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.kb-term {
+  background: var(--bg-card);
+  border: 1px solid var(--border-light);
+  border-radius: 14px;
+  overflow: hidden;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease;
+}
+.kb-term.drag-over {
+  border-color: var(--brand);
+  background: var(--brand-soft);
+}
+.kb-term-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 14px;
+  cursor: pointer;
+  user-select: none;
+}
+.kb-term-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-1);
+}
+.kb-term.win .kb-term-title svg {
+  color: var(--color-ok);
+}
+.kb-term.lost .kb-term-title svg {
+  color: var(--color-bad);
+}
+.kb-term-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11.5px;
+  color: var(--text-3);
+}
+.kb-term-total {
+  font-weight: 700;
+  color: var(--text-1);
+}
+.kb-term-body {
+  padding: 0 14px 14px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: 8px;
+}
+.kb-term.win .kb-card-value {
+  color: var(--color-ok);
+}
+.kb-term.lost .kb-card-value {
+  color: var(--color-bad);
+}
+@media (max-width: 767px) {
+  .kb-col {
+    flex-basis: 230px;
+    min-width: 230px;
+  }
+  .kb-terminals {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ── Chip filtro (stile Northstar: Stato / Tipo) ─────────────────────────── */
+.chip-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.chip-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-4);
+  margin-right: 2px;
+}
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 11px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--bg-input);
+  color: var(--text-2);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition:
+    background 0.12s ease,
+    color 0.12s ease,
+    border-color 0.12s ease;
+}
+.chip:hover {
+  border-color: var(--text-4);
+}
+.chip.active {
+  background: var(--brand);
+  border-color: var(--brand);
+  color: #ffffff;
+  font-weight: 600;
+}
+.chip .kb-dot {
+  width: 7px;
+  height: 7px;
+}
+/* Intestazione tabella ordinabile */
+.th-sort {
+  cursor: pointer;
+  user-select: none;
+}
+.th-sort:hover {
+  color: var(--text-1);
+}
+.th-sort svg {
+  display: inline-block;
+  vertical-align: -2px;
+  margin-left: 3px;
+  opacity: 0.5;
+}
+.th-sort.active svg {
+  opacity: 1;
+  color: var(--brand);
+}
+/* Stato vuoto */
+.empty-box {
+  text-align: center;
+  padding: 40px 20px;
+  border: 2px dashed var(--border);
+  border-radius: 14px;
+  color: var(--text-3);
+}
+.empty-box svg {
+  margin: 0 auto 10px;
+  color: var(--text-4);
+}
+.empty-box h3 {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-1);
+  margin-bottom: 4px;
+}
+.empty-box p {
+  font-size: 13px;
+  margin-bottom: 14px;
+}
