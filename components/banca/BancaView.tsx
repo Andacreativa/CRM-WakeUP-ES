@@ -133,7 +133,7 @@ function CategoriaBadge({ categoria }: { categoria: string }) {
 export default function BancaView() {
   const { anno } = useAnno();
   const [vista, setVista] = useState<Vista>("movimenti");
-  const [tipo, setTipo] = useState<Tipo>("uscite");
+  const [tipo, setTipo] = useState<Tipo>("entrate");
   const [stato, setStato] = useState<FiltroStato>("da_abbinare");
   const [mese, setMese] = useState(0);
   const [q, setQ] = useState("");
@@ -518,8 +518,8 @@ export default function BancaView() {
                 setSel(new Set());
               }}
               options={[
-                { val: "uscite", label: "Uscite" },
                 { val: "entrate", label: "Entrate" },
+                { val: "uscite", label: "Uscite" },
               ]}
             />
             {tipo === "uscite" && (

@@ -1554,7 +1554,6 @@ a.pill-wait:hover {
 .recon-doc {
   background: var(--bg-card);
   border: 1px solid var(--border);
-  border-left: 3px solid var(--color-ok);
   border-radius: 10px;
   padding: 10px;
   cursor: grab;
@@ -1562,13 +1561,11 @@ a.pill-wait:hover {
 }
 .recon-doc:hover {
   border-color: var(--brand);
-  border-left-color: var(--color-ok);
 }
 .recon-doc.dragging {
   opacity: 0.5;
 }
 .recon-doc.proposta {
-  border-left-color: var(--color-warn);
   border-color: #fde68a;
   background: #fffbeb;
 }
