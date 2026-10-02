@@ -1,5 +1,6 @@
 "use client";
 
+import Pills from "@/components/Pills";
 import SearchBox from "@/components/SearchBox";
 import { matchQ } from "@/lib/utils";
 import { useEffect, useState } from "react";
@@ -156,33 +157,21 @@ export default function ContrattiPage() {
       )}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Contratti</h1>
-          <p className="text-gray-500 text-sm mt-0.5">
+          <h1 className="page-title">Contratti</h1>
+          <p className="page-sub">
             {filtered.length} contratti
           </p>
         </div>
         <div className="flex items-center gap-3 flex-wrap">
           <SearchBox value={q} onChange={setQ} placeholder="Cerca numero, cliente…" className="w-60" />
-          <div className="flex gap-1 bg-gray-100 rounded-xl p-1 w-fit">
-            {(["tutti", ...STATI] as string[]).map((s) => (
-              <button
-                key={s}
-                onClick={() => setFiltroStatus(s)}
-                className="text-sm px-4 py-1.5 rounded-lg font-medium transition-colors capitalize"
-                style={
-                  filtroStatus === s
-                    ? { background: "#e8308a", color: "#fff" }
-                    : { color: "#6b7280" }
-                }
-              >
-                {s}
-              </button>
-            ))}
-          </div>
+          <Pills
+            value={filtroStatus}
+            onChange={setFiltroStatus}
+            options={(["tutti", ...STATI] as string[]).map((s) => ({ val: s, label: s.charAt(0).toUpperCase() + s.slice(1) }))}
+          />
           <button
             onClick={() => setShowNew(true)}
-            className="flex items-center gap-2 text-white text-sm font-medium px-4 py-2 rounded-xl"
-            style={{ background: "#e8308a" }}
+            className="btn btn-primary"
           >
             <Plus className="w-4 h-4" /> Nuovo Contratto
           </button>
@@ -190,9 +179,9 @@ export default function ContrattiPage() {
       </div>
 
       <div className="glass-card rounded-2xl overflow-hidden">
-        <table className="w-full">
+        <table className="tbl">
           <thead>
-            <tr className="border-b border-gray-100 bg-gray-50">
+            <tr>
               {[
                 "N. Contratto",
                 "Cliente",
@@ -206,7 +195,7 @@ export default function ContrattiPage() {
               ].map((h) => (
                 <th
                   key={h}
-                  className={`text-xs font-semibold text-gray-500 uppercase tracking-wide px-4 py-3 ${["Importo Mensile", "Totale", "Durata"].includes(h) ? "text-right" : "text-left"}`}
+                  className={`${["Importo Mensile", "Totale", "Durata"].includes(h) ? "text-right" : "text-left"}`}
                 >
                   {h}
                 </th>
@@ -232,7 +221,7 @@ export default function ContrattiPage() {
                   key={c.id}
                   className={`border-b border-gray-50 hover:bg-gray-50 transition-colors ${i % 2 === 1 ? "bg-[#f9fafb]" : "bg-white"}`}
                 >
-                  <td className="px-4 py-3 text-sm font-mono font-semibold text-gray-700">
+                  <td className="font-mono font-semibold">
                     <button
                       onClick={() => setEditing(c)}
                       className="hover:text-brand hover:underline"
@@ -240,7 +229,7 @@ export default function ContrattiPage() {
                       {c.numero}
                     </button>
                   </td>
-                  <td className="px-4 py-3 text-sm text-gray-900">
+                  <td className="text-gray-900">
                     {nome}
                     {!c.cliente && (
                       <span className="pill-wait ml-2 text-[10px] font-semibold px-1.5 py-0.5 rounded">
@@ -253,22 +242,22 @@ export default function ContrattiPage() {
                       </span>
                     )}
                   </td>
-                  <td className="px-4 py-3 text-sm text-gray-600">
+                  <td>
                     {new Date(c.dataDecorrenza).toLocaleDateString("it-IT")}
                   </td>
-                  <td className="px-4 py-3 text-sm text-gray-600 text-right">
+                  <td className="text-right">
                     {c.durataMesi} mesi
                   </td>
-                  <td className="px-4 py-3 text-sm text-gray-900 text-right tabular-nums">
+                  <td className="text-gray-900 text-right tabular-nums">
                     {fmt(c.importoMensile)}
                   </td>
-                  <td className="px-4 py-3 text-sm font-semibold text-gray-900 text-right tabular-nums">
+                  <td className="font-semibold text-gray-900 text-right tabular-nums">
                     {fmt(c.totaleContratto)}
                   </td>
-                  <td className="px-4 py-3 text-xs uppercase text-gray-500">
+                  <td className="text-xs uppercase text-gray-500">
                     {c.lingua === "es" ? "ES" : "IT"}
                   </td>
-                  <td className="px-4 py-3">
+                  <td>
                     <select
                       value={c.status}
                       onChange={(e) => updateStatus(c.id, e.target.value)}
@@ -282,7 +271,7 @@ export default function ContrattiPage() {
                       ))}
                     </select>
                   </td>
-                  <td className="px-4 py-3">
+                  <td>
                     <div className="flex items-center gap-1 justify-end">
                       <button
                         onClick={() => generaRichieste(c)}
@@ -719,15 +708,14 @@ function ContrattoFormModal({
         <div className="flex gap-3 pt-2">
           <button
             onClick={onClose}
-            className="flex-1 border border-gray-200 text-gray-600 text-sm font-medium py-2.5 rounded-xl hover:bg-gray-50"
+            className="btn btn-secondary flex-1 .5"
           >
             Annulla
           </button>
           <button
             onClick={submit}
             disabled={saving}
-            className="flex-1 text-white text-sm font-medium py-2.5 rounded-xl disabled:opacity-60"
-            style={{ background: "#e8308a" }}
+            className="btn btn-primary flex-1"
           >
             {saving ? "Salvataggio..." : editing ? "Salva" : "Crea Contratto"}
           </button>

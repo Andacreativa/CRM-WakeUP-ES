@@ -120,20 +120,20 @@ export default function RegoleBanca({ onNotify }: { onNotify: (kind: "ok" | "err
           <div className="flex items-center gap-2">
             <button
               onClick={ripristina}
-              className="glass-btn-secondary flex items-center gap-1.5 text-sm font-medium px-3 py-2 rounded-xl text-gray-700"
+              className="btn btn-secondary"
             >
               <RotateCcw className="w-4 h-4" /> Predefinite
             </button>
             <button
               onClick={aggiungi}
-              className="glass-btn-secondary flex items-center gap-1.5 text-sm font-medium px-3 py-2 rounded-xl text-gray-700"
+              className="btn btn-secondary"
             >
               <Plus className="w-4 h-4" /> Regola
             </button>
             <button
               onClick={salva}
               disabled={saving || !dirty}
-              className="glass-btn-primary flex items-center gap-1.5 text-sm font-medium px-4 py-2 rounded-xl text-white disabled:opacity-50"
+              className="btn btn-primary disabled:opacity-50"
             >
               <Save className="w-4 h-4" /> {saving ? "Salvo…" : "Salva"}
             </button>
@@ -141,13 +141,13 @@ export default function RegoleBanca({ onNotify }: { onNotify: (kind: "ok" | "err
         </div>
 
         <div className="mt-4 overflow-x-auto">
-          <table className="w-full min-w-[760px]">
+          <table className="tbl min-w-[760px]">
             <thead>
-              <tr className="border-b border-gray-100 bg-gray-50">
+              <tr>
                 {["#", "Espressione", "Categoria", "Fornitore proposto", ""].map((h, i) => (
                   <th
                     key={i}
-                    className="text-left text-[11px] font-semibold uppercase tracking-wide text-gray-500 px-3 py-2"
+                    className="text-left"
                   >
                     {h}
                   </th>
@@ -157,7 +157,7 @@ export default function RegoleBanca({ onNotify }: { onNotify: (kind: "ok" | "err
             <tbody>
               {regole.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="px-3 py-8 text-center text-sm text-gray-400">
+                  <td colSpan={5} className="text-center text-gray-400">
                     Nessuna regola: tutte le uscite verranno proposte come &quot;Altro&quot;.
                   </td>
                 </tr>
@@ -165,9 +165,9 @@ export default function RegoleBanca({ onNotify }: { onNotify: (kind: "ok" | "err
               {regole.map((r, i) => {
                 const ok = r.pattern.trim() && regexValida(r.pattern);
                 return (
-                  <tr key={i} className="border-b border-gray-50">
-                    <td className="px-3 py-2 text-xs text-gray-400 w-8">{i + 1}</td>
-                    <td className="px-3 py-2">
+                  <tr key={i}>
+                    <td className="text-xs text-gray-400 w-8">{i + 1}</td>
+                    <td>
                       <input
                         value={r.pattern}
                         onChange={(e) => aggiorna(i, { pattern: e.target.value })}
@@ -175,7 +175,7 @@ export default function RegoleBanca({ onNotify }: { onNotify: (kind: "ok" | "err
                         className={cn(inputCls, "font-mono", !ok && "border-bad/30 bg-bad/10")}
                       />
                     </td>
-                    <td className="px-3 py-2 w-48">
+                    <td className="w-48">
                       <select
                         value={r.categoria}
                         onChange={(e) => aggiorna(i, { categoria: e.target.value })}
@@ -189,7 +189,7 @@ export default function RegoleBanca({ onNotify }: { onNotify: (kind: "ok" | "err
                         <option value={ESCLUDI}>Escludi (non è una spesa)</option>
                       </select>
                     </td>
-                    <td className="px-3 py-2 w-56">
+                    <td className="w-56">
                       <input
                         value={r.fornitore}
                         onChange={(e) => aggiorna(i, { fornitore: e.target.value })}
@@ -197,7 +197,7 @@ export default function RegoleBanca({ onNotify }: { onNotify: (kind: "ok" | "err
                         className={inputCls}
                       />
                     </td>
-                    <td className="px-3 py-2 whitespace-nowrap">
+                    <td className="whitespace-nowrap">
                       <button onClick={() => sposta(i, -1)} className="p-1 text-gray-400 hover:text-gray-700" title="Su">
                         <ArrowUp className="w-4 h-4" />
                       </button>
@@ -226,13 +226,13 @@ export default function RegoleBanca({ onNotify }: { onNotify: (kind: "ok" | "err
           <p className="text-sm text-gray-400 mt-4">Ancora niente: si riempie man mano che crei o abbini spese.</p>
         ) : (
           <div className="mt-4 overflow-x-auto">
-            <table className="w-full min-w-[600px]">
+            <table className="tbl min-w-[600px]">
               <thead>
-                <tr className="border-b border-gray-100 bg-gray-50">
+                <tr>
                   {["Beneficiario", "Categoria", "Fornitore", ""].map((h, i) => (
                     <th
                       key={i}
-                      className="text-left text-[11px] font-semibold uppercase tracking-wide text-gray-500 px-3 py-2"
+                      className="text-left"
                     >
                       {h}
                     </th>
@@ -241,11 +241,11 @@ export default function RegoleBanca({ onNotify }: { onNotify: (kind: "ok" | "err
               </thead>
               <tbody>
                 {voci.map(([k, v]) => (
-                  <tr key={k} className="border-b border-gray-50">
-                    <td className="px-3 py-2 text-sm text-gray-700 font-mono">{k}</td>
-                    <td className="px-3 py-2 text-sm text-gray-700">{v.categoria}</td>
-                    <td className="px-3 py-2 text-sm text-gray-700">{v.fornitore || "—"}</td>
-                    <td className="px-3 py-2 text-right">
+                  <tr key={k}>
+                    <td className="font-mono">{k}</td>
+                    <td>{v.categoria}</td>
+                    <td>{v.fornitore || "—"}</td>
+                    <td className="text-right">
                       <button onClick={() => dimentica(k)} className="p-1 text-gray-400 hover:text-bad" title="Dimentica">
                         <Trash2 className="w-4 h-4" />
                       </button>

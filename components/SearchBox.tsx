@@ -24,7 +24,7 @@ export default function SearchBox({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder ?? "Cerca…"}
-        className="w-full text-sm border border-gray-200 rounded-lg pl-9 pr-8 py-2 bg-white text-gray-700 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-brand/30 [&::-webkit-search-cancel-button]:hidden"
+        className="sel w-full pl-9 pr-8 placeholder:text-gray-400 [&::-webkit-search-cancel-button]:hidden"
       />
       {value && (
         <button

@@ -1,5 +1,7 @@
 "use client";
 
+import Pills from "@/components/Pills";
+import { Kpi, KpiGrid } from "@/components/Kpi";
 import SearchBox from "@/components/SearchBox";
 import { matchQ } from "@/lib/utils";
 import { useEffect, useState } from "react";
@@ -354,21 +356,14 @@ export default function PreventiviPage() {
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-3 pl-10 md:pl-0">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Preventivi</h1>
-          <p className="text-gray-500 text-sm mt-1">
+          <h1 className="page-title">Preventivi</h1>
+          <p className="page-sub">
             {preventivi.length} preventivi totali
           </p>
         </div>
         <button
           onClick={openNew}
-          className="flex items-center gap-2 text-white text-sm font-medium px-4 py-2.5 rounded-xl transition-all"
-          style={{ background: BRAND }}
-          onMouseEnter={(e) =>
-            ((e.currentTarget as HTMLElement).style.opacity = "0.85")
-          }
-          onMouseLeave={(e) =>
-            ((e.currentTarget as HTMLElement).style.opacity = "1")
-          }
+          className="btn btn-primary"
         >
           <Plus className="w-4 h-4" /> Crea preventivo
         </button>
@@ -377,26 +372,15 @@ export default function PreventiviPage() {
       {/* Filtri */}
       <div className="flex items-center gap-2 flex-wrap">
         <SearchBox value={q} onChange={setQ} placeholder="Cerca numero, cliente, oggetto…" />
-        <div className="flex gap-1 bg-gray-100 rounded-xl p-1 w-fit">
-        {[{ value: "tutti", label: "Tutti" }, ...STATUS_OPTIONS].map((o) => (
-          <button
-            key={o.value}
-            onClick={() => setFiltroStatus(o.value)}
-            className="text-sm px-3 py-1.5 rounded-md font-medium transition-colors"
-            style={
-              filtroStatus === o.value
-                ? { background: BRAND, color: "#fff" }
-                : { color: "#6b7280" }
-            }
-          >
-            {o.label}
-          </button>
-        ))}
-      </div>
+        <Pills
+          value={filtroStatus}
+          onChange={setFiltroStatus}
+          options={[{ value: "tutti", label: "Tutti" }, ...STATUS_OPTIONS].map((o) => ({ val: o.value, label: o.label }))}
+        />
       </div>
 
       {/* KPI cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <KpiGrid cols={3}>
         {[
           {
             label: "Totale valore",
@@ -424,20 +408,15 @@ export default function PreventiviPage() {
             color: "text-warn",
           },
         ].map((k) => (
-          <div key={k.label} className="glass-card rounded-2xl p-4">
-            <p className="text-xs text-gray-500 uppercase tracking-wide">
-              {k.label}
-            </p>
-            <p className={`text-xl font-bold mt-1 ${k.color}`}>{k.val}</p>
-          </div>
+          <Kpi key={k.label} label={k.label} value={k.val} valueClass={k.color} />
         ))}
-      </div>
+      </KpiGrid>
 
       {/* Table */}
       <div className="glass-card rounded-2xl overflow-hidden overflow-x-auto">
-        <table className="w-full min-w-[700px]">
+        <table className="tbl min-w-[700px]">
           <thead>
-            <tr className="border-b border-gray-100 bg-gray-50">
+            <tr>
               {[
                 "Numero",
                 "Cliente",
@@ -450,7 +429,7 @@ export default function PreventiviPage() {
               ].map((h) => (
                 <th
                   key={h}
-                  className={`text-xs font-semibold text-gray-500 uppercase tracking-wide px-4 py-3 ${h === "Totale" ? "text-right" : h === "Status" ? "text-center" : "text-left"}`}
+                  className={`${h ==="Totale" ? "text-right" : h === "Status" ? "text-center" : "text-left"}`}
                 >
                   {h}
                 </th>
@@ -477,12 +456,12 @@ export default function PreventiviPage() {
               return (
                 <tr
                   key={p.id}
-                  className={`border-b border-gray-50 hover:bg-gray-50 transition-colors ${isScaduto ? "bg-bad/10" : i % 2 === 1 ? "bg-[#F0F0F0]" : ""}`}
+                  className={isScaduto ? "bg-bad/10" : undefined}
                 >
-                  <td className="px-4 py-3 text-sm font-mono font-medium text-gray-700">
+                  <td className="font-mono font-medium">
                     {p.numero ?? "—"}
                   </td>
-                  <td className="px-4 py-3">
+                  <td>
                     <p className="text-sm font-medium text-gray-900">
                       {p.nomeCliente ?? "—"}
                     </p>
@@ -492,13 +471,13 @@ export default function PreventiviPage() {
                       </p>
                     )}
                   </td>
-                  <td className="px-4 py-3 text-sm text-gray-600 max-w-[180px] truncate">
+                  <td className="max-w-[180px] truncate">
                     {p.oggetto ?? ""}
                   </td>
-                  <td className="px-4 py-3 text-sm text-gray-500">
+                  <td className="text-gray-500">
                     {new Date(p.createdAt).toLocaleDateString("it-IT")}
                   </td>
-                  <td className="px-4 py-3 text-sm">
+                  <td>
                     {p.dataScadenza ? (
                       <span
                         className={`text-xs font-medium ${isScaduto ? "text-bad" : "text-gray-500"}`}
@@ -509,10 +488,10 @@ export default function PreventiviPage() {
                       <span className="text-gray-400">—</span>
                     )}
                   </td>
-                  <td className="px-4 py-3 text-sm font-semibold text-gray-900 text-right">
+                  <td className="font-semibold text-gray-900 text-right">
                     {fmt(p.totale ?? 0)}
                   </td>
-                  <td className="px-4 py-3 text-center">
+                  <td className="text-center">
                     <button
                       onClick={() => {
                         const next =
@@ -537,7 +516,7 @@ export default function PreventiviPage() {
                       {st.label}
                     </button>
                   </td>
-                  <td className="px-4 py-3">
+                  <td>
                     <div className="flex items-center gap-1 justify-end">
                       {p.status === "accettato" && (
                         <button
@@ -771,7 +750,7 @@ export default function PreventiviPage() {
                 </button>
               </div>
               <div className="border border-gray-200 rounded-xl overflow-hidden">
-                <table className="w-full">
+                <table className="tbl">
                   <thead className="bg-gray-50">
                     <tr>
                       <th className="text-xs font-semibold text-gray-500 px-3 py-2 text-left w-[26%]">
@@ -795,10 +774,10 @@ export default function PreventiviPage() {
                       <th className="w-[2%]" />
                     </tr>
                   </thead>
-                  <tbody className="zebra">
+                  <tbody>
                     {voci.map((v) => (
-                      <tr key={v.id} className="border-t border-gray-100">
-                        <td className="px-2 py-1.5">
+                      <tr key={v.id}>
+                        <td>
                           <input
                             type="text"
                             value={v.servizio}
@@ -809,7 +788,7 @@ export default function PreventiviPage() {
                             className="w-full border border-gray-200 rounded-md px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-brand/30"
                           />
                         </td>
-                        <td className="px-2 py-1.5">
+                        <td>
                           <input
                             type="text"
                             value={v.descrizione}
@@ -820,7 +799,7 @@ export default function PreventiviPage() {
                             className="w-full border border-gray-200 rounded-md px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-brand/30"
                           />
                         </td>
-                        <td className="px-2 py-1.5">
+                        <td>
                           <select
                             value={v.tipo}
                             onChange={(e) =>
@@ -836,7 +815,7 @@ export default function PreventiviPage() {
                             <option value="una_tantum">Una Tantum</option>
                           </select>
                         </td>
-                        <td className="px-2 py-1.5">
+                        <td>
                           <input
                             type="number"
                             min={1}
@@ -851,7 +830,7 @@ export default function PreventiviPage() {
                             className="w-full border border-gray-200 rounded-md px-2 py-1.5 text-xs text-center focus:outline-none focus:ring-1 focus:ring-brand/30"
                           />
                         </td>
-                        <td className="px-2 py-1.5">
+                        <td>
                           <input
                             type="number"
                             min={0}
@@ -867,13 +846,13 @@ export default function PreventiviPage() {
                             className="w-full border border-gray-200 rounded-md px-2 py-1.5 text-xs text-right focus:outline-none focus:ring-1 focus:ring-brand/30"
                           />
                         </td>
-                        <td className="px-2 py-1.5 text-xs font-semibold text-gray-900 text-right whitespace-nowrap">
+                        <td className="text-xs font-semibold text-gray-900 text-right whitespace-nowrap">
                           {fmt(
                             (Number(v.quantita) || 0) *
                               (Number(v.prezzoUnitario) || 0),
                           )}
                         </td>
-                        <td className="px-1 py-1.5">
+                        <td>
                           {voci.length > 1 && (
                             <button
                               onClick={() =>
@@ -990,20 +969,13 @@ export default function PreventiviPage() {
             <div className="flex gap-3 pt-1 border-t border-gray-100">
               <button
                 onClick={() => setShowForm(false)}
-                className="flex-1 border border-gray-200 text-gray-600 text-sm font-medium py-2.5 rounded-xl hover:bg-gray-50 transition-colors"
+                className="btn btn-secondary flex-1 .5"
               >
                 Annulla
               </button>
               <button
                 onClick={save}
-                className="flex-1 text-white text-sm font-medium py-2.5 rounded-xl transition-all"
-                style={{ background: BRAND }}
-                onMouseEnter={(e) =>
-                  ((e.currentTarget as HTMLElement).style.opacity = "0.85")
-                }
-                onMouseLeave={(e) =>
-                  ((e.currentTarget as HTMLElement).style.opacity = "1")
-                }
+                className="btn btn-primary flex-1"
               >
                 {editing ? "Salva Modifiche" : "Crea Preventivo"}
               </button>
@@ -1362,14 +1334,14 @@ function GeneraContrattoModal({
         <div className="flex gap-3 pt-2">
           <button
             onClick={onClose}
-            className="flex-1 border border-gray-200 text-gray-600 text-sm font-medium py-2.5 rounded-xl hover:bg-gray-50"
+            className="btn btn-secondary flex-1 .5"
           >
             Annulla
           </button>
           <button
             onClick={submit}
             disabled={saving}
-            className="glass-btn-primary flex-1 text-white text-sm font-medium py-2.5 rounded-xl disabled:opacity-60"
+            className="btn btn-primary flex-1 .5 disabled:opacity-60"
           >
             {saving ? "Generazione..." : "Genera e Scarica PDF"}
           </button>

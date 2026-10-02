@@ -106,7 +106,6 @@ export const NAV: NavSection[] = [
   },
   {
     label: "Sistema",
-    footer: true,
     items: [
       {
         code: "impostazioni",

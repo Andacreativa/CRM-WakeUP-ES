@@ -1,5 +1,7 @@
 "use client";
 
+import Pills from "@/components/Pills";
+import { Kpi, KpiGrid } from "@/components/Kpi";
 import SearchBox from "@/components/SearchBox";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
@@ -20,7 +22,7 @@ interface Lead extends LeadFormValues {
 }
 
 const selectCls =
-  "text-sm border border-gray-200 rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-brand/30";
+  "sel";
 
 export default function LeadPage() {
   const [leads, setLeads] = useState<Lead[]>([]);
@@ -91,41 +93,33 @@ export default function LeadPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Lead</h1>
-          <p className="text-gray-500 text-sm mt-1">Potenziali clienti e trattative in corso</p>
+          <h1 className="page-title">Lead</h1>
+          <p className="page-sub">Potenziali clienti e trattative in corso</p>
         </div>
         <button
           onClick={() => setForm({ open: true, lead: null })}
-          className="glass-btn-primary flex items-center gap-2 text-white text-sm font-medium px-4 py-2 rounded-xl"
+          className="btn btn-primary"
         >
           <Plus className="w-4 h-4" /> Nuovo lead
         </button>
       </div>
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <KpiGrid cols={4}>
         {kpi.map((k) => (
-          <div key={k.label} className="glass-card rounded-2xl p-4">
-            <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">{k.label}</p>
-            <p className="text-2xl font-bold mt-1 text-gray-900">{k.value}</p>
-          </div>
+          <Kpi key={k.label} label={k.label} value={k.value} />
         ))}
-      </div>
+      </KpiGrid>
 
       <div className="flex items-center gap-2 flex-wrap">
         <SearchBox value={q} onChange={setQ} placeholder="Cerca azienda, nome, email, città…" />
-        <div className="flex gap-1 bg-gray-100 rounded-xl p-1 w-fit flex-wrap">
-        {[{ value: "", label: "Tutti" }, ...STATI_LEAD].map((s) => (
-          <button
-            key={s.value}
-            onClick={() => setStato(s.value)}
-            className="text-sm px-3 py-1.5 rounded-lg font-medium transition-colors"
-            style={stato === s.value ? { background: "#e8308a", color: "#fff" } : { color: "#6b7280" }}
-          >
-            {s.label}
-            {s.value && counts[s.value] ? ` (${counts[s.value]})` : s.value === "" ? ` (${leads.length})` : ""}
-          </button>
-        ))}
-        </div>
+        <Pills
+          value={stato}
+          onChange={setStato}
+          options={[{ value: "", label: "Tutti" }, ...STATI_LEAD].map((s) => ({
+            val: s.value as string,
+            label: `${s.label}${s.value && counts[s.value] ? ` (${counts[s.value]})` : s.value === "" ? ` (${leads.length})` : ""}`,
+          }))}
+        />
         <select value={fonte} onChange={(e) => setFonte(e.target.value)} className={selectCls}>
           <option value="">Tutte le fonti</option>
           {FONTI_LEAD.map((f) => (
@@ -143,14 +137,14 @@ export default function LeadPage() {
 
       <div className="glass-card rounded-2xl overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[960px]">
+          <table className="tbl min-w-[960px]">
             <thead>
-              <tr className="border-b border-gray-100 bg-gray-50">
+              <tr>
                 {["Data", "Azienda", "Contatto", "Fonte", "Responsabile", "Città", "Stato", "Valore", "Prossima azione", ""].map((h) => (
                   <th
                     key={h}
                     className={cn(
-                      "text-[11px] font-semibold uppercase tracking-wide text-gray-500 px-4 py-3",
+                      "",
                       h === "Valore" ? "text-right" : "text-left",
                     )}
                   >
@@ -159,10 +153,10 @@ export default function LeadPage() {
                 ))}
               </tr>
             </thead>
-            <tbody className="zebra">
+            <tbody>
               {paged.length === 0 && (
                 <tr>
-                  <td colSpan={10} className="text-center text-gray-400 py-12 text-sm">Nessun lead</td>
+                  <td colSpan={10} className="text-center text-gray-400 py-12">Nessun lead</td>
                 </tr>
               )}
               {paged.map((l) => {
@@ -171,31 +165,31 @@ export default function LeadPage() {
                 const paData = l.prossimaAzioneData ?? l.attivita[0]?.prossimaAzioneData;
                 const scaduta = paData ? new Date(paData).getTime() < Date.now() : false;
                 return (
-                  <tr key={l.id} className="border-b border-gray-50 hover:bg-gray-50/60">
-                    <td className="px-4 py-3 text-xs text-gray-500 whitespace-nowrap">
+                  <tr key={l.id}>
+                    <td className="text-xs text-gray-500 whitespace-nowrap">
                       {new Date(l.createdAt).toLocaleDateString("it-IT")}
                     </td>
-                    <td className="px-4 py-3">
+                    <td>
                       <Link href={`/crm/lead/${l.id}`} className="text-sm font-semibold text-gray-900 hover:text-brand">
                         {l.azienda ?? l.nome}
                       </Link>
-                      <div className="text-[11px] text-gray-400">
+                      <div className="tbl-muted">
                         {l.codice ?? ""}
                         {l.cliente && <span className="ml-1 text-ok">· cliente {l.cliente.nome}</span>}
                       </div>
                     </td>
-                    <td className="px-4 py-3 text-xs text-gray-600">
+                    <td className="text-xs">
                       {l.azienda && <div className="text-gray-900">{l.nome}</div>}
                       <div>{l.email ?? "—"}</div>
                       <div className="text-gray-400">{l.telefono ?? ""}</div>
                     </td>
-                    <td className="px-4 py-3 text-xs text-gray-600">
+                    <td className="text-xs">
                       {FONTI_LEAD.find((f) => f.value === l.fonte)?.label ?? "—"}
                       {l.fonteDettaglio && <div className="text-gray-400 truncate max-w-[140px]">{l.fonteDettaglio}</div>}
                     </td>
-                    <td className="px-4 py-3 text-xs text-gray-600">{l.responsabile ?? "—"}</td>
-                    <td className="px-4 py-3 text-xs text-gray-600">{l.citta ?? "—"}</td>
-                    <td className="px-4 py-3">
+                    <td className="text-xs">{l.responsabile ?? "—"}</td>
+                    <td className="text-xs">{l.citta ?? "—"}</td>
+                    <td>
                       <select
                         value={l.stato}
                         onChange={(e) => cambiaStato(l, e.target.value)}
@@ -207,10 +201,10 @@ export default function LeadPage() {
                         ))}
                       </select>
                     </td>
-                    <td className="px-4 py-3 text-sm font-semibold text-gray-900 text-right whitespace-nowrap">
+                    <td className="font-semibold text-gray-900 text-right whitespace-nowrap">
                       {l.valore != null ? fmt(l.valore) : "—"}
                     </td>
-                    <td className="px-4 py-3 text-xs">
+                    <td className="text-xs">
                       {pa ? (
                         <>
                           <div className="text-gray-700 truncate max-w-[180px]">{pa}</div>
@@ -224,7 +218,7 @@ export default function LeadPage() {
                         <span className="text-gray-400">—</span>
                       )}
                     </td>
-                    <td className="px-4 py-3">
+                    <td>
                       <div className="flex items-center gap-1 justify-end">
                         <Link href={`/crm/lead/${l.id}`} className="p-1.5 text-gray-400 hover:text-brand" title="Apri">
                           <ExternalLink className="w-4 h-4" />

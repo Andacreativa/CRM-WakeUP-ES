@@ -207,8 +207,8 @@ export default function DipendentiPage() {
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Dipendenti</h1>
-          <p className="text-gray-500 text-sm mt-1">
+          <h1 className="page-title">Dipendenti</h1>
+          <p className="page-sub">
             {dipendenti.length} persone in anagrafica
           </p>
         </div>
@@ -216,7 +216,7 @@ export default function DipendentiPage() {
           <SearchBox value={q} onChange={setQ} placeholder="Cerca persona…" className="w-56" />
           <button
             onClick={openNew}
-            className="glass-btn-primary flex items-center gap-2 text-white text-sm font-medium px-4 py-2.5 rounded-xl"
+            className="btn btn-primary .5"
           >
             <Plus className="w-4 h-4" /> Nuova persona
           </button>
@@ -225,9 +225,9 @@ export default function DipendentiPage() {
 
       {/* Tabella anagrafica */}
       <div className="glass-card rounded-2xl overflow-hidden">
-        <table className="w-full">
+        <table className="tbl">
           <thead>
-            <tr className="border-b border-gray-100 bg-gray-50">
+            <tr>
               {[
                 ["Persona", "text-left"],
                 ["Tipo", "text-left"],
@@ -240,14 +240,14 @@ export default function DipendentiPage() {
               ].map(([h, al], i) => (
                 <th
                   key={i}
-                  className={`text-xs font-semibold text-gray-500 uppercase tracking-wide px-4 py-3 ${al}`}
+                  className={`${al}`}
                 >
                   {h}
                 </th>
               ))}
             </tr>
           </thead>
-          <tbody className="zebra">
+          <tbody>
             {dipendenti.length === 0 && (
               <tr>
                 <td
@@ -263,7 +263,7 @@ export default function DipendentiPage() {
                 <tr>
                   <td
                     colSpan={8}
-                    className="px-4 pt-4 pb-1 text-[11px] font-semibold uppercase tracking-wide text-gray-400 bg-white"
+                    className="px-4 pt-4 pb-1 text-gray-400 bg-white"
                   >
                     {g.label}
                   </td>
@@ -273,7 +273,7 @@ export default function DipendentiPage() {
                 key={d.id}
                 className="border-b border-gray-50 hover:bg-gray-50 transition-colors"
               >
-                <td className="px-4 py-3 text-sm font-medium text-gray-900">
+                <td className="font-medium text-gray-900">
                   <div className="flex items-center gap-3">
                     <Avatar
                       nome={d.nome}
@@ -290,7 +290,7 @@ export default function DipendentiPage() {
                     </button>
                   </div>
                 </td>
-                <td className="px-4 py-3">
+                <td>
                   <span
                     className={`text-[11px] font-semibold px-2 py-0.5 rounded-md ${
                       d.tipo === "commerciale"
@@ -308,13 +308,13 @@ export default function DipendentiPage() {
                     </span>
                   )}
                 </td>
-                <td className="px-4 py-3 text-sm font-semibold text-gray-900 text-right">
+                <td className="font-semibold text-gray-900 text-right">
                   {fmt(d.nettoBustaPaga)}
                 </td>
-                <td className="px-4 py-3 text-sm text-gray-700 text-right">
+                <td className="text-right">
                   {d.tipo === "commerciale" ? "—" : fmt(d.seguridadSocial)}
                 </td>
-                <td className="px-4 py-3 text-sm text-gray-700 text-right">
+                <td className="text-right">
                   {d.tipo === "commerciale" ? (
                     "—"
                   ) : (
@@ -326,17 +326,17 @@ export default function DipendentiPage() {
                     </>
                   )}
                 </td>
-                <td className="px-4 py-3 text-sm text-gray-700 text-right">
+                <td className="text-right">
                   {d.tipo === "dipendente"
                     ? "—"
                     : fmt(d.benefitMensili)}
                 </td>
-                <td className="px-4 py-3 text-sm text-gray-700 text-right">
+                <td className="text-right">
                   {d.tipo === "commerciale"
                     ? `${(d.percentualeCommissione ?? 0).toFixed(1).replace(".", ",")}%`
                     : "—"}
                 </td>
-                <td className="px-4 py-3">
+                <td>
                   <div className="flex items-center gap-2 justify-end">
                     <button
                       onClick={() => openEdit(d)}
@@ -408,7 +408,7 @@ export default function DipendentiPage() {
                     </button>
                   )}
                 </div>
-                <p className="text-[11px] text-gray-400">
+                <p className="tbl-muted">
                   PNG/JPG. In assenza di foto verranno mostrate le iniziali.
                 </p>
               </div>
@@ -734,7 +734,7 @@ export default function DipendentiPage() {
                     />
                   </div>
                 </div>
-                <p className="text-[11px] text-gray-400">
+                <p className="tbl-muted">
                   Gli importi di default vengono proposti ogni mese nel registro pagamenti e
                   restano modificabili voce per voce. I rimborsi non hanno un default: si
                   inseriscono a mano nel registro quando capitano, anche più volte al mese.
@@ -745,13 +745,13 @@ export default function DipendentiPage() {
             <div className="flex gap-3 pt-2">
               <button
                 onClick={() => setShowForm(false)}
-                className="flex-1 border border-gray-200 text-gray-600 text-sm font-medium py-2.5 rounded-xl hover:bg-gray-50"
+                className="btn btn-secondary flex-1 .5"
               >
                 Annulla
               </button>
               <button
                 onClick={save}
-                className="glass-btn-primary flex-1 text-white text-sm font-medium py-2.5 rounded-xl"
+                className="btn btn-primary flex-1 .5"
               >
                 {editing ? "Salva" : "Aggiungi"}
               </button>

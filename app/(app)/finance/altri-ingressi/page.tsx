@@ -1,5 +1,6 @@
 "use client";
 
+import { Kpi, KpiGrid } from "@/components/Kpi";
 import SearchBox from "@/components/SearchBox";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Plus, Pencil, Trash2, Check, X, Info } from "lucide-react";
@@ -47,7 +48,7 @@ const inputCls =
   "w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30 bg-white";
 const labelCls = "text-xs font-medium text-gray-600 block mb-1";
 const selectCls =
-  "text-sm border border-gray-200 rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-brand/30";
+  "sel";
 
 // Categoria effettiva: le ritenute create in automatico dalla ripartizione
 // commerciale sono "ritenuta_commerciale" anche se nate senza categoria.
@@ -156,8 +157,8 @@ export default function AltriIngressiPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Altri ingressi</h1>
-          <p className="text-gray-500 text-sm mt-1">
+          <h1 className="page-title">Altri ingressi</h1>
+          <p className="page-sub">
             Entrate non da fattura: cashback, rimborsi, apporti, incassi senza fattura
           </p>
         </div>
@@ -165,26 +166,23 @@ export default function AltriIngressiPage() {
           <FiltriBar anno={anno} azienda={azienda} onAnno={setAnno} onAzienda={setAzienda} showAzienda={false} />
           <button
             onClick={openNew}
-            className="glass-btn-primary flex items-center gap-2 text-white text-sm font-medium px-4 py-2 rounded-xl"
+            className="btn btn-primary"
           >
             <Plus className="w-4 h-4" /> Nuovo ingresso
           </button>
         </div>
       </div>
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <KpiGrid cols={4}>
         {[
           { label: "Totale", value: fmt(totale), color: "#e8308a" },
           { label: "Incassati", value: fmt(incassati), color: "#22c55e" },
           { label: "In attesa", value: fmt(totale - incassati), color: "#f59e0b" },
           { label: "Solo contabili", value: fmt(contabili), color: "#9ca3af" },
         ].map((k) => (
-          <div key={k.label} className="glass-card rounded-2xl p-4">
-            <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">{k.label}</p>
-            <p className="text-2xl font-bold mt-1" style={{ color: k.color }}>{k.value}</p>
-          </div>
+          <Kpi key={k.label} label={k.label} value={k.value} color={k.color} />
         ))}
-      </div>
+      </KpiGrid>
 
       <div className="flex items-center gap-2 flex-wrap">
         <SearchBox value={q} onChange={setQ} placeholder="Cerca fonte, descrizione…" />
@@ -208,14 +206,14 @@ export default function AltriIngressiPage() {
       </div>
 
       <div className="glass-card rounded-2xl overflow-hidden">
-        <table className="w-full">
+        <table className="tbl">
           <thead>
-            <tr className="border-b border-gray-100 bg-gray-50">
+            <tr>
               {["Fonte", "Categoria", "Mese", "Importo", "Stato", ""].map((h) => (
                 <th
                   key={h}
                   className={cn(
-                    "text-[11px] font-semibold uppercase tracking-wide text-gray-500 px-4 py-3",
+                    "",
                     h === "Importo" ? "text-right" : h === "Stato" ? "text-center" : "text-left",
                   )}
                 >
@@ -224,21 +222,21 @@ export default function AltriIngressiPage() {
               ))}
             </tr>
           </thead>
-          <tbody className="zebra">
+          <tbody>
             {paged.length === 0 && (
               <tr>
-                <td colSpan={6} className="text-center text-gray-400 py-12 text-sm">Nessun ingresso</td>
+                <td colSpan={6} className="text-center text-gray-400 py-12">Nessun ingresso</td>
               </tr>
             )}
             {paged.map((r) => {
               const contabile = soloContabile(r);
               return (
-                <tr key={r.id} className="border-b border-gray-50">
-                  <td className="px-4 py-3">
-                    <div className="text-sm font-semibold text-gray-900">{r.fonte}</div>
+                <tr key={r.id}>
+                  <td>
+                    <div className="tbl-primary">{r.fonte}</div>
                     {r.descrizione && <div className="text-xs text-gray-500">{r.descrizione}</div>}
                   </td>
-                  <td className="px-4 py-3">
+                  <td>
                     <span className="text-[11px] font-semibold px-2 py-0.5 rounded-md bg-gray-100 text-gray-700">
                       {CATEGORIA_INGRESSO_LABEL[categoriaDi(r)] ?? categoriaDi(r)}
                     </span>
@@ -248,13 +246,13 @@ export default function AltriIngressiPage() {
                       </span>
                     )}
                   </td>
-                  <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">
+                  <td className="whitespace-nowrap">
                     {MESI[r.mese - 1]} {r.anno}
                   </td>
                   <td className={cn("px-4 py-3 text-sm font-semibold text-right text-gray-900")}>
                     {fmt(r.importo)}
                   </td>
-                  <td className="px-4 py-3 text-center">
+                  <td className="text-center">
                     <button
                       onClick={() => toggleIncassato(r)}
                       className={cn(
@@ -268,7 +266,7 @@ export default function AltriIngressiPage() {
                       {r.incassato ? "Incassato" : "In attesa"}
                     </button>
                   </td>
-                  <td className="px-4 py-3">
+                  <td>
                     <div className="flex items-center gap-1 justify-end">
                       <button onClick={() => openEdit(r)} className="p-1.5 text-gray-400 hover:text-gray-700" title="Modifica">
                         <Pencil className="w-4 h-4" />
@@ -345,7 +343,7 @@ export default function AltriIngressiPage() {
             </div>
             <div className="flex justify-end gap-2 pt-1">
               <button onClick={() => setShowForm(false)} className="text-sm text-gray-500 hover:text-gray-700 px-3 py-2">Annulla</button>
-              <button onClick={save} className="glass-btn-primary text-white text-sm font-medium px-5 py-2 rounded-xl">
+              <button onClick={save} className="btn btn-primary">
                 {editing ? "Salva" : "Aggiungi"}
               </button>
             </div>

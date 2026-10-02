@@ -208,8 +208,8 @@ export default function FornitoriPage() {
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Fornitori</h1>
-          <p className="text-gray-500 text-sm mt-1">
+          <h1 className="page-title">Fornitori</h1>
+          <p className="page-sub">
             {filtered.length} fornitori in anagrafica
           </p>
         </div>
@@ -226,7 +226,7 @@ export default function FornitoriPage() {
           <PageSizeSelect pageSize={pageSize} onChange={setPageSize} />
           <button
             onClick={openNew}
-            className="glass-btn-primary flex items-center gap-2 text-white text-sm font-medium px-4 py-2.5 rounded-xl"
+            className="btn btn-primary .5"
           >
             <Plus className="w-4 h-4" /> Nuovo Fornitore
           </button>
@@ -235,20 +235,20 @@ export default function FornitoriPage() {
 
       {/* Tabella */}
       <div className="glass-card rounded-2xl overflow-hidden">
-        <table className="w-full">
+        <table className="tbl">
           <thead>
-            <tr className="border-b border-gray-100 bg-gray-50">
+            <tr>
               {["Paese", "Fornitore", "Totale Spese", ""].map((h) => (
                 <th
                   key={h}
-                  className={`text-xs font-semibold text-gray-500 uppercase tracking-wide px-4 py-3 ${h === "Totale Spese" ? "text-right" : "text-left"}`}
+                  className={`${h ==="Totale Spese" ? "text-right" : "text-left"}`}
                 >
                   {h}
                 </th>
               ))}
             </tr>
           </thead>
-          <tbody className="zebra">
+          <tbody>
             {filtered.length === 0 && (
               <tr>
                 <td
@@ -266,10 +266,10 @@ export default function FornitoriPage() {
                   key={c.id}
                   className="border-b border-gray-50 hover:bg-gray-50 transition-colors"
                 >
-                  <td className="px-4 py-3 text-xl">
+                  <td className="text-xl">
                     {PAESE_FLAG[c.paese] || "🌍"}
                   </td>
-                  <td className="px-4 py-3">
+                  <td>
                     <button
                       onClick={() => setDetail(c)}
                       className="text-sm font-medium text-gray-900 hover:text-brand hover:underline text-left"
@@ -288,7 +288,7 @@ export default function FornitoriPage() {
                   >
                     {totale > 0 ? fmt(totale) : "—"}
                   </td>
-                  <td className="px-4 py-3">
+                  <td>
                     <div className="flex items-center gap-2 justify-end">
                       <button
                         onClick={() => openEdit(c)}
@@ -440,13 +440,13 @@ export default function FornitoriPage() {
             <div className="flex gap-3 pt-2">
               <button
                 onClick={() => setShowForm(false)}
-                className="flex-1 border border-gray-200 text-gray-600 text-sm font-medium py-2.5 rounded-xl hover:bg-gray-50 transition-colors"
+                className="btn btn-secondary flex-1 .5"
               >
                 Annulla
               </button>
               <button
                 onClick={save}
-                className="glass-btn-primary flex-1 text-white text-sm font-medium py-2.5 rounded-xl"
+                className="btn btn-primary flex-1 .5"
               >
                 {editing ? "Salva Modifiche" : "Aggiungi"}
               </button>
@@ -571,13 +571,13 @@ function FornitoreDetailModal({
         <div className="flex gap-3 pt-2">
           <button
             onClick={onClose}
-            className="flex-1 border border-gray-200 text-gray-600 text-sm font-medium py-2.5 rounded-xl hover:bg-gray-50"
+            className="btn btn-secondary flex-1 .5"
           >
             Chiudi
           </button>
           <button
             onClick={onEdit}
-            className="glass-btn-primary flex-1 text-white text-sm font-medium py-2.5 rounded-xl"
+            className="btn btn-primary flex-1 .5"
           >
             Modifica
           </button>
@@ -642,7 +642,7 @@ function FattureFornitoriTab({
           <select
             value={filtroAnno}
             onChange={(e) => setFiltroAnno(parseInt(e.target.value))}
-            className="text-sm border border-gray-200 rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-brand/30"
+            className="sel"
           >
             {[2024, 2025, 2026].map((a) => (
               <option key={a} value={a}>
@@ -653,7 +653,7 @@ function FattureFornitoriTab({
           <select
             value={filtroMese}
             onChange={(e) => setFiltroMese(parseInt(e.target.value))}
-            className="text-sm border border-gray-200 rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-brand/30"
+            className="sel"
           >
             <option value={0}>Tutti i mesi</option>
             {MESI.map((m, i) => (
@@ -694,13 +694,13 @@ function FattureFornitoriTab({
             }}
             disabled={fatture.length === 0}
             title={fatture.length === 0 ? "Nessuna fattura nel filtro" : "Scarica ZIP"}
-            className="flex items-center gap-2 border border-gray-200 text-gray-700 text-sm font-medium px-4 py-2.5 rounded-xl hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="btn btn-secondary .5 disabled:cursor-not-allowed"
           >
             <Download className="w-4 h-4" /> Scarica ZIP
           </button>
           <button
             onClick={() => setShowUpload(true)}
-            className="glass-btn-primary flex items-center gap-2 text-white text-sm font-medium px-4 py-2.5 rounded-xl"
+            className="btn btn-primary .5"
           >
             <Upload className="w-4 h-4" /> Carica Fattura
           </button>
@@ -708,9 +708,9 @@ function FattureFornitoriTab({
       </div>
 
       <div className="glass-card rounded-2xl overflow-hidden">
-        <table className="w-full">
+        <table className="tbl">
           <thead>
-            <tr className="border-b border-gray-100 bg-gray-50">
+            <tr>
               {[
                 "Fornitore",
                 "Nome file",
@@ -721,7 +721,7 @@ function FattureFornitoriTab({
               ].map((h) => (
                 <th
                   key={h}
-                  className={`text-xs font-semibold text-gray-500 uppercase tracking-wide px-4 py-3 ${h === "Importo" ? "text-right" : "text-left"}`}
+                  className={`${h ==="Importo" ? "text-right" : "text-left"}`}
                 >
                   {h}
                 </th>
@@ -744,10 +744,10 @@ function FattureFornitoriTab({
                 key={f.id}
                 className={`border-b border-gray-50 hover:bg-gray-50 transition-colors ${i % 2 === 1 ? "bg-[#f9fafb]" : "bg-white"}`}
               >
-                <td className="px-4 py-3 text-sm font-semibold text-gray-900">
+                <td className="font-semibold text-gray-900">
                   {f.fornitore?.nome ?? "—"}
                 </td>
-                <td className="px-4 py-3 text-sm text-gray-700">
+                <td>
                   <button
                     onClick={() => setPreview(f)}
                     className="hover:text-brand hover:underline text-left"
@@ -755,18 +755,18 @@ function FattureFornitoriTab({
                     {f.fileName}
                   </button>
                 </td>
-                <td className="px-4 py-3 text-sm text-gray-600">
+                <td>
                   {MESI[f.mese - 1]} {f.anno}
                 </td>
-                <td className="px-4 py-3 text-sm font-semibold text-gray-900 text-right tabular-nums">
+                <td className="font-semibold text-gray-900 text-right tabular-nums">
                   {fmt(f.importo)}
                 </td>
-                <td className="px-4 py-3 text-sm text-gray-500">
+                <td className="text-gray-500">
                   {f.dataFattura
                     ? new Date(f.dataFattura).toLocaleDateString("it-IT")
                     : "—"}
                 </td>
-                <td className="px-4 py-3">
+                <td>
                   <div className="flex items-center gap-1 justify-end">
                     <a
                       href={`/api/fatture-fornitori/${f.id}/file`}
@@ -1098,8 +1098,7 @@ function UploadFatturaModal({
                 <button
                   onClick={creaFornitore}
                   disabled={creatingFornitore}
-                  className="text-xs font-medium text-white px-3 py-1.5 rounded-lg whitespace-nowrap"
-                  style={{ background: "#e8308a" }}
+                  className="btn btn-primary btn-sm"
                 >
                   {creatingFornitore ? "Creo..." : "Crea fornitore"}
                 </button>
@@ -1185,14 +1184,14 @@ function UploadFatturaModal({
         <div className="flex gap-3 pt-2">
           <button
             onClick={onClose}
-            className="flex-1 border border-gray-200 text-gray-600 text-sm font-medium py-2.5 rounded-xl hover:bg-gray-50"
+            className="btn btn-secondary flex-1 .5"
           >
             Annulla
           </button>
           <button
             onClick={submit}
             disabled={uploading || !file || !fornitoreId}
-            className="glass-btn-primary flex-1 text-white text-sm font-medium py-2.5 rounded-xl disabled:opacity-60"
+            className="btn btn-primary flex-1 .5 disabled:opacity-60"
           >
             {uploading ? "Caricamento..." : "Carica"}
           </button>

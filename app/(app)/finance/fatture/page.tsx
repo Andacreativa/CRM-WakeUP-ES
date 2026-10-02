@@ -1,5 +1,8 @@
 "use client";
 
+import { ExportBar, ExportButton } from "@/components/ExportBar";
+import Pills from "@/components/Pills";
+import { Kpi, KpiGrid } from "@/components/Kpi";
 import SearchBox from "@/components/SearchBox";
 import { useEffect, useState } from "react";
 import {
@@ -408,7 +411,6 @@ export default function FatturePage() {
   const selTotale = selected.reduce((s, f) => s + (f?.importo ?? 0), 0);
   // Esporta: le spuntate, oppure tutte quelle del filtro
   const exportList = tutte || selected.length === 0 ? filtered : selected;
-  const canExport = tutte || selected.length > 0;
 
   const toggleRow = (f: Fattura, shift: boolean) => {
     setSelectedIds((prev) => {
@@ -534,8 +536,8 @@ export default function FatturePage() {
     <div className={`space-y-6 ${exportMode ? "pb-24" : ""}`}>
       <div className="flex items-start justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-3xl font-extrabold tracking-tight text-gray-900">Fatture emesse</h1>
-          <p className="text-gray-500 text-sm mt-1">
+          <h1 className="page-title">Fatture emesse</h1>
+          <p className="page-sub">
             Fatture attive create a mano o dalle richieste. Bozze e proforma arrivano con la
             creazione fatture.
           </p>
@@ -543,26 +545,20 @@ export default function FatturePage() {
         {tab === "emesse" && (
           <div className="flex items-center gap-3 flex-wrap">
             <PageSizeSelect pageSize={pageSize} onChange={setPageSize} />
-            <button
+            <ExportButton
+              active={exportMode}
               onClick={() => (exportMode ? esciExport() : setExportMode(true))}
               title="Scegli le fatture e scaricale in Excel o PDF"
-              className={
-                exportMode
-                  ? "glass-btn-primary flex items-center gap-1.5 text-white text-sm font-medium px-3 py-2 rounded-xl"
-                  : "flex items-center gap-1.5 border border-gray-200 text-gray-600 text-sm font-medium px-3 py-2 rounded-xl hover:bg-gray-50 transition-colors"
-              }
-            >
-              <Download className="w-4 h-4" /> Esporta
-            </button>
+            />
             <button
               onClick={() => setShowImport(true)}
-              className="flex items-center gap-1.5 border border-gray-200 text-gray-600 text-sm font-medium px-3 py-2 rounded-xl hover:bg-gray-50 transition-colors"
+              className="btn btn-secondary"
             >
               <Upload className="w-4 h-4 text-brand" /> Importa Fatture
             </button>
             <button
               onClick={openNew}
-              className="glass-btn-primary flex items-center gap-2 text-white text-sm font-medium px-4 py-2 rounded-xl transition-all"
+              className="btn btn-primary"
             >
               <Plus className="w-4 h-4" /> Nuova Fattura
             </button>
@@ -614,7 +610,7 @@ export default function FatturePage() {
       {tab === "emesse" && (
         <>
       {/* KPI */}
-      <div className="grid grid-cols-3 gap-4">
+      <KpiGrid cols={3}>
         {[
           { label: "Totale", val: fmt(totale), color: "text-gray-900" },
           { label: "Incassato", val: fmt(pagate), color: "text-ok" },
@@ -624,14 +620,9 @@ export default function FatturePage() {
             color: "text-warn",
           },
         ].map((k) => (
-          <div key={k.label} className="glass-card rounded-2xl p-4">
-            <p className="text-xs text-gray-500 uppercase tracking-wide">
-              {k.label}
-            </p>
-            <p className={`text-xl font-bold mt-1 ${k.color}`}>{k.val}</p>
-          </div>
+          <Kpi key={k.label} label={k.label} value={k.val} valueClass={k.color} />
         ))}
-      </div>
+      </KpiGrid>
 
       {/* Filtri */}
       <div className="flex gap-3 flex-wrap items-center">
@@ -639,7 +630,7 @@ export default function FatturePage() {
         <select
           value={filtroMese}
           onChange={(e) => setFiltroMese(parseInt(e.target.value))}
-          className="text-sm border border-gray-200 rounded-lg px-3 py-2 bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-brand/30"
+          className="sel"
         >
           <option value={0}>Tutti i mesi</option>
           {MESI.map((m, i) => (
@@ -652,7 +643,7 @@ export default function FatturePage() {
           <select
             value={filtroClienteId}
             onChange={(e) => setFiltroClienteId(parseInt(e.target.value) || 0)}
-            className="text-sm border border-gray-200 rounded-lg px-3 py-2 bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-brand/30 min-w-[180px]"
+            className="sel min-w-[180px]"
           >
             <option value={0}>Tutti i clienti</option>
             {[...clienti]
@@ -676,7 +667,7 @@ export default function FatturePage() {
         <select
           value={azienda}
           onChange={(e) => setAzienda(e.target.value)}
-          className="text-sm border border-gray-200 rounded-lg px-3 py-2 bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-brand/30"
+          className="sel"
         >
           <option value="">Tutti i canali</option>
           {CANALI.map((a) => (
@@ -685,26 +676,15 @@ export default function FatturePage() {
             </option>
           ))}
         </select>
-        <div className="flex gap-1 bg-gray-100 rounded-lg p-1">
-          {(["tutti", "pagato", "attesa"] as const).map((v) => (
-            <button
-              key={v}
-              onClick={() => setFiltroPagato(v)}
-              className="text-sm px-3 py-1.5 rounded-md font-medium transition-colors"
-              style={
-                filtroPagato === v
-                  ? { background: "#e8308a", color: "#fff" }
-                  : { color: "#6b7280" }
-              }
-            >
-              {v === "tutti"
-                ? "Tutti"
-                : v === "pagato"
-                  ? "Pagati"
-                  : "In Attesa"}
-            </button>
-          ))}
-        </div>
+        <Pills
+          value={filtroPagato}
+          onChange={setFiltroPagato}
+          options={[
+            { val: "tutti", label: "Tutti" },
+            { val: "pagato", label: "Pagati" },
+            { val: "attesa", label: "In attesa" },
+          ]}
+        />
         <span className="ml-auto text-xs text-gray-400 whitespace-nowrap">
           {filtered.length} fatture
           {selected.length > 0 ? ` · ${selected.length} selezionate` : ""}
@@ -713,9 +693,9 @@ export default function FatturePage() {
 
       {/* Tabella fatture */}
       <div className="glass-card rounded-2xl overflow-hidden">
-        <table className="w-full">
+        <table className="tbl">
           <thead>
-            <tr className="border-b border-gray-100 bg-gray-50">
+            <tr>
               {exportMode && (
                 <th className="w-10 px-3 py-3">
                   <input
@@ -745,7 +725,7 @@ export default function FatturePage() {
               ].map((h) => (
                 <th
                   key={h}
-                  className={`text-xs font-semibold text-gray-500 uppercase tracking-wide px-4 py-3 ${h === "Importo" ? "text-right" : h === "Stato" ? "text-center" : "text-left"}`}
+                  className={`${h ==="Importo" ? "text-right" : h === "Stato" ? "text-center" : "text-left"}`}
                 >
                   {h}
                 </th>
@@ -763,7 +743,7 @@ export default function FatturePage() {
                 </td>
               </tr>
             )}
-            {paged.map((f, i) => (
+            {paged.map((f) => (
               <tr
                 key={`${f.id}-${f.pagato}-${totalePagato(f)}`}
                 onMouseDown={(e) => {
@@ -772,14 +752,14 @@ export default function FatturePage() {
                 }}
                 onClick={(e) => exportMode && toggleRow(f, e.shiftKey)}
                 title={exportMode ? "Click per selezionare · Shift+click per un intervallo" : undefined}
-                className={`border-b border-gray-50 transition-colors ${exportMode ? "cursor-pointer" : ""} ${
+                className={`${exportMode ? "cursor-pointer" : ""} ${
                   exportMode && selectedIds.has(f.id)
                     ? "bg-brand/10 hover:bg-brand/15"
-                    : `${i % 2 === 1 ? "bg-[#f9fafb]" : "bg-white"} hover:bg-gray-50`
+                    : ""
                 }`}
               >
                 {exportMode && (
-                  <td className="px-3 py-3 w-10" onClick={(e) => e.stopPropagation()}>
+                  <td className="w-10" onClick={(e) => e.stopPropagation()}>
                     <input
                       type="checkbox"
                       checked={selectedIds.has(f.id)}
@@ -799,21 +779,21 @@ export default function FatturePage() {
                 >
                   {f.numero ?? "—"}
                 </td>
-                <td className="px-4 py-3 text-sm font-medium text-gray-900">
+                <td className="font-medium text-gray-900">
                   {f.cliente?.nome ?? "—"}
                   <span className="ml-1 text-xs text-gray-400">
                     {f.cliente?.paese ?? ""}
                   </span>
                 </td>
-                <td className="px-4 py-3">
+                <td>
                   <span className="text-xs font-medium text-gray-500 whitespace-nowrap">
                     {canaleLabel(f.azienda, f.aziendaNota)}
                   </span>
                 </td>
-                <td className="px-4 py-3 text-sm text-gray-600">
+                <td>
                   {MESI[f.mese - 1]}
                 </td>
-                <td className="px-4 py-3 text-sm">
+                <td>
                   {f.scadenza ? (
                     <span
                       className={`text-xs font-medium ${isScaduta(f) ? "text-bad" : isInScadenza(f) ? "text-warn" : "text-gray-500"}`}
@@ -824,10 +804,10 @@ export default function FatturePage() {
                     <span className="text-gray-400">—</span>
                   )}
                 </td>
-                <td className="px-4 py-3 text-sm font-semibold text-gray-900 text-right">
+                <td className="font-semibold text-gray-900 text-right">
                   {fmt(f.importo)}
                 </td>
-                <td className="px-4 py-3 text-center">
+                <td className="text-center">
                   {(() => {
                     const stato = statoCalcolato(f);
                     if (stato === "pagato") {
@@ -872,7 +852,7 @@ export default function FatturePage() {
                     );
                   })()}
                 </td>
-                <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                <td onClick={(e) => e.stopPropagation()}>
                   <div className="flex items-center gap-2 justify-end">
                     {statoCalcolato(f) !== "pagato" && (
                       <button
@@ -912,83 +892,43 @@ export default function FatturePage() {
         />
       )}
 
-      {/* Barra Esporta (come Northstar): spuntate oppure tutte quelle del filtro */}
+      {/* Barra Esporta (comune a tutta l'app): spuntate oppure tutte quelle del filtro */}
       {exportMode && (
-        <div className="export-bar bg-white border-t border-gray-200 shadow-[0_-8px_24px_rgba(0,0,0,0.08)]">
-          <div className="flex items-center justify-between gap-3 flex-wrap px-5 py-3">
-            <div className="flex items-center gap-3 flex-wrap text-sm text-gray-600">
-              {tutte ? (
-                <span>
-                  <strong className="text-gray-900 text-base">{filtered.length}</strong> fatture, tutte
-                  quelle del filtro · <strong className="text-gray-900">{fmt(totale)}</strong>
-                </span>
-              ) : (
-                <span>
-                  <strong className="text-gray-900 text-base">{selected.length}</strong>{" "}
-                  {selected.length === 1 ? "fattura selezionata" : "fatture selezionate"}
-                  {selected.length > 0 && (
-                    <>
-                      {" · "}
-                      <strong className="text-gray-900">{fmt(selTotale)}</strong>
-                    </>
-                  )}
-                </span>
-              )}
-              <button
-                type="button"
-                onClick={() => setTutte((t) => !t)}
-                className="text-brand underline underline-offset-4 hover:text-brand"
-              >
-                {tutte ? "torna alle spuntate" : `oppure tutte quelle del filtro (${filtered.length})`}
-              </button>
-            </div>
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">
-                Elenco
-              </span>
-              <button
-                onClick={() => runExportExcel(exportList)}
-                disabled={!canExport}
-                className="flex items-center gap-1.5 border border-gray-200 text-gray-700 text-sm font-medium px-3 py-1.5 rounded-xl hover:bg-gray-50 transition-colors disabled:opacity-40"
-              >
-                <FileSpreadsheet className="w-4 h-4 text-ok" /> Excel
-              </button>
-              <button
-                onClick={() => runExportPDF(exportList)}
-                disabled={!canExport}
-                className="glass-btn-primary flex items-center gap-1.5 text-white text-sm font-medium px-3 py-1.5 rounded-xl transition-all disabled:opacity-40"
-              >
-                <Download className="w-4 h-4" /> PDF
-              </button>
-              <span className="w-px h-6 bg-gray-200 mx-1" />
-              <span className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">
-                Rapporto SMH
-              </span>
-              <button
-                onClick={() => runRapportoSmh(exportList, "xlsx")}
-                disabled={!canExport}
-                title="Fatture ai clienti SMH con ritenuta, netto e fattura diretta da emettere"
-                className="flex items-center gap-1.5 border border-gray-200 text-gray-700 text-sm font-medium px-3 py-1.5 rounded-xl hover:bg-gray-50 transition-colors disabled:opacity-40"
-              >
-                <FileSpreadsheet className="w-4 h-4 text-ok" /> Excel
-              </button>
-              <button
-                onClick={() => runRapportoSmh(exportList, "pdf")}
-                disabled={!canExport}
-                title="Fatture ai clienti SMH con ritenuta, netto e fattura diretta da emettere"
-                className="glass-btn-secondary flex items-center gap-1.5 text-gray-700 text-sm font-medium px-3 py-1.5 rounded-xl disabled:opacity-40"
-              >
-                <FileText className="w-4 h-4 text-brand" /> PDF
-              </button>
-              <button
-                onClick={esciExport}
-                className="text-sm font-medium text-gray-500 hover:text-gray-700 px-3 py-1.5"
-              >
-                Annulla
-              </button>
-            </div>
-          </div>
-        </div>
+        <ExportBar
+          selected={selected.length}
+          total={filtered.length}
+          unit="fatture"
+          importo={fmt(tutte ? totale : selTotale)}
+          tutte={tutte}
+          onTutte={() => setTutte((t) => !t)}
+          onClose={esciExport}
+          groups={[
+            {
+              label: "Elenco",
+              actions: [
+                { label: "Excel", icon: <FileSpreadsheet className="text-ok" />, onClick: () => runExportExcel(exportList) },
+                { label: "PDF", icon: <Download />, primary: true, onClick: () => runExportPDF(exportList) },
+              ],
+            },
+            {
+              label: "Rapporto SMH",
+              actions: [
+                {
+                  label: "Excel",
+                  icon: <FileSpreadsheet className="text-ok" />,
+                  title: "Fatture ai clienti SMH con ritenuta, netto e fattura diretta da emettere",
+                  onClick: () => runRapportoSmh(exportList, "xlsx"),
+                },
+                {
+                  label: "PDF",
+                  icon: <FileText className="text-brand" />,
+                  title: "Fatture ai clienti SMH con ritenuta, netto e fattura diretta da emettere",
+                  onClick: () => runRapportoSmh(exportList, "pdf"),
+                },
+              ],
+            },
+          ]}
+        />
       )}
 
       {/* Tabella Altri Ingressi — stesso formato delle fatture */}
@@ -1245,13 +1185,13 @@ export default function FatturePage() {
             <div className="flex gap-3 pt-2">
               <button
                 onClick={() => setShowForm(false)}
-                className="flex-1 border border-gray-200 text-gray-600 text-sm font-medium py-2.5 rounded-xl hover:bg-gray-50"
+                className="btn btn-secondary flex-1 .5"
               >
                 Annulla
               </button>
               <button
                 onClick={save}
-                className="glass-btn-primary flex-1 text-white text-sm font-medium py-2.5 rounded-xl"
+                className="btn btn-primary flex-1 .5"
               >
                 {editing ? "Salva" : "Aggiungi"}
               </button>
@@ -1436,14 +1376,14 @@ function AccontoModal({
         <div className="flex gap-3 pt-2">
           <button
             onClick={onClose}
-            className="flex-1 border border-gray-200 text-gray-600 text-sm font-medium py-2.5 rounded-xl hover:bg-gray-50"
+            className="btn btn-secondary flex-1 .5"
           >
             Annulla
           </button>
           <button
             onClick={submit}
             disabled={saving}
-            className="glass-btn-primary flex-1 text-white text-sm font-medium py-2.5 rounded-xl disabled:opacity-50"
+            className="btn btn-primary flex-1 .5 disabled:opacity-50"
           >
             {saving ? "Salvataggio..." : "Registra"}
           </button>

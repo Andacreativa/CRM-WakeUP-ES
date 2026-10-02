@@ -1,5 +1,8 @@
 "use client";
 
+import { ExportBar, ExportButton } from "@/components/ExportBar";
+import Pills from "@/components/Pills";
+import { Kpi, KpiGrid } from "@/components/Kpi";
 import SearchBox from "@/components/SearchBox";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
@@ -65,6 +68,8 @@ export default function ScadenzePage() {
   const [q, setQ] = useState("");
   const [filtroStato, setFiltroStato] = useState<"tutte" | Stato>("tutte");
   const [selected, setSelected] = useState<Set<number>>(new Set());
+  const [exportMode, setExportMode] = useState(false);
+  const [tutte, setTutte] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
 
   const load = useCallback(async () => {
@@ -190,8 +195,13 @@ export default function ScadenzePage() {
     load();
   };
 
+  const esciExport = () => {
+    setExportMode(false);
+    setTutte(false);
+    setSelected(new Set());
+  };
   const exportPDFAction = async () => {
-    const rows = filtered.filter((f) => selected.has(f.id));
+    const rows = tutte ? filtered : filtered.filter((f) => selected.has(f.id));
     if (rows.length === 0) return;
     const totaleResiduo = rows.reduce((s, f) => s + residuo(f), 0);
     await exportPDF(
@@ -226,15 +236,15 @@ export default function ScadenzePage() {
       )}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Scadenze</h1>
-          <p className="text-gray-500 text-sm mt-1">Fatture non pagate con data di scadenza</p>
+          <h1 className="page-title">Scadenze</h1>
+          <p className="page-sub">Fatture non pagate con data di scadenza</p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           <SearchBox value={q} onChange={setQ} placeholder="Cerca cliente, numero…" className="w-64" />
           <select
             value={filtroAzienda}
             onChange={(e) => setFiltroAzienda(e.target.value)}
-            className="text-sm border border-gray-200 rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-brand/30"
+            className="sel"
           >
             <option value="">Tutte le aziende</option>
             {AZIENDE.map((a) => (
@@ -244,7 +254,7 @@ export default function ScadenzePage() {
           <select
             value={filtroCliente}
             onChange={(e) => setFiltroCliente(e.target.value)}
-            className="text-sm border border-gray-200 rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-brand/30 max-w-[220px]"
+            className="sel max-w-[220px]"
           >
             <option value="">Tutti i clienti</option>
             {clientiUnici.map((c) => (
@@ -254,22 +264,18 @@ export default function ScadenzePage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-3 gap-4">
+      <KpiGrid cols={3}>
         {kpi.map((k) => (
-          <div key={k.label} className="glass-card rounded-2xl p-4">
-            <div className="flex items-center gap-2">
-              <k.icon className="w-4 h-4" style={{ color: k.color }} />
-              <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">{k.label}</p>
-            </div>
-            <p className="text-2xl font-bold mt-1" style={{ color: k.color }}>
-              {fmt(k.rows.reduce((s, f) => s + residuo(f), 0))}
-            </p>
-            <p className="text-xs text-gray-400 mt-0.5">
-              {k.rows.length} {k.rows.length === 1 ? "fattura" : "fatture"}
-            </p>
-          </div>
+          <Kpi
+            key={k.label}
+            label={k.label}
+            value={fmt(k.rows.reduce((s, f) => s + residuo(f), 0))}
+            color={k.color}
+            icon={k.icon}
+            sub={`${k.rows.length} ${k.rows.length === 1 ? "fattura" : "fatture"}`}
+          />
         ))}
-      </div>
+      </KpiGrid>
 
       {maiSollecitate.length > 0 && (
         <div className="text-sm rounded-xl px-4 py-3 border bg-warn/10 border-warn/30 text-warn flex items-center gap-2">
@@ -281,39 +287,22 @@ export default function ScadenzePage() {
       )}
 
       <div className="flex items-center justify-between flex-wrap gap-3">
-        <div className="flex gap-1 bg-gray-100 rounded-xl p-1 w-fit">
-          {[
+        <Pills
+          value={filtroStato as string}
+          onChange={(v) => setFiltroStato(v as typeof filtroStato)}
+          options={[
             { val: "tutte", label: `Tutte le pendenti (${scadute.length + urgenti.length + prossime.length})` },
             { val: "scaduta", label: `Scadute (${scadute.length})` },
             { val: "urgente", label: `Urgenti (${urgenti.length})` },
             { val: "prossima", label: `Prossime (${prossime.length})` },
-          ].map(({ val, label }) => (
-            <button
-              key={val}
-              onClick={() => setFiltroStato(val as typeof filtroStato)}
-              className="text-sm px-3 py-1.5 rounded-lg font-medium transition-colors"
-              style={filtroStato === val ? { background: "#e8308a", color: "#fff" } : { color: "#6b7280" }}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
+          ]}
+        />
         <div className="flex items-center gap-2 flex-wrap">
-          <button
-            onClick={toggleAll}
-            disabled={filteredIds.length === 0}
-            className="text-sm border border-gray-200 text-gray-600 font-medium px-3 py-2 rounded-xl hover:bg-gray-50 disabled:opacity-50"
-          >
-            {allSelected ? "Deseleziona tutto" : "Seleziona tutto"}
-          </button>
-          <button
-            onClick={exportPDFAction}
-            disabled={selected.size === 0}
-            className="flex items-center gap-1.5 border border-gray-200 text-gray-600 text-sm font-medium px-3 py-2 rounded-xl hover:bg-gray-50 disabled:opacity-50"
-          >
-            <Download className="w-4 h-4 text-bad" />
-            Esporta PDF{selected.size > 0 ? ` (${selected.size})` : ""}
-          </button>
+          <ExportButton
+            active={exportMode}
+            onClick={() => (exportMode ? esciExport() : setExportMode(true))}
+            title="Spunta le scadenze e scaricale in PDF"
+          />
         </div>
       </div>
 
@@ -326,9 +315,9 @@ export default function ScadenzePage() {
       ) : (
         <div className="glass-card rounded-2xl overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[900px]">
+            <table className="tbl min-w-[900px]">
               <thead>
-                <tr className="border-b border-gray-100 bg-gray-50">
+                <tr>
                   <th className="px-4 py-3 w-8">
                     <input type="checkbox" checked={allSelected} onChange={toggleAll} style={{ accentColor: "#e8308a" }} />
                   </th>
@@ -336,8 +325,7 @@ export default function ScadenzePage() {
                     <th
                       key={h}
                       className={cn(
-                        "text-[11px] font-semibold uppercase tracking-wide text-gray-500 px-4 py-3",
-                        h === "Residuo" || h === "Giorni" ? "text-right" : "text-left",
+                                                h === "Residuo" || h === "Giorni" ? "text-right" : "text-left",
                       )}
                     >
                       {h}
@@ -345,7 +333,7 @@ export default function ScadenzePage() {
                   ))}
                 </tr>
               </thead>
-              <tbody className="zebra">
+              <tbody>
                 {filtered.map((f) => {
                   const g = giorniA(f.scadenza!);
                   const n = f._count?.solleciti ?? 0;
@@ -353,8 +341,8 @@ export default function ScadenzePage() {
                   const acc = sumAcc(f);
                   const email = f.cliente?.email;
                   return (
-                    <tr key={f.id} className="border-b border-gray-50 align-middle">
-                      <td className="px-4 py-3">
+                    <tr key={f.id} className="align-middle">
+                      <td>
                         <input
                           type="checkbox"
                           checked={selected.has(f.id)}
@@ -363,29 +351,29 @@ export default function ScadenzePage() {
                           aria-label={`Seleziona ${f.cliente?.nome ?? ""}`}
                         />
                       </td>
-                      <td className="px-4 py-3">
-                        <div className="text-sm font-semibold text-gray-900">{f.cliente?.nome ?? "—"}</div>
-                        <div className="text-[11px] text-gray-400">
+                      <td>
+                        <div className="tbl-primary">{f.cliente?.nome ?? "—"}</div>
+                        <div className="tbl-muted">
                           {email ?? "nessuna email"} · {MESI[f.mese - 1]} {f.anno}
                         </div>
                       </td>
-                      <td className="px-4 py-3 text-sm font-mono text-gray-600 whitespace-nowrap">{f.numero ?? "—"}</td>
-                      <td className="px-4 py-3 text-right whitespace-nowrap">
-                        <div className="text-sm font-semibold text-gray-900">{fmt(residuo(f))}</div>
+                      <td className="font-mono whitespace-nowrap">{f.numero ?? "—"}</td>
+                      <td className="text-right whitespace-nowrap">
+                        <div className="tbl-primary">{fmt(residuo(f))}</div>
                         {acc > 0 && <div className="text-[10px] text-warn">acconto {fmt(acc)} su {fmt(f.importo)}</div>}
                       </td>
-                      <td className="px-4 py-3 text-sm text-gray-700 whitespace-nowrap">
+                      <td className="whitespace-nowrap">
                         {new Date(f.scadenza!).toLocaleDateString("it-IT")}
                       </td>
                       <td className={cn("px-4 py-3 text-sm text-right font-semibold whitespace-nowrap", g < 0 ? "text-bad" : "text-gray-700")}>
                         {g > 0 ? `+${g}` : g} gg
                       </td>
-                      <td className="px-4 py-3">
+                      <td>
                         <span className={cn("text-[11px] font-semibold px-2 py-0.5 rounded-md border", STATI[f.stato].pill)}>
                           {STATI[f.stato].label}
                         </span>
                       </td>
-                      <td className="px-4 py-3 text-xs text-gray-600 whitespace-nowrap">
+                      <td className="text-xs whitespace-nowrap">
                         {ultimo ? (
                           <>
                             {new Date(ultimo.data).toLocaleDateString("it-IT")}{" "}
@@ -399,7 +387,7 @@ export default function ScadenzePage() {
                           <span className="text-gray-400">—</span>
                         )}
                       </td>
-                      <td className="px-4 py-3">
+                      <td>
                         <div className="flex items-center gap-1 justify-end">
                           <button
                             onClick={() => sollecita(f)}
@@ -437,6 +425,18 @@ export default function ScadenzePage() {
         <p className="text-xs text-gray-400">
           {withStato.filter((f) => f.stato === "ok").length} fatture oltre i 30 giorni non sono mostrate nelle pendenti.
         </p>
+      )}
+      {exportMode && (
+        <ExportBar
+          selected={selected.size}
+          total={filtered.length}
+          unit="scadenze"
+          importo={fmt((tutte ? filtered : filtered.filter((f) => selected.has(f.id))).reduce((t, f) => t + residuo(f), 0))}
+          tutte={tutte}
+          onTutte={() => setTutte((t) => !t)}
+          onClose={esciExport}
+          groups={[{ actions: [{ label: "PDF", icon: <Download />, primary: true, onClick: exportPDFAction }] }]}
+        />
       )}
     </div>
   );

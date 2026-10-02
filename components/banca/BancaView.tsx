@@ -1,5 +1,7 @@
 "use client";
 
+import Pills from "@/components/Pills";
+import { Kpi, KpiGrid } from "@/components/Kpi";
 import SearchBox from "@/components/SearchBox";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
@@ -11,12 +13,11 @@ import {
   Landmark,
   Loader2,
   RotateCcw,
-  Search,
   Trash2,
   Unlink,
   Upload,
 } from "lucide-react";
-import { fmt, MESI, CATEGORIE_SPESA, CATEGORIE_COLORI, BRAND } from "@/lib/constants";
+import { fmt, MESI, CATEGORIE_SPESA, CATEGORIE_COLORI } from "@/lib/constants";
 import { useAnno } from "@/lib/anno-context";
 import { cn } from "@/lib/utils";
 import {
@@ -97,7 +98,7 @@ const selectCls =
   "text-sm border border-gray-200 rounded-lg px-2.5 py-1.5 bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-brand/30";
 const inputCls =
   "w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-brand/30 disabled:bg-gray-50 disabled:text-gray-400";
-const thCls = "text-left text-[11px] font-semibold uppercase tracking-wide text-gray-500 px-3 py-3";
+const thCls = "text-left ";
 
 const data = (iso: string | null | undefined) =>
   iso ? new Date(iso).toLocaleDateString("it-IT", { timeZone: "UTC" }) : "—";
@@ -122,34 +123,6 @@ const editDaSuggerimento = (s: Suggerimento): Edit => ({
 });
 const CON_REGISTRO = new Set(["Rimborsi", "Benefit"]);
 
-function Pills<T extends string>({
-  value,
-  onChange,
-  options,
-}: {
-  value: T;
-  onChange: (v: T) => void;
-  options: { val: T; label: string }[];
-}) {
-  return (
-    <div className="flex gap-1 bg-gray-100 rounded-xl p-1">
-      {options.map((o) => {
-        const active = o.val === value;
-        return (
-          <button
-            key={o.val}
-            type="button"
-            onClick={() => onChange(o.val)}
-            className="text-sm px-3 py-1.5 rounded-lg font-medium transition-colors whitespace-nowrap"
-            style={active ? { background: BRAND, color: "#fff" } : { color: "#6b7280" }}
-          >
-            {o.label}
-          </button>
-        );
-      })}
-    </div>
-  );
-}
 
 function CategoriaBadge({ categoria }: { categoria: string }) {
   return (
@@ -404,8 +377,8 @@ export default function BancaView() {
 
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Banca</h1>
-          <p className="text-gray-500 text-sm mt-0.5">
+          <h1 className="page-title">Banca</h1>
+          <p className="page-sub">
             Estratto conto BBVA{kpi.ultimo?.conto ? ` · ${kpi.ultimo.conto}` : ""}
             {anno > 0 ? ` · ${anno}` : " · tutti gli anni"}
           </p>
@@ -421,14 +394,14 @@ export default function BancaView() {
           />
           <Link
             href="/impostazioni/banca"
-            className="glass-btn-secondary flex items-center gap-1.5 text-gray-700 text-sm font-medium px-3 py-2 rounded-xl"
+            className="btn btn-secondary"
             title="Regole di categoria e memoria beneficiari"
           >
             <Settings2 className="w-4 h-4" /> Regole
           </Link>
           <button
             onClick={() => setShowImport(true)}
-            className="glass-btn-primary flex items-center gap-1.5 text-white text-sm font-medium px-4 py-2 rounded-xl"
+            className="btn btn-primary"
           >
             <Upload className="w-4 h-4" /> Importa estratto
           </button>
@@ -436,7 +409,7 @@ export default function BancaView() {
       </div>
 
       {/* KPI */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <KpiGrid cols={4}>
         {[
           {
             label: "Uscite da rivedere",
@@ -460,22 +433,16 @@ export default function BancaView() {
             color: "#374151",
           },
         ].map((k) => (
-          <div key={k.label} className="glass-card rounded-2xl p-4">
-            <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">{k.label}</p>
-            <p className="text-2xl font-bold mt-1" style={{ color: k.color }}>
-              {k.value}
-            </p>
-            <p className="text-xs text-gray-400 mt-0.5">{k.sub}</p>
-          </div>
+          <Kpi key={k.label} label={k.label} value={k.value} color={k.color} sub={k.sub} />
         ))}
-      </div>
+      </KpiGrid>
 
       {vista === "importazioni" && (
         <div className="glass-card rounded-2xl overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[860px]">
+            <table className="tbl min-w-[860px]">
               <thead>
-                <tr className="border-b border-gray-100 bg-gray-50">
+                <tr>
                   {["Caricato il", "File", "Periodo", "Lette", "Nuove", "Già presenti", "Collegati", ""].map(
                     (h, i) => (
                       <th key={i} className={cn(thCls, i >= 3 && i <= 6 && "text-right")}>
@@ -485,42 +452,42 @@ export default function BancaView() {
                   )}
                 </tr>
               </thead>
-              <tbody className="zebra">
+              <tbody>
                 {importazioni.length === 0 && (
                   <tr>
-                    <td colSpan={8} className="px-4 py-12 text-center text-sm text-gray-400">
+                    <td colSpan={8} className="text-center text-gray-400">
                       <Landmark className="w-10 h-10 mx-auto mb-2 text-gray-400" />
                       Nessun estratto caricato
                     </td>
                   </tr>
                 )}
                 {importazioni.map((imp) => (
-                  <tr key={imp.id} className="border-b border-gray-50">
-                    <td className="px-3 py-3 text-sm text-gray-700 whitespace-nowrap">
+                  <tr key={imp.id}>
+                    <td className="whitespace-nowrap">
                       {new Date(imp.createdAt).toLocaleString("it-IT", {
                         dateStyle: "short",
                         timeStyle: "short",
                       })}
                     </td>
-                    <td className="px-3 py-3">
+                    <td>
                       <div className="text-sm font-medium text-gray-900 max-w-[320px] truncate" title={imp.nomeFile}>
                         {imp.nomeFile}
                       </div>
-                      <div className="text-[11px] text-gray-400">
+                      <div className="tbl-muted">
                         {imp.banca}
                         {imp.conto ? ` · ${imp.conto}` : ""}
                       </div>
                     </td>
-                    <td className="px-3 py-3 text-sm text-gray-700 whitespace-nowrap">
+                    <td className="whitespace-nowrap">
                       {data(imp.periodoDa)} – {data(imp.periodoA)}
                     </td>
-                    <td className="px-3 py-3 text-sm text-right">{imp.righeLette}</td>
-                    <td className="px-3 py-3 text-sm text-right font-semibold text-gray-900">{imp.righeNuove}</td>
-                    <td className="px-3 py-3 text-sm text-right text-gray-500">{imp.righeDuplicate}</td>
-                    <td className="px-3 py-3 text-sm text-right text-gray-700">
+                    <td className="text-right">{imp.righeLette}</td>
+                    <td className="text-right font-semibold text-gray-900">{imp.righeNuove}</td>
+                    <td className="text-right text-gray-500">{imp.righeDuplicate}</td>
+                    <td className="text-right">
                       {imp.collegati}/{imp.movimenti}
                     </td>
-                    <td className="px-3 py-3 text-right">
+                    <td className="text-right">
                       <button
                         onClick={() => eliminaImport(imp)}
                         disabled={imp.collegati > 0}
@@ -601,7 +568,7 @@ export default function BancaView() {
               <button
                 onClick={() => inBlocco(applica, "Applicati")}
                 disabled={!sel.size || !!busy}
-                className="glass-btn-primary flex items-center gap-1.5 text-white font-medium px-3 py-1.5 rounded-xl disabled:opacity-50"
+                className="btn btn-primary disabled:opacity-50"
               >
                 {busy && !busy.startsWith("#") ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
                 {busy && !busy.startsWith("#") ? busy : "Applica proposte"}
@@ -609,7 +576,7 @@ export default function BancaView() {
               <button
                 onClick={() => inBlocco((r) => patch(r, { azione: "escludi" }), "Esclusi")}
                 disabled={!sel.size || !!busy}
-                className="glass-btn-secondary flex items-center gap-1.5 text-gray-700 font-medium px-3 py-1.5 rounded-xl disabled:opacity-50"
+                className="btn btn-secondary"
               >
                 <Ban className="w-4 h-4" /> Escludi
               </button>
@@ -625,9 +592,9 @@ export default function BancaView() {
           {/* Tabella */}
           <div className="glass-card rounded-2xl overflow-hidden">
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[1040px]">
+              <table className="tbl min-w-[1040px]">
                 <thead>
-                  <tr className="border-b border-gray-100 bg-gray-50">
+                  <tr>
                     {tipo === "uscite" && stato === "da_abbinare" && (
                       <th className="px-3 py-3 w-8">
                         <input
@@ -655,17 +622,17 @@ export default function BancaView() {
                     <th className={thCls}></th>
                   </tr>
                 </thead>
-                <tbody className="zebra">
+                <tbody>
                   {loading && (
                     <tr>
-                      <td colSpan={8} className="px-4 py-10 text-center text-sm text-gray-400">
+                      <td colSpan={8} className="text-center text-gray-400">
                         Caricamento…
                       </td>
                     </tr>
                   )}
                   {!loading && visibili.length === 0 && (
                     <tr>
-                      <td colSpan={8} className="px-4 py-12 text-center text-sm text-gray-400">
+                      <td colSpan={8} className="text-center text-gray-400">
                         <Landmark className="w-10 h-10 mx-auto mb-2 text-gray-400" />
                         {rows.length === 0
                           ? "Nessun movimento: importa un estratto BBVA."
@@ -684,9 +651,9 @@ export default function BancaView() {
                         : undefined;
                       const occupato = busy === `#${r.id}`;
                       return (
-                        <tr key={r.id} className="border-b border-gray-50 align-top">
+                        <tr key={r.id} className="align-top">
                           {editing && (
-                            <td className="px-3 py-3">
+                            <td>
                               <input
                                 type="checkbox"
                                 checked={sel.has(r.id)}
@@ -695,10 +662,10 @@ export default function BancaView() {
                               />
                             </td>
                           )}
-                          <td className="px-3 py-3 text-xs text-gray-700 whitespace-nowrap">
+                          <td className="text-xs whitespace-nowrap">
                             {dataBreve(r.dataContabile)}
                           </td>
-                          <td className="px-3 py-3">
+                          <td>
                             <div className="text-sm font-semibold text-gray-900 max-w-[260px] truncate" title={r.beneficiario ?? r.concetto}>
                               {r.beneficiario ?? r.concetto}
                             </div>
@@ -721,7 +688,7 @@ export default function BancaView() {
 
                           {editing ? (
                             <>
-                              <td className="px-3 py-3">
+                              <td>
                                 {candidato ? (
                                   <div className="space-y-1">
                                     <CategoriaBadge categoria={candidato.categoria} />
@@ -776,7 +743,7 @@ export default function BancaView() {
                                   </div>
                                 )}
                               </td>
-                              <td className="px-3 py-3 min-w-[230px] max-w-[280px]">
+                              <td className="min-w-[230px] max-w-[280px]">
                                 {s && s.candidati.length > 0 ? (
                                   <>
                                     <select
@@ -809,7 +776,7 @@ export default function BancaView() {
                             </>
                           ) : (
                             <>
-                              <td className="px-3 py-3 whitespace-nowrap">
+                              <td className="whitespace-nowrap">
                                 <span
                                   className={cn(
                                     "text-[11px] font-semibold px-2 py-0.5 rounded-md",
@@ -821,7 +788,7 @@ export default function BancaView() {
                                   {STATO_MOVIMENTO_LABEL[r.stato]}
                                 </span>
                               </td>
-                              <td className="px-3 py-3">
+                              <td>
                                 {r.abbinamenti.map((a) => (
                                   <div key={a.id} className="text-xs text-gray-700 flex items-center gap-1.5 flex-wrap">
                                     {a.spesa && (
@@ -854,7 +821,7 @@ export default function BancaView() {
                             </>
                           )}
 
-                          <td className="px-3 py-3 whitespace-nowrap text-right">
+                          <td className="whitespace-nowrap text-right">
                             {occupato ? (
                               <Loader2 className="w-4 h-4 animate-spin text-brand inline" />
                             ) : editing ? (
@@ -862,7 +829,7 @@ export default function BancaView() {
                                 <button
                                   onClick={() => singolo(r)}
                                   disabled={!!busy}
-                                  className="glass-btn-primary flex items-center gap-1 text-white text-xs font-medium px-2.5 py-1.5 rounded-lg disabled:opacity-50"
+                                  className="btn btn-primary gap-1 text-xs px-2.5 disabled:opacity-50"
                                 >
                                   <Check className="w-3.5 h-3.5" /> {e?.candidatoId ? "Abbina" : "Crea spesa"}
                                 </button>

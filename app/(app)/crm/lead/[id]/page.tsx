@@ -138,7 +138,7 @@ export default function LeadDettaglioPage() {
       <div className="flex items-start justify-between flex-wrap gap-3">
         <div>
           <div className="flex items-center gap-2 flex-wrap">
-            <h1 className="text-2xl font-bold text-gray-900">{lead.azienda ?? lead.nome}</h1>
+            <h1 className="page-title">{lead.azienda ?? lead.nome}</h1>
             <select
               value={lead.stato}
               onChange={(e) => cambiaStato(e.target.value)}
@@ -156,7 +156,7 @@ export default function LeadDettaglioPage() {
               priorità {PRIORITA_LEAD.find((p) => p.value === lead.priorita)?.label.toLowerCase()}
             </span>
           </div>
-          <p className="text-gray-500 text-sm mt-1">
+          <p className="page-sub">
             {lead.codice ?? ""}
             {lead.azienda && lead.nome !== lead.azienda ? ` · ${lead.nome}` : ""}
             {" · creato il "}
@@ -165,20 +165,20 @@ export default function LeadDettaglioPage() {
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           {lead.cliente ? (
-            <Link href={`/crm/clienti/${lead.cliente.id}`} className="glass-btn-secondary inline-flex items-center gap-1.5 text-sm font-medium px-3 py-2 rounded-xl text-gray-700">
+            <Link href={`/crm/clienti/${lead.cliente.id}`} className="btn btn-secondary">
               <ExternalLink className="w-4 h-4" /> Cliente: {lead.cliente.nome}
             </Link>
           ) : (
             <>
-              <button onClick={converti} className="glass-btn-primary inline-flex items-center gap-1.5 text-white text-sm font-medium px-3 py-2 rounded-xl">
+              <button onClick={converti} className="btn btn-primary">
                 <UserPlus className="w-4 h-4" /> Converti in cliente
               </button>
-              <button onClick={() => setCollega(true)} className="glass-btn-secondary inline-flex items-center gap-1.5 text-sm font-medium px-3 py-2 rounded-xl text-gray-700">
+              <button onClick={() => setCollega(true)} className="btn btn-secondary">
                 <Link2 className="w-4 h-4" /> Collega cliente
               </button>
             </>
           )}
-          <Link href="/sales/preventivi" className="glass-btn-secondary inline-flex items-center gap-1.5 text-sm font-medium px-3 py-2 rounded-xl text-gray-700">
+          <Link href="/sales/preventivi" className="btn btn-secondary">
             <FileText className="w-4 h-4" /> Preventivo
           </Link>
           <button onClick={() => setEdit(true)} className="p-2 rounded-xl text-gray-500 hover:bg-gray-100" title="Modifica">
@@ -360,7 +360,7 @@ function Attivita({ lead, onChanged }: { lead: Lead; onChanged: () => void }) {
         <input value={prossima} onChange={(e) => setProssima(e.target.value)} className={inputCls} placeholder="Prossima azione" />
         <div className="flex gap-2">
           <input type="date" value={prossimaData} onChange={(e) => setProssimaData(e.target.value)} className={inputCls} />
-          <button onClick={aggiungi} disabled={busy} className="glass-btn-primary text-white text-sm font-medium px-4 rounded-xl disabled:opacity-60 whitespace-nowrap">
+          <button onClick={aggiungi} disabled={busy} className="btn btn-primary disabled:opacity-60">
             Aggiungi
           </button>
         </div>
@@ -448,7 +448,7 @@ function Referenti({ lead, onChanged }: { lead: Lead; onChanged: () => void }) {
           <input value={f.email} onChange={(e) => setF({ ...f, email: e.target.value })} className={inputCls} placeholder="Email" />
           <div className="flex gap-2">
             <input value={f.telefono} onChange={(e) => setF({ ...f, telefono: e.target.value })} className={inputCls} placeholder="Telefono" />
-            <button onClick={salva} className="glass-btn-primary text-white text-sm font-medium px-3 rounded-xl">Ok</button>
+            <button onClick={salva} className="btn btn-primary">Ok</button>
           </div>
         </div>
       )}
@@ -505,7 +505,7 @@ function CollegaClienteModal({ leadId, onClose, onDone }: { leadId: number; onCl
         </div>
         <div className="flex justify-end gap-2">
           <button onClick={onClose} className="text-sm text-gray-500 hover:text-gray-700 px-3 py-2">Annulla</button>
-          <button onClick={salva} disabled={!sel} className="glass-btn-primary text-white text-sm font-medium px-5 py-2 rounded-xl disabled:opacity-60">Collega</button>
+          <button onClick={salva} disabled={!sel} className="btn btn-primary disabled:opacity-60">Collega</button>
         </div>
       </div>
     </div>

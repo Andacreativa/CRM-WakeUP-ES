@@ -647,9 +647,9 @@ export default function ReportModal({ open, onClose, initialAnno }: Props) {
               Bilancio mese per mese
             </h3>
           </div>
-          <table className="w-full text-sm">
+          <table className="tbl text-sm">
             <thead>
-              <tr className="border-b border-gray-100 text-xs text-gray-500">
+              <tr>
                 <th className="px-3 py-2 text-left font-medium">Mese</th>
                 <th className="px-3 py-2 text-right font-medium">Entrate</th>
                 <th className="px-3 py-2 text-right font-medium">Uscite</th>
@@ -660,11 +660,11 @@ export default function ReportModal({ open, onClose, initialAnno }: Props) {
               {report.mesi.map((m) => {
                 const bil = m.entrate - m.uscite;
                 return (
-                  <tr key={m.mese} className="border-b border-gray-50">
-                    <td className="px-3 py-1.5 text-gray-700">
+                  <tr key={m.mese}>
+                    <td>
                       {MESI[m.mese - 1]}
                     </td>
-                    <td className="px-3 py-1.5 text-right">
+                    <td className="text-right">
                       <input
                         type="number"
                         step="0.01"
@@ -679,7 +679,7 @@ export default function ReportModal({ open, onClose, initialAnno }: Props) {
                         className="w-28 bg-transparent border-none focus:outline-none focus:ring-1 focus:ring-brand/30 rounded px-1 py-0.5 text-right tabular-nums"
                       />
                     </td>
-                    <td className="px-3 py-1.5 text-right">
+                    <td className="text-right">
                       <input
                         type="number"
                         step="0.01"
@@ -707,12 +707,12 @@ export default function ReportModal({ open, onClose, initialAnno }: Props) {
               })}
             </tbody>
             <tfoot>
-              <tr className="border-t-2 border-gray-200 bg-gray-50 font-semibold text-sm">
-                <td className="px-3 py-2 text-gray-700">TOTALE</td>
-                <td className="px-3 py-2 text-right tabular-nums text-ok">
+              <tr className="tbl-total">
+                <td>TOTALE</td>
+                <td className="text-right tabular-nums text-ok">
                   {fmt(totEntrateMesi)}
                 </td>
-                <td className="px-3 py-2 text-right tabular-nums text-bad">
+                <td className="text-right tabular-nums text-bad">
                   {fmt(totUsciteMesi)}
                 </td>
                 <td
@@ -755,20 +755,20 @@ export default function ReportModal({ open, onClose, initialAnno }: Props) {
         <div className="flex gap-3 pt-2">
           <button
             onClick={onClose}
-            className="flex-1 border border-gray-200 text-gray-600 text-sm font-medium py-2.5 rounded-xl hover:bg-gray-50"
+            className="btn btn-secondary flex-1 .5"
           >
             Chiudi
           </button>
           <button
             onClick={handleExportExcel}
-            className="flex items-center justify-center gap-2 flex-1 border border-gray-200 text-gray-700 text-sm font-medium py-2.5 rounded-xl hover:bg-gray-50"
+            className="btn btn-secondary flex-1 .5"
           >
             <FileSpreadsheet className="w-4 h-4 text-ok" />
             Esporta Excel
           </button>
           <button
             onClick={handleExportPDF}
-            className="glass-btn-primary flex items-center justify-center gap-2 flex-1 text-white text-sm font-medium py-2.5 rounded-xl"
+            className="btn btn-primary flex-1 .5"
           >
             <Download className="w-4 h-4" />
             Esporta PDF
@@ -805,9 +805,9 @@ function DetailSection({
           {title}
         </h3>
       </div>
-      <table className="w-full text-sm">
+      <table className="tbl text-sm">
         <thead>
-          <tr className="border-b border-gray-100 text-xs text-gray-500">
+          <tr>
             <th className="px-3 py-2 text-left font-medium">Voce</th>
             <th className="px-3 py-2 text-right font-medium">Totale</th>
             {showFattureCols && (
@@ -821,8 +821,8 @@ function DetailSection({
         </thead>
         <tbody>
           {rows.map((r) => (
-            <tr key={r.id} className="border-b border-gray-50">
-              <td className="px-3 py-1.5">
+            <tr key={r.id}>
+              <td>
                 <input
                   type="text"
                   value={r.label}
@@ -830,7 +830,7 @@ function DetailSection({
                   className="w-full bg-transparent border-none focus:outline-none focus:ring-1 focus:ring-brand/30 rounded px-1 py-0.5 text-gray-700"
                 />
               </td>
-              <td className="px-3 py-1.5 text-right">
+              <td className="text-right">
                 <input
                   type="number"
                   step="0.01"
@@ -843,7 +843,7 @@ function DetailSection({
               </td>
               {showFattureCols && (
                 <>
-                  <td className="px-3 py-1.5 text-right">
+                  <td className="text-right">
                     {r.pagate != null && (
                       <input
                         type="number"
@@ -858,7 +858,7 @@ function DetailSection({
                       />
                     )}
                   </td>
-                  <td className="px-3 py-1.5 text-right">
+                  <td className="text-right">
                     {r.nonPagate != null && (
                       <input
                         type="number"
@@ -875,7 +875,7 @@ function DetailSection({
                   </td>
                 </>
               )}
-              <td className="px-2 py-1.5 text-center">
+              <td className="text-center">
                 {r.removable && (
                   <button
                     onClick={() => onRemove(r.id)}
@@ -889,7 +889,7 @@ function DetailSection({
             </tr>
           ))}
           <tr>
-            <td colSpan={showFattureCols ? 5 : 3} className="px-3 py-1.5">
+            <td colSpan={showFattureCols ? 5 : 3}>
               <button
                 onClick={onAdd}
                 className="text-xs text-brand hover:text-brand flex items-center gap-1"
@@ -900,8 +900,8 @@ function DetailSection({
           </tr>
         </tbody>
         <tfoot>
-          <tr className="border-t-2 border-gray-200 bg-gray-50">
-            <td className="px-3 py-2 text-sm font-semibold text-gray-700">
+          <tr className="tbl-total">
+            <td className="font-semibold">
               TOTALE
             </td>
             <td

@@ -1,5 +1,7 @@
 "use client";
 
+import { ExportBar, ExportButton } from "@/components/ExportBar";
+import { Kpi, KpiGrid } from "@/components/Kpi";
 import { useEffect, useMemo, useState } from "react";
 import { ArrowLeft, Download, FileSpreadsheet } from "lucide-react";
 import { fmt, MESI, BRAND } from "@/lib/constants";
@@ -37,7 +39,7 @@ const TIPO_LABEL: Record<string, string> = {
   socio_dipendente: "Socio dipendente",
   commerciale: "Commerciale",
 };
-const thCls = "text-[11px] font-semibold uppercase tracking-wide text-gray-500 px-4 py-2.5";
+const thCls = "";
 const somma = (rows: Pagamento[]) => rows.reduce((s, p) => s + p.importo, 0);
 const dataIt = (iso: string | null) =>
   iso ? new Date(iso).toLocaleDateString("it-IT", { day: "2-digit", month: "2-digit" }) : "";
@@ -46,6 +48,7 @@ export default function ReportDipendentiPage() {
   const { anno: annoCtx } = useAnno();
   const anno = annoCtx > 0 ? annoCtx : new Date().getFullYear();
   const [persone, setPersone] = useState<Persona[]>([]);
+  const [exportMode, setExportMode] = useState(false);
   const [pagamenti, setPagamenti] = useState<Pagamento[]>([]);
   const [personaId, setPersonaId] = useState(0); // 0 = riepilogo
   const vista = personaId ? "dettaglio" : "riepilogo";
@@ -219,7 +222,7 @@ export default function ReportDipendentiPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">
+          <h1 className="page-title">
             Report {anno}
             {personaId > 0 && (
               <span className="text-gray-400 font-medium">
@@ -228,7 +231,7 @@ export default function ReportDipendentiPage() {
               </span>
             )}
           </h1>
-          <p className="text-gray-500 text-sm mt-1">
+          <p className="page-sub">
             {vista === "dettaglio"
               ? "Mese per mese, voce per voce"
               : "Bilancio generale dell'anno. Clicca una persona per il dettaglio mensile."}
@@ -238,41 +241,22 @@ export default function ReportDipendentiPage() {
           {personaId > 0 && (
             <button
               onClick={() => setPersonaId(0)}
-              className="glass-btn-secondary flex items-center gap-1.5 text-gray-700 text-sm font-medium px-3 py-2 rounded-xl"
+              className="btn btn-secondary"
             >
               <ArrowLeft className="w-4 h-4" /> Riepilogo
             </button>
           )}
-          <button
-            onClick={esportaExcel}
-            className="flex items-center gap-1.5 border border-gray-200 text-gray-600 text-sm font-medium px-3 py-2 rounded-xl hover:bg-gray-50"
-          >
-            <FileSpreadsheet className="w-4 h-4 text-ok" /> Excel
-          </button>
-          <button
-            onClick={esportaPDF}
-            className="flex items-center gap-1.5 border border-gray-200 text-gray-600 text-sm font-medium px-3 py-2 rounded-xl hover:bg-gray-50"
-          >
-            <Download className="w-4 h-4 text-bad" /> PDF
-          </button>
+          <ExportButton active={exportMode} onClick={() => setExportMode((v) => !v)} title="Scarica il report in Excel o PDF" />
         </div>
       </div>
 
       {/* KPI */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="glass-card rounded-2xl p-4">
-          <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">Totale anno</p>
-          <p className="text-2xl font-bold mt-1" style={{ color: BRAND }}>
-            {fmt(totaleAnno)}
-          </p>
-        </div>
+      <KpiGrid>
+        <Kpi label="Totale anno" value={fmt(totaleAnno)} color={BRAND} />
         {vociUsate.slice(0, 3).map((v) => (
-          <div key={v} className="glass-card rounded-2xl p-4">
-            <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">{VOCI[v].label}</p>
-            <p className="text-2xl font-bold mt-1 text-gray-900">{fmt(somma(di((p) => p.voce === v)))}</p>
-          </div>
+          <Kpi key={v} label={VOCI[v].label} value={fmt(somma(di((p) => p.voce === v)))} />
         ))}
-      </div>
+      </KpiGrid>
 
       {loading && <div className="text-sm text-gray-400 py-10 text-center">Caricamento…</div>}
       {!loading && righe.length === 0 && (
@@ -294,15 +278,15 @@ export default function ReportDipendentiPage() {
             <div key={d.id} className="glass-card rounded-2xl overflow-hidden">
               <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
                 <div>
-                  <div className="text-sm font-semibold text-gray-900">{nomeCompleto(d)}</div>
-                  <div className="text-[11px] text-gray-400">{TIPO_LABEL[d.tipo] ?? d.tipo}</div>
+                  <div className="tbl-primary">{nomeCompleto(d)}</div>
+                  <div className="tbl-muted">{TIPO_LABEL[d.tipo] ?? d.tipo}</div>
                 </div>
-                <div className="text-sm font-semibold text-gray-900">{fmt(somma(mie))}</div>
+                <div className="tbl-primary">{fmt(somma(mie))}</div>
               </div>
               <div className="overflow-x-auto">
-                <table className="w-full min-w-[720px]">
+                <table className="tbl min-w-[720px]">
                   <thead>
-                    <tr className="border-b border-gray-100 bg-gray-50">
+                    <tr>
                       <th className={cn(thCls, "text-left")}>Mese</th>
                       {cols.map((v) => (
                         <th key={v} className={cn(thCls, "text-right whitespace-nowrap")}>
@@ -312,13 +296,13 @@ export default function ReportDipendentiPage() {
                       <th className={cn(thCls, "text-right")}>Totale</th>
                     </tr>
                   </thead>
-                  <tbody className="zebra">
+                  <tbody>
                     {MESI.map((m, i) => {
                       const del = mie.filter((p) => p.mese === i + 1);
                       if (!del.length) return null;
                       return (
-                        <tr key={m} className="border-b border-gray-50">
-                          <td className="px-4 py-2.5 text-sm font-medium text-gray-700">{m}</td>
+                        <tr key={m}>
+                          <td className="font-medium">{m}</td>
                           {cols.map((v) => {
                             const voce = del.filter((p) => p.voce === v);
                             const tot = somma(voce);
@@ -339,7 +323,7 @@ export default function ReportDipendentiPage() {
                               </td>
                             );
                           })}
-                          <td className="px-4 py-2.5 text-sm text-right font-semibold text-gray-900 tabular-nums">
+                          <td className="text-right font-semibold text-gray-900 tabular-nums">
                             {fmt(somma(del))}
                           </td>
                         </tr>
@@ -347,16 +331,16 @@ export default function ReportDipendentiPage() {
                     })}
                   </tbody>
                   <tfoot>
-                    <tr className="bg-gray-50 border-t border-gray-100">
-                      <td className="px-4 py-2.5 text-xs font-semibold uppercase tracking-wide text-gray-500">
+                    <tr className="tbl-total">
+                      <td>
                         Totale
                       </td>
                       {cols.map((v) => (
-                        <td key={v} className="px-4 py-2.5 text-sm text-right font-semibold text-gray-700 tabular-nums">
+                        <td key={v} className="text-right font-semibold tabular-nums">
                           {fmt(somma(mie.filter((p) => p.voce === v)))}
                         </td>
                       ))}
-                      <td className="px-4 py-2.5 text-sm text-right font-semibold text-gray-900 tabular-nums">
+                      <td className="text-right font-semibold text-gray-900 tabular-nums">
                         {fmt(somma(mie))}
                       </td>
                     </tr>
@@ -365,7 +349,7 @@ export default function ReportDipendentiPage() {
               </div>
               {rimborsi.length > 0 && (
                 <div className="border-t border-gray-100 px-4 py-3">
-                  <div className="text-[11px] font-semibold uppercase tracking-wide text-gray-500 mb-2">
+                  <div className="mb-2">
                     Rimborsi nel dettaglio
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-1">
@@ -412,6 +396,22 @@ export default function ReportDipendentiPage() {
           />
         </>
       )}
+      {exportMode && (
+        <ExportBar
+          total={righe.length}
+          unit="righe"
+          summary={<span>Report <strong className="text-gray-900">{anno}</strong>{personaId ? ", dettaglio della persona" : ", riepilogo di tutte le persone"}</span>}
+          onClose={() => setExportMode(false)}
+          groups={[
+            {
+              actions: [
+                { label: "Excel", icon: <FileSpreadsheet className="text-ok" />, onClick: esportaExcel },
+                { label: "PDF", icon: <Download />, primary: true, onClick: esportaPDF },
+              ],
+            },
+          ]}
+        />
+      )}
     </div>
   );
 }
@@ -434,9 +434,9 @@ function Tabella({
     <div className="glass-card rounded-2xl overflow-hidden">
       <div className="px-4 py-3 border-b border-gray-100 text-sm font-semibold text-gray-900">{titolo}</div>
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[640px]">
+        <table className="tbl min-w-[640px]">
           <thead>
-            <tr className="border-b border-gray-100 bg-gray-50">
+            <tr>
               <th className={cn(thCls, "text-left")} />
               {colonne.map((c) => (
                 <th key={c} className={cn(thCls, "text-right whitespace-nowrap")}>
@@ -446,7 +446,7 @@ function Tabella({
               <th className={cn(thCls, "text-right")}>Totale</th>
             </tr>
           </thead>
-          <tbody className="zebra">
+          <tbody>
             {righe.map((r, i) => (
               <tr
                 key={r.label}
@@ -454,30 +454,30 @@ function Tabella({
                 title={onRiga ? "Apri il dettaglio mensile" : undefined}
                 className={cn("border-b border-gray-50", onRiga && "cursor-pointer hover:bg-brand/10")}
               >
-                <td className="px-4 py-2.5">
+                <td>
                   <div className="text-sm font-medium text-gray-700">{r.label}</div>
-                  {r.sub && <div className="text-[11px] text-gray-400">{r.sub}</div>}
+                  {r.sub && <div className="tbl-muted">{r.sub}</div>}
                 </td>
                 {r.valori.map((v, i) => (
-                  <td key={i} className="px-4 py-2.5 text-sm text-right text-gray-700 tabular-nums">
+                  <td key={i} className="text-right tabular-nums">
                     {v > 0 ? fmt(v) : <span className="text-gray-400">—</span>}
                   </td>
                 ))}
-                <td className="px-4 py-2.5 text-sm text-right font-semibold text-gray-900 tabular-nums">
+                <td className="text-right font-semibold text-gray-900 tabular-nums">
                   {fmt(totRiga(r.valori))}
                 </td>
               </tr>
             ))}
           </tbody>
           <tfoot>
-            <tr className="bg-gray-50 border-t border-gray-100">
-              <td className="px-4 py-2.5 text-xs font-semibold uppercase tracking-wide text-gray-500">Totale</td>
+            <tr className="tbl-total">
+              <td>Totale</td>
               {totali.map((t, i) => (
-                <td key={i} className="px-4 py-2.5 text-sm text-right font-semibold text-gray-700 tabular-nums">
+                <td key={i} className="text-right font-semibold tabular-nums">
                   {t > 0 ? fmt(t) : "—"}
                 </td>
               ))}
-              <td className="px-4 py-2.5 text-sm text-right font-semibold text-gray-900 tabular-nums">
+              <td className="text-right font-semibold text-gray-900 tabular-nums">
                 {fmt(totRiga(totali))}
               </td>
             </tr>

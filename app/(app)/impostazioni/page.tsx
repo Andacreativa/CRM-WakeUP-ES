@@ -92,15 +92,15 @@ export default function ImpostazioniPage() {
       )}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Fatturazione</h1>
-          <p className="text-gray-500 text-sm mt-1">
+          <h1 className="page-title">Fatturazione</h1>
+          <p className="page-sub">
             Dati emittente, numerazione, valori di default e testi dei solleciti
           </p>
         </div>
         <button
           onClick={salva}
           disabled={saving}
-          className="glass-btn-primary flex items-center gap-2 text-white text-sm font-medium px-4 py-2.5 rounded-xl disabled:opacity-60"
+          className="btn btn-primary .5 disabled:opacity-60"
         >
           <Save className="w-4 h-4" /> {saving ? "Salvataggio…" : "Salva"}
         </button>
@@ -318,7 +318,7 @@ export default function ImpostazioniPage() {
         <button
           onClick={salva}
           disabled={saving}
-          className="glass-btn-primary flex items-center gap-2 text-white text-sm font-medium px-5 py-2.5 rounded-xl disabled:opacity-60"
+          className="btn btn-primary .5 disabled:opacity-60"
         >
           <Save className="w-4 h-4" /> {saving ? "Salvataggio…" : "Salva impostazioni"}
         </button>

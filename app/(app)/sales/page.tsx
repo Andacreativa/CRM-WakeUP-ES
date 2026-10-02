@@ -1,5 +1,6 @@
 "use client";
 
+import { Kpi, KpiGrid } from "@/components/Kpi";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { DragEvent } from "react";
@@ -36,7 +37,7 @@ interface Lead {
 }
 
 const selectCls =
-  "text-sm border border-gray-200 rounded-lg px-3 py-2 bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-brand/30";
+  "sel";
 
 const iniziali = (s: string) =>
   s
@@ -279,14 +280,14 @@ export default function PipelinePage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Pipeline</h1>
-          <p className="text-gray-500 text-sm mt-1">
+          <h1 className="page-title">Pipeline</h1>
+          <p className="page-sub">
             Trascina una trattativa in un&apos;altra colonna per cambiarne lo stato
           </p>
         </div>
         <button
           onClick={() => setNuovo("nuovo")}
-          className="glass-btn-primary flex items-center gap-2 text-white text-sm font-medium px-4 py-2 rounded-xl"
+          className="btn btn-primary"
         >
           <Plus className="w-4 h-4" /> Nuovo lead
         </button>
@@ -301,16 +302,11 @@ export default function PipelinePage() {
         </div>
       )}
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <KpiGrid cols={4}>
         {kpi.map((k) => (
-          <div key={k.label} className="glass-card rounded-2xl p-4">
-            <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">{k.label}</p>
-            <p className="text-2xl font-bold mt-1" style={{ color: k.color }}>
-              {k.value}
-            </p>
-          </div>
+          <Kpi key={k.label} label={k.label} value={k.value} color={k.color} />
         ))}
-      </div>
+      </KpiGrid>
 
       <div className="flex items-center gap-2 flex-wrap">
         <SearchBox value={q} onChange={setQ} placeholder="Cerca nella pipeline…" />

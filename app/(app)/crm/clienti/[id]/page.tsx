@@ -108,19 +108,19 @@ export default function ClienteDettaglioPage() {
       <div className="flex items-start justify-between flex-wrap gap-3">
         <div>
           <div className="flex items-center gap-2 flex-wrap">
-            <h1 className="text-2xl font-bold text-gray-900">{c.nome}</h1>
+            <h1 className="page-title">{c.nome}</h1>
             <span className="text-[11px] font-semibold px-2 py-0.5 rounded-md bg-gray-100 text-gray-600">{c.paese}</span>
             {c.tipoImposta && <span className="text-[11px] font-semibold px-2 py-0.5 rounded-md bg-brand/10 text-brand">{c.tipoImposta}</span>}
           </div>
-          <p className="text-gray-500 text-sm mt-1">
+          <p className="page-sub">
             {c.partitaIva ? `P.IVA ${c.partitaIva}` : "P.IVA non indicata"} · cliente dal {new Date(c.createdAt).toLocaleDateString("it-IT")}
           </p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
-          <Link href="/finance/fatture?tab=da-emettere" className="glass-btn-secondary inline-flex items-center gap-1.5 text-sm font-medium px-3 py-2 rounded-xl text-gray-700">
+          <Link href="/finance/fatture?tab=da-emettere" className="btn btn-secondary">
             <Receipt className="w-4 h-4" /> Richiesta fattura
           </Link>
-          <button onClick={() => setEdit(true)} className="glass-btn-primary inline-flex items-center gap-1.5 text-white text-sm font-medium px-3 py-2 rounded-xl">
+          <button onClick={() => setEdit(true)} className="btn btn-primary">
             <Pencil className="w-4 h-4" /> Modifica
           </button>
           <button onClick={del} className="p-2 rounded-xl text-gray-500 hover:text-bad hover:bg-bad/10" title="Elimina">
@@ -152,7 +152,7 @@ export default function ClienteDettaglioPage() {
             <div className="divide-y divide-gray-50">
               {campi.map((f) => (
                 <div key={f.key} className="grid grid-cols-[150px_1fr_32px] items-center gap-2 py-2">
-                  <span className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">{f.label}</span>
+                  <span className="">{f.label}</span>
                   <span className={cn("text-sm break-words", f.value ? "text-gray-900" : "text-gray-400")}>{f.value || "non indicato"}</span>
                   {f.value ? (
                     <button onClick={() => copy(f.key, f.value!)} className="p-1.5 rounded-md text-gray-400 hover:text-gray-700 hover:bg-gray-100" title={`Copia ${f.label}`}>
@@ -178,27 +178,27 @@ export default function ClienteDettaglioPage() {
             {c.fatture.length === 0 ? (
               <p className="text-sm text-gray-400 px-5 py-4">Nessuna fattura.</p>
             ) : (
-              <table className="w-full">
+              <table className="tbl">
                 <thead>
-                  <tr className="bg-gray-50 border-b border-gray-100">
+                  <tr>
                     {["Numero", "Periodo", "Scadenza", "Stato", "Importo"].map((h) => (
-                      <th key={h} className={cn("text-[11px] font-semibold uppercase tracking-wide text-gray-500 px-5 py-2.5", h === "Importo" ? "text-right" : "text-left")}>{h}</th>
+                      <th key={h} className={cn("", h === "Importo" ? "text-right" : "text-left")}>{h}</th>
                     ))}
                   </tr>
                 </thead>
-                <tbody className="zebra">
+                <tbody>
                   {c.fatture.map((f) => {
                     const acc = f.acconti.reduce((s, a) => s + a.importo, 0);
                     const stato = f.pagato || acc >= f.importo ? "pagata" : acc > 0 ? "acconto" : "da incassare";
                     return (
-                      <tr key={f.id} className="border-b border-gray-50">
-                        <td className="px-5 py-2.5 text-xs font-mono text-gray-600">{f.numero ?? "—"}</td>
-                        <td className="px-5 py-2.5 text-sm text-gray-700">{MESI[f.mese - 1]} {f.anno}</td>
-                        <td className="px-5 py-2.5 text-sm text-gray-500">{f.scadenza ? new Date(f.scadenza).toLocaleDateString("it-IT") : "—"}</td>
-                        <td className="px-5 py-2.5">
+                      <tr key={f.id}>
+                        <td className="text-xs font-mono">{f.numero ?? "—"}</td>
+                        <td>{MESI[f.mese - 1]} {f.anno}</td>
+                        <td className="text-gray-500">{f.scadenza ? new Date(f.scadenza).toLocaleDateString("it-IT") : "—"}</td>
+                        <td>
                           <span className={cn("text-[11px] font-semibold px-2 py-0.5 rounded-md", stato === "pagata" ? "pill-ok" : stato === "acconto" ? "pill-partial" : "pill-wait")}>{stato}</span>
                         </td>
-                        <td className="px-5 py-2.5 text-sm font-semibold text-gray-900 text-right">{fmt(f.importo)}</td>
+                        <td className="font-semibold text-gray-900 text-right">{fmt(f.importo)}</td>
                       </tr>
                     );
                   })}
@@ -277,8 +277,8 @@ export default function ClienteDettaglioPage() {
               { label: "Fatture", value: String(c.fatture.length), color: "#111827" },
             ].map((k) => (
               <div key={k.label}>
-                <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">{k.label}</p>
-                <p className="text-xl font-bold" style={{ color: k.color }}>{k.value}</p>
+                <p className="kpi-label">{k.label}</p>
+                <p className="kpi-value" style={{ color: k.color }}>{k.value}</p>
               </div>
             ))}
           </section>
@@ -362,7 +362,7 @@ function Referenti({
           <input value={f.email} onChange={(e) => setF({ ...f, email: e.target.value })} className={inputCls} placeholder="Email" />
           <div className="flex gap-2">
             <input value={f.telefono} onChange={(e) => setF({ ...f, telefono: e.target.value })} className={inputCls} placeholder="Telefono" />
-            <button onClick={salva} className="glass-btn-primary text-white text-sm font-medium px-3 rounded-xl">Ok</button>
+            <button onClick={salva} className="btn btn-primary">Ok</button>
           </div>
         </div>
       )}

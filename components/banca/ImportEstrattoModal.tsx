@@ -181,13 +181,13 @@ export default function ImportEstrattoModal({
                   setEsito(null);
                   setErrore(null);
                 }}
-                className="glass-btn-secondary text-sm font-medium px-3 py-2 rounded-xl text-gray-700"
+                className="btn btn-secondary"
               >
                 Carica un altro file
               </button>
               <button
                 onClick={chiudi}
-                className="glass-btn-primary text-sm font-medium px-4 py-2 rounded-xl text-white"
+                className="btn btn-primary"
               >
                 Vai ai movimenti
               </button>

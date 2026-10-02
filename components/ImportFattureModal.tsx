@@ -398,13 +398,13 @@ export default function ImportFattureModal({
             <div className="flex gap-3 pt-1">
               <button
                 onClick={reset}
-                className="flex-1 border border-gray-200 text-gray-600 text-sm font-medium py-2.5 rounded-xl hover:bg-gray-50"
+                className="btn btn-secondary flex-1 .5"
               >
                 Importa altro file
               </button>
               <button
                 onClick={close}
-                className="glass-btn-primary flex-1 text-white text-sm font-medium py-2.5 rounded-xl"
+                className="btn btn-primary flex-1 .5"
               >
                 Chiudi
               </button>

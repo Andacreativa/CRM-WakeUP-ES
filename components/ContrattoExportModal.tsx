@@ -413,14 +413,13 @@ export default function ContrattoExportModal({
         <div className="flex gap-3 pt-2 border-t border-gray-100">
           <button
             onClick={onClose}
-            className="flex-1 border border-gray-200 text-gray-600 text-sm font-medium py-2.5 rounded-xl hover:bg-gray-50"
+            className="btn btn-secondary flex-1 .5"
           >
             Annulla
           </button>
           <button
             onClick={handleExport}
-            className="flex-1 flex items-center justify-center gap-2 text-white text-sm font-medium py-2.5 rounded-xl"
-            style={{ background: "#e8308a" }}
+            className="btn btn-primary flex-1"
           >
             <Download className="w-4 h-4" /> Esporta PDF
           </button>

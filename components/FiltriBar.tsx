@@ -1,6 +1,7 @@
 "use client";
 
-import { ANNI, AZIENDE, BRAND, CANALE_LABEL } from "@/lib/constants";
+import Pills from "@/components/Pills";
+import { ANNI, AZIENDE, CANALE_LABEL } from "@/lib/constants";
 
 interface Props {
   anno: number;
@@ -53,7 +54,7 @@ export default function FiltriBar({
         <select
           value={anno}
           onChange={(e) => onAnno(parseInt(e.target.value))}
-          className="text-sm font-medium px-3 py-2 rounded-xl border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 outline-none cursor-pointer"
+          className="sel cursor-pointer"
         >
           {includeAllYears && <option value={0}>Tutti</option>}
           {ANNI.map((a) => (
@@ -65,26 +66,7 @@ export default function FiltriBar({
       )}
 
       {showAzienda && (
-        <div className="flex gap-1 bg-gray-100 rounded-xl p-1">
-          {OPTIONS.map(({ val, label }) => {
-            const active = azienda === val;
-            return (
-              <button
-                key={val}
-                type="button"
-                onClick={() => onAzienda(val)}
-                className="text-sm px-3 py-1.5 rounded-lg font-medium transition-colors"
-                style={
-                  active
-                    ? { background: BRAND, color: "#fff" }
-                    : { color: "#6b7280" }
-                }
-              >
-                {label}
-              </button>
-            );
-          })}
-        </div>
+        <Pills value={azienda} onChange={onAzienda} options={OPTIONS} />
       )}
     </div>
   );

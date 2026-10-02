@@ -64,8 +64,8 @@ export default function DocumentiPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Documenti</h1>
-        <p className="text-gray-500 text-sm mt-0.5">
+        <h1 className="page-title">Documenti</h1>
+        <p className="page-sub">
           Archivio documenti aziendali e personali dei soci
         </p>
       </div>
@@ -104,16 +104,16 @@ export default function DocumentiPage() {
         </div>
         <button
           onClick={() => setShowUpload(true)}
-          className="glass-btn-primary flex items-center gap-2 text-white text-sm font-medium px-4 py-2.5 rounded-xl"
+          className="btn btn-primary .5"
         >
           <Upload className="w-4 h-4" /> Carica Documento
         </button>
       </div>
 
       <div className="glass-card rounded-2xl overflow-hidden">
-        <table className="w-full">
+        <table className="tbl">
           <thead>
-            <tr className="border-b border-gray-100 bg-gray-50">
+            <tr>
               {[
                 "Nome",
                 "Categoria",
@@ -124,7 +124,7 @@ export default function DocumentiPage() {
               ].map((h) => (
                 <th
                   key={h}
-                  className="text-xs font-semibold text-gray-500 uppercase tracking-wide px-4 py-3 text-left"
+                  className="text-left"
                 >
                   {h}
                 </th>
@@ -148,20 +148,20 @@ export default function DocumentiPage() {
                 key={d.id}
                 className={`border-b border-gray-50 hover:bg-gray-50 transition-colors ${i % 2 === 1 ? "bg-[#f9fafb]" : "bg-white"}`}
               >
-                <td className="px-4 py-3 text-sm font-medium text-gray-700">
+                <td className="font-medium">
                   {d.nome}
                 </td>
-                <td className="px-4 py-3 text-sm text-gray-700">
+                <td>
                   <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-brand/10 text-brand">
                     {d.categoria}
                   </span>
                 </td>
                 {tab === "soci" && (
-                  <td className="px-4 py-3 text-sm text-gray-700">
+                  <td>
                     {d.socio ?? "—"}
                   </td>
                 )}
-                <td className="px-4 py-3 text-xs text-gray-500 max-w-[200px] truncate">
+                <td className="text-xs text-gray-500 max-w-[200px] truncate">
                   <button
                     onClick={() => setPreview(d)}
                     className="hover:text-brand hover:underline text-left"
@@ -169,10 +169,10 @@ export default function DocumentiPage() {
                     {d.fileName}
                   </button>
                 </td>
-                <td className="px-4 py-3 text-sm text-gray-500">
+                <td className="text-gray-500">
                   {new Date(d.dataCaricamento).toLocaleDateString("it-IT")}
                 </td>
-                <td className="px-4 py-3">
+                <td>
                   <div className="flex items-center gap-1 justify-end">
                     <button
                       onClick={() => downloadDoc(d)}
@@ -374,14 +374,14 @@ function UploadDocumentoModal({
         <div className="flex gap-3 pt-2">
           <button
             onClick={onClose}
-            className="flex-1 border border-gray-200 text-gray-600 text-sm font-medium py-2.5 rounded-xl hover:bg-gray-50"
+            className="btn btn-secondary flex-1 .5"
           >
             Annulla
           </button>
           <button
             onClick={submit}
             disabled={uploading || !file}
-            className="glass-btn-primary flex-1 text-white text-sm font-medium py-2.5 rounded-xl disabled:opacity-60"
+            className="btn btn-primary flex-1 .5 disabled:opacity-60"
           >
             {uploading ? "Caricamento..." : "Carica"}
           </button>

@@ -1,5 +1,7 @@
 "use client";
 
+import { ExportBar, ExportButton } from "@/components/ExportBar";
+import { Kpi, KpiGrid } from "@/components/Kpi";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -71,7 +73,7 @@ const stats = (c: Cliente) => {
 };
 
 const selectCls =
-  "text-sm border border-gray-200 rounded-lg px-3 py-2 bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-brand/30";
+  "sel";
 
 const paeseDi = (c: Cliente) => (["Italia", "Spagna"].includes(c.paese) ? c.paese : "Altri");
 
@@ -79,6 +81,7 @@ export default function ClientiPage() {
   const router = useRouter();
   const [clienti, setClienti] = useState<Cliente[]>([]);
   const [q, setQ] = useState("");
+  const [exportMode, setExportMode] = useState(false);
   const [paese, setPaese] = useState("");
   const [stato, setStato] = useState<"" | "attivi" | "inattivi">("");
   const [ordine, setOrdine] = useState<Ordine>("nome");
@@ -195,53 +198,39 @@ export default function ClientiPage() {
   };
 
   const kpi = [
-    { label: "Clienti totali", value: String(clienti.length), icon: Building2, cls: "bg-info/10 text-info" },
-    { label: "Attivi", value: String(tot.attivi), icon: CheckCircle2, cls: "bg-ok/10 text-ok" },
-    { label: "Inattivi", value: String(tot.inattivi), icon: XCircle, cls: "bg-off/15 text-off" },
-    { label: "Da incassare", value: fmt(tot.daIncassare), icon: Clock, cls: "bg-warn/10 text-warn" },
+    { label: "Clienti totali", value: String(clienti.length), icon: Building2, color: "#3b82f6" },
+    { label: "Attivi", value: String(tot.attivi), icon: CheckCircle2, color: "#22c55e" },
+    { label: "Inattivi", value: String(tot.inattivi), icon: XCircle, color: "#9ca3af" },
+    { label: "Da incassare", value: fmt(tot.daIncassare), icon: Clock, color: "#f59e0b" },
   ];
 
-  const thCls = "text-[11px] font-semibold uppercase tracking-wide text-gray-500 px-3 py-3 whitespace-nowrap";
+  const thCls = "text-[11px] font-semibold uppercase tracking-wide text-gray-500  whitespace-nowrap";
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Clienti</h1>
-          <p className="text-gray-500 text-sm mt-1">
+          <h1 className="page-title">Clienti</h1>
+          <p className="page-sub">
             {clienti.length} totali · {tot.attivi} attivi · {fmt(tot.fatturato)} fatturati
           </p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
-          <button
-            onClick={esportaCsv}
-            className="flex items-center gap-1.5 border border-gray-200 bg-white text-gray-600 text-sm font-medium px-3 py-2 rounded-xl hover:bg-gray-50"
-            title="Scarica i clienti filtrati in CSV"
-          >
-            <Download className="w-4 h-4" /> Esporta CSV
-          </button>
+          <ExportButton active={exportMode} onClick={() => setExportMode((v) => !v)} title="Scarica i clienti del filtro in CSV" />
           <button
             onClick={() => setForm({ open: true, cliente: null })}
-            className="glass-btn-primary flex items-center gap-2 text-white text-sm font-medium px-4 py-2 rounded-xl"
+            className="btn btn-primary"
           >
             <Plus className="w-4 h-4" /> Nuovo cliente
           </button>
         </div>
       </div>
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <KpiGrid>
         {kpi.map((k) => (
-          <div key={k.label} className="glass-card rounded-2xl p-4 flex items-center gap-3">
-            <span className={cn("w-10 h-10 rounded-xl grid place-items-center shrink-0", k.cls)}>
-              <k.icon className="w-5 h-5" />
-            </span>
-            <div className="min-w-0">
-              <p className="text-2xl font-bold text-gray-900 leading-none">{k.value}</p>
-              <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-500 mt-1">{k.label}</p>
-            </div>
-          </div>
+          <Kpi key={k.label} label={k.label} value={k.value} icon={k.icon} iconColor={k.color} />
         ))}
-      </div>
+      </KpiGrid>
 
       {/* Filtri */}
       <div className="glass-card rounded-2xl p-3 space-y-3">
@@ -302,7 +291,7 @@ export default function ClientiPage() {
           {clienti.length === 0 ? (
             <button
               onClick={() => setForm({ open: true, cliente: null })}
-              className="glass-btn-primary inline-flex items-center gap-2 text-white text-sm font-medium px-4 py-2 rounded-xl"
+              className="btn btn-primary"
             >
               <Plus className="w-4 h-4" /> Crea cliente
             </button>
@@ -315,9 +304,9 @@ export default function ClientiPage() {
       ) : (
         <div className="glass-card rounded-2xl overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[860px]">
+            <table className="tbl min-w-[860px]">
               <thead>
-                <tr className="border-b border-gray-100 bg-gray-50">
+                <tr>
                   <th className={cn(thCls, "text-left th-sort", ordine === "data" && "active")} onClick={() => ordina("data")}>
                     Data {freccia("data")}
                   </th>
@@ -336,18 +325,18 @@ export default function ClientiPage() {
                   <th className={thCls} />
                 </tr>
               </thead>
-              <tbody className="zebra">
+              <tbody>
                 {paged.map(({ c, s }) => (
                   <tr
                     key={c.id}
                     className="border-b border-gray-50 hover:bg-brand/5 cursor-pointer"
                     onClick={() => router.push(`/crm/clienti/${c.id}`)}
                   >
-                    <td className="px-3 py-3 text-xs text-gray-400 whitespace-nowrap">
+                    <td className="text-xs text-gray-400 whitespace-nowrap">
                       {new Date(c.createdAt).toLocaleDateString("it-IT", { day: "2-digit", month: "2-digit", year: "2-digit" })}
                     </td>
-                    <td className="px-3 py-3">
-                      <div className="text-sm font-semibold text-gray-900">{c.nome}</div>
+                    <td>
+                      <div className="tbl-primary">{c.nome}</div>
                       <div className="text-[11px] text-gray-400 truncate max-w-[260px]">
                         {c.partitaIva ?? "P.IVA mancante"}
                         {c.tipoImposta ? ` · ${c.tipoImposta}` : ""}
@@ -355,11 +344,11 @@ export default function ClientiPage() {
                         {s.n > 0 && ` · ${s.n} fattur${s.n === 1 ? "a" : "e"}`}
                       </div>
                     </td>
-                    <td className="px-3 py-3 text-sm text-gray-600 whitespace-nowrap max-w-[200px] truncate">
+                    <td className="whitespace-nowrap max-w-[200px] truncate">
                       {c.paese}
                       {c.citta && <span className="text-gray-400"> · {c.citta}</span>}
                     </td>
-                    <td className="px-3 py-3">
+                    <td>
                       <span
                         className={cn("text-[11px] font-semibold px-2 py-0.5 rounded-md", s.attivo ? "pill-ok" : "pill-off")}
                         title={
@@ -371,12 +360,12 @@ export default function ClientiPage() {
                         {s.attivo ? "Attivo" : "Inattivo"}
                       </span>
                     </td>
-                    <td className="px-3 py-3 text-sm font-semibold text-gray-900 text-right tabular-nums">{fmt(s.fatturato)}</td>
-                    <td className="px-3 py-3 text-sm text-ok text-right tabular-nums">{fmt(s.incassato)}</td>
+                    <td className="font-semibold text-gray-900 text-right tabular-nums">{fmt(s.fatturato)}</td>
+                    <td className="text-ok text-right tabular-nums">{fmt(s.incassato)}</td>
                     <td className={cn("px-4 py-3 text-sm text-right tabular-nums", s.daIncassare > 0 ? "text-warn font-semibold" : "text-gray-400")}>
                       {fmt(s.daIncassare)}
                     </td>
-                    <td className="px-3 py-3" onClick={(e) => e.stopPropagation()}>
+                    <td onClick={(e) => e.stopPropagation()}>
                       <div className="flex items-center gap-1 justify-end">
                         <Link href={`/crm/clienti/${c.id}`} className="p-1.5 text-gray-400 hover:text-brand" title="Apri scheda">
                           <ExternalLink className="w-4 h-4" />
@@ -407,6 +396,15 @@ export default function ClientiPage() {
             if (!form.cliente) router.push(`/crm/clienti/${c.id}`);
             else load();
           }}
+        />
+      )}
+      {exportMode && (
+        <ExportBar
+          total={filtered.length}
+          unit="clienti"
+          maschile
+          onClose={() => setExportMode(false)}
+          groups={[{ actions: [{ label: "CSV", icon: <Download />, primary: true, onClick: esportaCsv }] }]}
         />
       )}
     </div>

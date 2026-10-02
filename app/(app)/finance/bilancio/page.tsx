@@ -1,5 +1,7 @@
 "use client";
 
+import { ExportBar, ExportButton } from "@/components/ExportBar";
+import { Kpi, KpiGrid } from "@/components/Kpi";
 import { useEffect, useState } from "react";
 import {
   BarChart,
@@ -30,6 +32,7 @@ interface MeseData {
 
 export default function BilancioPage() {
   const [dati, setDati] = useState<MeseData[]>([]);
+  const [exportMode, setExportMode] = useState(false);
   const [fattureTotale, setFattureTotale] = useState(0);
   const [, setFattureTotaleIncassato] = useState(0);
   const [speseTotale, setSpeseTotale] = useState(0);
@@ -147,8 +150,8 @@ export default function BilancioPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Bilancio</h1>
-          <p className="text-gray-500 text-sm mt-1">
+          <h1 className="page-title">Bilancio</h1>
+          <p className="page-sub">
             Conto economico {anno > 0 ? anno : "tutti gli anni"}
           </p>
         </div>
@@ -161,21 +164,10 @@ export default function BilancioPage() {
             showAzienda={false}
             includeAllYears
           />
-          <button
-            onClick={handleExcel}
-            className="flex items-center gap-1.5 border border-gray-200 text-gray-600 text-sm font-medium px-3 py-2 rounded-xl hover:bg-gray-50"
-          >
-            <FileSpreadsheet className="w-4 h-4 text-ok" /> Excel
-          </button>
-          <button
-            onClick={handlePDF}
-            className="flex items-center gap-1.5 border border-gray-200 text-gray-600 text-sm font-medium px-3 py-2 rounded-xl hover:bg-gray-50"
-          >
-            <Download className="w-4 h-4 text-bad" /> PDF
-          </button>
+          <ExportButton active={exportMode} onClick={() => setExportMode((v) => !v)} title="Scarica il bilancio in Excel o PDF" />
           <button
             onClick={() => setReportOpen(true)}
-            className="glass-btn-primary flex items-center gap-2 text-white text-sm font-medium px-4 py-2 rounded-xl"
+            className="btn btn-primary"
           >
             <FileText className="w-4 h-4" /> Genera Report
           </button>
@@ -189,48 +181,16 @@ export default function BilancioPage() {
       />
 
       {/* KPI Totali */}
-      <div className="grid grid-cols-3 gap-4">
-        <div className="glass-card rounded-2xl p-5">
-          <p className="text-xs text-gray-500 uppercase tracking-wide">
-            Totale Entrate
-          </p>
-          <p className="text-2xl font-bold text-ok mt-1">
-            {fmt(fattureTotale)}
-          </p>
-        </div>
-        <div className="glass-card rounded-2xl p-5">
-          <p className="text-xs text-gray-500 uppercase tracking-wide">
-            Totale Uscite
-          </p>
-          <p className="text-2xl font-bold text-bad mt-1">
-            {fmt(speseTotale)}
-          </p>
-        </div>
-        <div
-          className={`glass-card rounded-2xl p-5 ${
-            bilancioTotale > 0
-              ? "bg-ok/10/60"
-              : bilancioTotale < 0
-                ? "bg-bad/10/60"
-                : ""
-          }`}
-        >
-          <p className="text-xs text-gray-500 uppercase tracking-wide">
-            Bilancio Netto
-          </p>
-          <p
-            className={`text-2xl font-bold mt-1 ${
-              bilancioTotale > 0
-                ? "text-ok"
-                : bilancioTotale < 0
-                  ? "text-bad"
-                  : "text-gray-500"
-            }`}
-          >
-            {fmt(bilancioTotale)}
-          </p>
-        </div>
-      </div>
+      <KpiGrid cols={3}>
+        <Kpi label="Totale entrate" value={fmt(fattureTotale)} valueClass="text-ok" />
+        <Kpi label="Totale uscite" value={fmt(speseTotale)} valueClass="text-bad" />
+        <Kpi
+          label="Bilancio netto"
+          value={fmt(bilancioTotale)}
+          valueClass={bilancioTotale > 0 ? "text-ok" : bilancioTotale < 0 ? "text-bad" : "text-gray-500"}
+          sub="entrate meno uscite"
+        />
+      </KpiGrid>
 
       {/* Grafici affiancati */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -297,26 +257,26 @@ export default function BilancioPage() {
 
       {/* Tabella mensile */}
       <div className="glass-card rounded-2xl overflow-hidden">
-        <table className="w-full">
+        <table className="tbl">
           <thead>
-            <tr className="border-b border-gray-100 bg-gray-50">
+            <tr>
               {["Mese", "Entrate", "Uscite", "Bilancio"].map((h, i) => (
                 <th
                   key={h}
-                  className={`text-xs font-semibold text-gray-500 uppercase tracking-wide px-6 py-3 ${i > 0 ? "text-right" : "text-left"}`}
+                  className={`${i > 0 ?"text-right" : "text-left"}`}
                 >
                   {h}
                 </th>
               ))}
             </tr>
           </thead>
-          <tbody className="zebra">
+          <tbody>
             {dati.map((d) => (
               <tr
                 key={d.mese}
                 className="border-b border-gray-50 hover:bg-gray-50 transition-colors"
               >
-                <td className="px-6 py-3 text-sm font-medium text-gray-700">
+                <td className="font-medium">
                   {MESI[d.mese - 1]}
                 </td>
                 <td
@@ -325,7 +285,7 @@ export default function BilancioPage() {
                 >
                   {d.entrate > 0 ? fmt(d.entrate) : "—"}
                 </td>
-                <td className="px-6 py-3 text-sm font-semibold text-bad text-right">
+                <td className="font-semibold text-bad text-right">
                   {d.uscite > 0 ? fmt(d.uscite) : "—"}
                 </td>
                 <td
@@ -335,12 +295,12 @@ export default function BilancioPage() {
                 </td>
               </tr>
             ))}
-            <tr className="bg-gray-50 font-bold border-t-2 border-gray-200">
-              <td className="px-6 py-3 text-sm text-gray-700">TOTALE ANNO</td>
-              <td className="px-6 py-3 text-sm text-right text-ok">
+            <tr className="tbl-total">
+              <td>TOTALE ANNO</td>
+              <td className="text-right text-ok">
                 {fmt(fattureTotale)}
               </td>
-              <td className="px-6 py-3 text-sm text-bad text-right">
+              <td className="text-bad text-right">
                 {fmt(speseTotale)}
               </td>
               <td
@@ -353,6 +313,22 @@ export default function BilancioPage() {
         </table>
       </div>
 
+      {exportMode && (
+        <ExportBar
+          total={12}
+          unit="mesi"
+          summary={<span>Bilancio <strong className="text-gray-900">{anno > 0 ? anno : "di tutti gli anni"}</strong>, entrate e uscite per mese</span>}
+          onClose={() => setExportMode(false)}
+          groups={[
+            {
+              actions: [
+                { label: "Excel", icon: <FileSpreadsheet className="text-ok" />, onClick: handleExcel },
+                { label: "PDF", icon: <Download />, primary: true, onClick: handlePDF },
+              ],
+            },
+          ]}
+        />
+      )}
     </div>
   );
 }

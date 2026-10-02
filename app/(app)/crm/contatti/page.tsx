@@ -1,9 +1,10 @@
 "use client";
 
+import Pills from "@/components/Pills";
 import SearchBox from "@/components/SearchBox";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { Plus, Pencil, Trash2, Search, Star, X } from "lucide-react";
+import { Plus, Pencil, Trash2, Star, X } from "lucide-react";
 import { PageSizeSelect, PageNav } from "@/components/Pagination";
 import { cn } from "@/lib/utils";
 
@@ -25,8 +26,6 @@ interface Contatto {
 const inputCls =
   "w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30 bg-white";
 const labelCls = "text-xs font-medium text-gray-600 block mb-1";
-const selectCls =
-  "text-sm border border-gray-200 rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-brand/30";
 
 const vuoto = () => ({
   nome: "",
@@ -143,60 +142,53 @@ export default function ContattiPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Contatti</h1>
-          <p className="text-gray-500 text-sm mt-1">Persone di riferimento dei clienti e dei lead</p>
+          <h1 className="page-title">Contatti</h1>
+          <p className="page-sub">Persone di riferimento dei clienti e dei lead</p>
         </div>
-        <button onClick={openNew} className="glass-btn-primary flex items-center gap-2 text-white text-sm font-medium px-4 py-2 rounded-xl">
+        <button onClick={openNew} className="btn btn-primary">
           <Plus className="w-4 h-4" /> Nuovo contatto
         </button>
       </div>
 
       <div className="flex items-center gap-2 flex-wrap">
         <SearchBox value={q} onChange={setQ} placeholder="Cerca nome, email, cliente…" />
-        <div className="flex gap-1 bg-gray-100 rounded-xl p-1">
-          {[
-            { v: "", l: "Tutti" },
-            { v: "cliente", l: "Di clienti" },
-            { v: "lead", l: "Di lead" },
-            { v: "nessuno", l: "Non collegati" },
-          ].map((o) => (
-            <button
-              key={o.v}
-              onClick={() => setTipo(o.v)}
-              className="text-sm px-3 py-1.5 rounded-lg font-medium"
-              style={tipo === o.v ? { background: "#e8308a", color: "#fff" } : { color: "#6b7280" }}
-            >
-              {o.l}
-            </button>
-          ))}
-        </div>
+        <Pills
+          value={tipo}
+          onChange={setTipo}
+          options={[
+            { val: "", label: "Tutti" },
+            { val: "cliente", label: "Di clienti" },
+            { val: "lead", label: "Di lead" },
+            { val: "nessuno", label: "Non collegati" },
+          ]}
+        />
         <PageSizeSelect pageSize={pageSize} onChange={setPageSize} />
       </div>
 
       <div className="glass-card rounded-2xl overflow-hidden">
-        <table className="w-full">
+        <table className="tbl">
           <thead>
-            <tr className="border-b border-gray-100 bg-gray-50">
+            <tr>
               {["Contatto", "Di", "Email", "Telefono", "", ""].map((h, i) => (
-                <th key={i} className="text-left text-[11px] font-semibold uppercase tracking-wide text-gray-500 px-4 py-3">{h}</th>
+                <th key={i} className="text-left">{h}</th>
               ))}
             </tr>
           </thead>
-          <tbody className="zebra">
+          <tbody>
             {paged.length === 0 && (
               <tr>
-                <td colSpan={6} className="text-center text-gray-400 py-12 text-sm">Nessun contatto</td>
+                <td colSpan={6} className="text-center text-gray-400 py-12">Nessun contatto</td>
               </tr>
             )}
             {paged.map((c) => (
-              <tr key={c.id} className="border-b border-gray-50">
-                <td className="px-4 py-3">
-                  <div className="text-sm font-semibold text-gray-900">
+              <tr key={c.id}>
+                <td>
+                  <div className="tbl-primary">
                     {c.nome}{c.cognome ? ` ${c.cognome}` : ""}
                   </div>
                   {c.ruolo && <div className="text-xs text-gray-500">{c.ruolo}</div>}
                 </td>
-                <td className="px-4 py-3 text-sm">
+                <td>
                   {c.cliente ? (
                     <Link href={`/crm/clienti/${c.cliente.id}`} className="inline-flex items-center gap-1.5 hover:text-brand">
                       <span className="pill-ok text-[10px] font-semibold px-1.5 py-0.5 rounded">cliente</span>
@@ -211,9 +203,9 @@ export default function ContattiPage() {
                     <span className="text-gray-400">—</span>
                   )}
                 </td>
-                <td className="px-4 py-3 text-sm text-gray-600">{c.email ?? "—"}</td>
-                <td className="px-4 py-3 text-sm text-gray-600">{c.telefono ?? "—"}</td>
-                <td className="px-4 py-3">
+                <td>{c.email ?? "—"}</td>
+                <td>{c.telefono ?? "—"}</td>
+                <td>
                   {c.clienteId && (
                     <button
                       onClick={() => !c.principale && setPrincipale(c)}
@@ -224,7 +216,7 @@ export default function ContattiPage() {
                     </button>
                   )}
                 </td>
-                <td className="px-4 py-3">
+                <td>
                   <div className="flex items-center gap-1 justify-end">
                     <button onClick={() => openEdit(c)} className="p-1.5 text-gray-400 hover:text-gray-700" title="Modifica"><Pencil className="w-4 h-4" /></button>
                     <button onClick={() => del(c)} className="p-1.5 text-gray-400 hover:text-bad" title="Elimina"><Trash2 className="w-4 h-4" /></button>
@@ -311,7 +303,7 @@ export default function ContattiPage() {
             </div>
             <div className="flex justify-end gap-2">
               <button onClick={() => setShowForm(false)} className="text-sm text-gray-500 hover:text-gray-700 px-3 py-2">Annulla</button>
-              <button onClick={save} className="glass-btn-primary text-white text-sm font-medium px-5 py-2 rounded-xl">{editing ? "Salva" : "Aggiungi"}</button>
+              <button onClick={save} className="btn btn-primary">{editing ? "Salva" : "Aggiungi"}</button>
             </div>
           </div>
         </div>

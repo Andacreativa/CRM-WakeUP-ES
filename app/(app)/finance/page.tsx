@@ -1,5 +1,6 @@
 "use client";
 
+import { Kpi, KpiGrid } from "@/components/Kpi";
 import { useEffect, useState } from "react";
 import {
   AreaChart,
@@ -135,7 +136,6 @@ export default function Dashboard() {
       valueColor: "#22c55e",
       icon: TrendingUp,
       iconColor: "#22c55e",
-      iconBg: "#dcfce7",
       sub: pctFatture
         ? `${Number(pctFatture) > 0 ? "+" : ""}${pctFatture}% vs ${anno - 1}`
         : `${fmt(data.totaleFatturePagate ?? 0)} incassati`,
@@ -146,7 +146,6 @@ export default function Dashboard() {
       valueColor: "#ef4444",
       icon: TrendingDown,
       iconColor: "#ef4444",
-      iconBg: "#fee2e2",
       sub: "uscite anno",
     },
     {
@@ -155,7 +154,6 @@ export default function Dashboard() {
       valueColor: bilancioColor,
       icon: Wallet,
       iconColor: bilancioColor,
-      iconBg: bilancio > 0 ? "#dcfce7" : bilancio < 0 ? "#fee2e2" : "#f3f4f6",
       sub: "entrate - uscite",
     },
     {
@@ -163,7 +161,6 @@ export default function Dashboard() {
       value: String(data.clienti ?? 0),
       icon: Users,
       iconColor: "#8b5cf6",
-      iconBg: "#f5f3ff",
       sub: "totale anagrafica",
     },
     {
@@ -172,7 +169,6 @@ export default function Dashboard() {
       valueColor: "#f59e0b",
       icon: Clock,
       iconColor: "#f59e0b",
-      iconBg: "#fef3c7",
       sub: "fatture non pagate",
     },
     {
@@ -180,7 +176,6 @@ export default function Dashboard() {
       value: fmt(data.totaleFatturePagate ?? 0),
       icon: CheckCircle,
       iconColor: "#22c55e",
-      iconBg: "#dcfce7",
       sub: "fatture pagate",
     },
   ];
@@ -190,8 +185,8 @@ export default function Dashboard() {
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
-          <p className="text-gray-500 text-sm mt-1">
+          <h1 className="page-title">Dashboard</h1>
+          <p className="page-sub">
             Riepilogo finanziario {anno}
             {azienda ? ` — ${azienda}` : ""}
           </p>
@@ -224,32 +219,19 @@ export default function Dashboard() {
       )}
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+      <KpiGrid cols={3}>
         {kpis.map((k) => (
-          <div key={k.label} className="glass-card rounded-2xl p-5">
-            <div className="flex items-start justify-between">
-              <div>
-                <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">
-                  {k.label}
-                </p>
-                <p
-                  className="text-2xl font-bold mt-1"
-                  style={{ color: k.valueColor ?? "#111827" }}
-                >
-                  {k.value}
-                </p>
-                <p className="text-xs text-gray-400 mt-1">{k.sub}</p>
-              </div>
-              <div
-                className="w-10 h-10 rounded-xl flex items-center justify-center"
-                style={{ background: k.iconBg }}
-              >
-                <k.icon className="w-5 h-5" style={{ color: k.iconColor }} />
-              </div>
-            </div>
-          </div>
+          <Kpi
+            key={k.label}
+            label={k.label}
+            value={k.value}
+            color={k.valueColor}
+            icon={k.icon}
+            iconColor={k.iconColor}
+            sub={k.sub}
+          />
         ))}
-      </div>
+      </KpiGrid>
 
       {/* Charts row */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

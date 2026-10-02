@@ -50,7 +50,7 @@ function LoginForm() {
             className="w-11 h-11 object-contain"
           />
         </div>
-        <h1 className="text-2xl font-bold text-gray-900">Anda</h1>
+        <h1 className="page-title">Anda</h1>
         <p className="text-sm text-gray-500">
           Gestionale Anda Agencia de Publicidad SL
         </p>
@@ -108,7 +108,7 @@ function LoginForm() {
       <button
         type="submit"
         disabled={loading || !username || !password}
-        className="glass-btn-primary w-full text-white text-sm font-medium py-2.5 rounded-xl disabled:opacity-60"
+        className="btn btn-primary w-full .5 disabled:opacity-60"
       >
         {loading ? "Accesso..." : "Accedi"}
       </button>

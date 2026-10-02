@@ -1,5 +1,6 @@
 "use client";
 
+import { Kpi, KpiGrid } from "@/components/Kpi";
 import SearchBox from "@/components/SearchBox";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
@@ -11,7 +12,6 @@ import {
   Link2,
   Unlink,
   FileSignature,
-  Search,
   Check,
   Clock,
   Receipt,
@@ -147,7 +147,7 @@ const inputCls =
   "w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30 bg-white";
 const labelCls = "text-xs font-medium text-gray-600 block mb-1";
 const selectCls =
-  "text-sm border border-gray-200 rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-brand/30";
+  "sel";
 
 export default function RichiesteFattureView({
   mode,
@@ -392,20 +392,20 @@ export default function RichiesteFattureView({
           <p className="text-sm text-gray-500">{sottotitolo}</p>
         ) : (
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">{titolo}</h1>
-            <p className="text-gray-500 text-sm mt-0.5">{sottotitolo}</p>
+            <h1 className="page-title">{titolo}</h1>
+            <p className="page-sub">{sottotitolo}</p>
           </div>
         )}
         <div className="flex items-center gap-2 flex-wrap">
           <button
             onClick={() => setDaContratto(true)}
-            className="glass-btn-secondary flex items-center gap-1.5 text-gray-700 text-sm font-medium px-3 py-2 rounded-xl"
+            className="btn btn-secondary"
           >
             <FileSignature className="w-4 h-4" /> Da contratto
           </button>
           <button
             onClick={openNew}
-            className="glass-btn-primary flex items-center gap-1.5 text-white text-sm font-medium px-4 py-2 rounded-xl"
+            className="btn btn-primary"
           >
             <Plus className="w-4 h-4" /> Nuova richiesta
           </button>
@@ -413,23 +413,16 @@ export default function RichiesteFattureView({
       </div>
 
       {/* KPI */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <KpiGrid cols={4}>
         {[
           { label: "Da emettere", value: fmt(kpi.daEmettere), color: "#e8308a" },
           { label: "Da validare", value: String(kpi.daValidare), color: "#f59e0b" },
           { label: "Da fare", value: String(kpi.daFare), color: "#3b82f6" },
           { label: "Da incassare", value: fmt(kpi.daIncassare), color: "#f59e0b" },
         ].map((k) => (
-          <div key={k.label} className="glass-card rounded-2xl p-4">
-            <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">
-              {k.label}
-            </p>
-            <p className="text-2xl font-bold mt-1" style={{ color: k.color }}>
-              {k.value}
-            </p>
-          </div>
+          <Kpi key={k.label} label={k.label} value={k.value} color={k.color} />
         ))}
-      </div>
+      </KpiGrid>
 
       {/* Filtri */}
       <div className="flex items-center gap-2 flex-wrap">
@@ -475,9 +468,9 @@ export default function RichiesteFattureView({
       {/* Tabella */}
       <div className="glass-card rounded-2xl overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[900px]">
+          <table className="tbl min-w-[900px]">
             <thead>
-              <tr className="border-b border-gray-100 bg-gray-50">
+              <tr>
                 {[
                   "Codice",
                   "Cliente",
@@ -492,7 +485,7 @@ export default function RichiesteFattureView({
                   <th
                     key={i}
                     className={cn(
-                      "text-left text-[11px] font-semibold uppercase tracking-wide text-gray-500 px-4 py-3",
+                      "text-left ",
                       h === "Importo" && "text-right",
                     )}
                   >
@@ -501,17 +494,17 @@ export default function RichiesteFattureView({
                 ))}
               </tr>
             </thead>
-            <tbody className="zebra">
+            <tbody>
               {loading && (
                 <tr>
-                  <td colSpan={9} className="px-4 py-10 text-center text-sm text-gray-400">
+                  <td colSpan={9} className="text-center text-gray-400">
                     Caricamento…
                   </td>
                 </tr>
               )}
               {!loading && paged.length === 0 && (
                 <tr>
-                  <td colSpan={9} className="px-4 py-12 text-center text-sm text-gray-400">
+                  <td colSpan={9} className="text-center text-gray-400">
                     <Receipt className="w-10 h-10 mx-auto mb-2 text-gray-400" />
                     Nessuna richiesta per i filtri scelti
                   </td>
@@ -520,15 +513,15 @@ export default function RichiesteFattureView({
               {paged.map((r) => {
                 const validata = r.validazione === "ok";
                 return (
-                  <tr key={r.id} className="border-b border-gray-50 align-top">
-                    <td className="px-4 py-3 text-xs font-mono text-gray-500 whitespace-nowrap">
+                  <tr key={r.id} className="align-top">
+                    <td className="text-xs font-mono text-gray-500 whitespace-nowrap">
                       {r.codice}
                       {r.origine === "contratto" && r.contratto && (
                         <div className="text-[10px] text-gray-400">{r.contratto.numero}</div>
                       )}
                     </td>
-                    <td className="px-4 py-3">
-                      <div className="text-sm font-semibold text-gray-900">{nomeCliente(r)}</div>
+                    <td>
+                      <div className="tbl-primary">{nomeCliente(r)}</div>
                       <div className="text-xs text-gray-500 max-w-[320px] truncate" title={r.descrizione}>
                         {r.descrizione}
                       </div>
@@ -544,26 +537,26 @@ export default function RichiesteFattureView({
                         </div>
                       )}
                     </td>
-                    <td className="px-4 py-3">
+                    <td>
                       <span className="text-xs font-medium text-gray-500 whitespace-nowrap">
                         {canaleLabel(r.azienda, r.aziendaNota)}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-sm text-gray-700 whitespace-nowrap">
+                    <td className="whitespace-nowrap">
                       {MESI[r.mese - 1]} {r.anno}
-                      <div className="text-[11px] text-gray-400">
+                      <div className="tbl-muted">
                         invio{" "}
                         {r.dataInvio ? new Date(r.dataInvio).toLocaleDateString("it-IT") : "—"}
                       </div>
                     </td>
-                    <td className="px-4 py-3 text-right whitespace-nowrap">
-                      <div className="text-sm font-semibold text-gray-900">{fmt(r.totale)}</div>
-                      <div className="text-[11px] text-gray-400">
+                    <td className="text-right whitespace-nowrap">
+                      <div className="tbl-primary">{fmt(r.totale)}</div>
+                      <div className="tbl-muted">
                         imp. {fmt(r.imponibile)}
                         {r.iva > 0 && ` · IGIC ${r.iva}%`}
                       </div>
                     </td>
-                    <td className="px-4 py-3">
+                    <td>
                       <button
                         onClick={() => toggle(r, "validazione")}
                         className={cn(
@@ -578,7 +571,7 @@ export default function RichiesteFattureView({
                         {validata ? "Ok invia" : "In attesa"}
                       </button>
                     </td>
-                    <td className="px-4 py-3">
+                    <td>
                       {r.fatturaId ? (
                         <div className="flex items-center gap-1">
                           <Link
@@ -608,7 +601,7 @@ export default function RichiesteFattureView({
                         <div className="flex items-center gap-1 flex-wrap">
                           <button
                             onClick={() => setCreaFattura(r)}
-                            className="glass-btn-primary text-white text-[11px] font-semibold px-2.5 py-1 rounded-md whitespace-nowrap"
+                            className="btn btn-primary text-[11px] px-2.5 py-1 rounded-md"
                           >
                             Crea fattura
                           </button>
@@ -621,10 +614,10 @@ export default function RichiesteFattureView({
                           </button>
                         </div>
                       ) : (
-                        <span className="text-[11px] text-gray-400">da validare</span>
+                        <span className="tbl-muted">da validare</span>
                       )}
                     </td>
-                    <td className="px-4 py-3">
+                    <td>
                       {r.emessaEff ? (
                         <button
                           onClick={() => !r.fatturaId && toggle(r, "incassata")}
@@ -645,10 +638,10 @@ export default function RichiesteFattureView({
                           {r.incassataEff ? "Incassata" : "Da incassare"}
                         </button>
                       ) : (
-                        <span className="text-[11px] text-gray-400">—</span>
+                        <span className="tbl-muted">—</span>
                       )}
                     </td>
-                    <td className="px-4 py-3 whitespace-nowrap">
+                    <td className="whitespace-nowrap">
                       <div className="flex items-center gap-1 justify-end">
                         <button
                           onClick={() => openEdit(r)}
@@ -966,7 +959,7 @@ export default function RichiesteFattureView({
                 <button
                   onClick={save}
                   disabled={saving}
-                  className="glass-btn-primary text-white text-sm font-medium px-5 py-2 rounded-xl disabled:opacity-60"
+                  className="btn btn-primary disabled:opacity-60"
                 >
                   {saving ? "Salvataggio…" : editing ? "Salva" : "Crea"}
                 </button>
@@ -1120,7 +1113,7 @@ function CreaFatturaModal({
           <button
             onClick={submit}
             disabled={busy}
-            className="glass-btn-primary text-white text-sm font-medium px-5 py-2 rounded-xl disabled:opacity-60"
+            className="btn btn-primary disabled:opacity-60"
           >
             {busy ? "Creazione…" : "Crea fattura"}
           </button>
@@ -1211,7 +1204,7 @@ function CollegaModal({
           <button
             onClick={submit}
             disabled={!sel}
-            className="glass-btn-primary text-white text-sm font-medium px-5 py-2 rounded-xl disabled:opacity-60"
+            className="btn btn-primary disabled:opacity-60"
           >
             Collega
           </button>
@@ -1291,7 +1284,7 @@ function DaContrattoModal({
               <button
                 onClick={() => genera(c)}
                 disabled={busy !== null}
-                className="glass-btn-primary text-white text-xs font-semibold px-3 py-1.5 rounded-lg disabled:opacity-60"
+                className="btn btn-primary text-xs disabled:opacity-60"
               >
                 {busy === c.id ? "…" : "Genera"}
               </button>

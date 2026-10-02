@@ -27,8 +27,8 @@ export default function ImpostazioniBancaPage() {
         </div>
       )}
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Banca</h1>
-        <p className="text-gray-500 text-sm mt-1">
+        <h1 className="page-title">Banca</h1>
+        <p className="page-sub">
           Come l&apos;estratto conto BBVA viene letto: regole di categoria e fornitori ricordati
         </p>
       </div>

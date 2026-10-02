@@ -145,8 +145,8 @@ export default function PagamentiPage() {
       )}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Pagamenti</h1>
-          <p className="text-gray-500 text-sm mt-1">
+          <h1 className="page-title">Pagamenti</h1>
+          <p className="page-sub">
             Registro mensile: ogni voce registrata crea la spesa corrispondente
           </p>
         </div>
@@ -165,7 +165,7 @@ export default function PagamentiPage() {
           </div>
           <button
             onClick={registraMese}
-            className="glass-btn-primary flex items-center gap-1.5 text-white text-sm font-medium px-4 py-2 rounded-xl"
+            className="btn btn-primary"
           >
             <Zap className="w-4 h-4" /> Registra mese
           </button>
@@ -174,16 +174,16 @@ export default function PagamentiPage() {
 
       <div className="glass-card rounded-2xl overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[720px]">
+          <table className="tbl min-w-[720px]">
             <thead>
-              <tr className="border-b border-gray-100 bg-gray-50">
-                <th className="text-left text-[11px] font-semibold uppercase tracking-wide text-gray-500 px-4 py-3">
+              <tr>
+                <th className="text-left">
                   Persona
                 </th>
                 {colonne.map((v) => (
                   <th
                     key={v}
-                    className="text-right text-[11px] font-semibold uppercase tracking-wide text-gray-500 px-4 py-3 whitespace-nowrap"
+                    className="text-right whitespace-nowrap"
                   >
                     {VOCI[v].label}
                     {VOCI[v].auto && (
@@ -191,22 +191,22 @@ export default function PagamentiPage() {
                     )}
                   </th>
                 ))}
-                <th className="text-right text-[11px] font-semibold uppercase tracking-wide text-gray-500 px-4 py-3">
+                <th className="text-right">
                   Totale
                 </th>
               </tr>
             </thead>
-            <tbody className="zebra">
+            <tbody>
               {loading && (
                 <tr>
-                  <td colSpan={colonne.length + 2} className="px-4 py-10 text-center text-sm text-gray-400">
+                  <td colSpan={colonne.length + 2} className="text-center text-gray-400">
                     Caricamento…
                   </td>
                 </tr>
               )}
               {!loading && persone.length === 0 && (
                 <tr>
-                  <td colSpan={colonne.length + 2} className="px-4 py-12 text-center text-sm text-gray-400">
+                  <td colSpan={colonne.length + 2} className="text-center text-gray-400">
                     Nessuna persona attiva. Aggiungila nella tab Persone.
                   </td>
                 </tr>
@@ -216,7 +216,7 @@ export default function PagamentiPage() {
                   <tr>
                     <td
                       colSpan={colonne.length + 2}
-                      className="px-4 pt-4 pb-1 text-[11px] font-semibold uppercase tracking-wide text-gray-400 bg-white"
+                      className="px-4 pt-4 pb-1 text-gray-400 bg-white"
                     >
                       {g.label}
                     </td>
@@ -224,13 +224,13 @@ export default function PagamentiPage() {
                   {g.persone.map((p) => {
                 const voci = vociDiTipo(p.tipo);
                 return (
-                  <tr key={p.id} className="border-b border-gray-50 align-middle">
-                    <td className="px-4 py-3">
+                  <tr key={p.id} className="align-middle">
+                    <td>
                       <div className="flex items-center gap-3">
                         <Avatar nome={p.nome} cognome={p.cognome} fotoPath={p.fotoPath} size={32} />
                         <div>
-                          <div className="text-sm font-semibold text-gray-900">{nomeCompleto(p)}</div>
-                          <div className="text-[11px] text-gray-400">
+                          <div className="tbl-primary">{nomeCompleto(p)}</div>
+                          <div className="tbl-muted">
                             {p.tipo === "socio_dipendente"
                               ? "Socio dipendente"
                               : p.tipo === "commerciale"
@@ -243,7 +243,7 @@ export default function PagamentiPage() {
                     {colonne.map((v) => {
                       if (!voci.includes(v)) {
                         return (
-                          <td key={v} className="px-4 py-3 text-right text-gray-400 text-sm">
+                          <td key={v} className="text-right text-gray-400">
                             —
                           </td>
                         );
@@ -252,7 +252,7 @@ export default function PagamentiPage() {
                       const somma = righe.reduce((s, x) => s + x.importo, 0);
                       if (VOCI[v].auto) {
                         return (
-                          <td key={v} className="px-4 py-3 text-right">
+                          <td key={v} className="text-right">
                             {righe.length ? (
                               <div
                                 title={righe
@@ -262,13 +262,13 @@ export default function PagamentiPage() {
                                   )
                                   .join("\n")}
                               >
-                                <div className="text-sm font-semibold text-gray-900">{fmt(somma)}</div>
+                                <div className="tbl-primary">{fmt(somma)}</div>
                                 <div className="text-[10px] text-gray-400">
                                   {righe.length} fattur{righe.length === 1 ? "a" : "e"}
                                 </div>
                               </div>
                             ) : (
-                              <span className="text-[11px] text-gray-400">nessuna</span>
+                              <span className="tbl-muted">nessuna</span>
                             )}
                           </td>
                         );
@@ -276,7 +276,7 @@ export default function PagamentiPage() {
                       if (VOCI[v].multiplo) {
                         // Rimborsi: più righe nel mese, ognuna con data e descrizione
                         return (
-                          <td key={v} className="px-4 py-3 text-right">
+                          <td key={v} className="text-right">
                             <div className="inline-flex flex-col items-end gap-1">
                               {righe.map((r) => (
                                 <button
@@ -313,7 +313,7 @@ export default function PagamentiPage() {
                       const esistente = righe[0] ?? null;
                       const def = importoDefault(p, v);
                       return (
-                        <td key={v} className="px-4 py-3 text-right">
+                        <td key={v} className="text-right">
                           {esistente ? (
                             <button
                               onClick={() => setModal({ persona: p, voce: v, esistente })}
@@ -342,7 +342,7 @@ export default function PagamentiPage() {
                         </td>
                       );
                     })}
-                    <td className="px-4 py-3 text-right text-sm font-semibold text-gray-900">
+                    <td className="text-right font-semibold text-gray-900">
                       {fmt(totRiga(p))}
                     </td>
                   </tr>
@@ -353,16 +353,16 @@ export default function PagamentiPage() {
             </tbody>
             {persone.length > 0 && (
               <tfoot>
-                <tr className="bg-gray-50 border-t border-gray-100">
-                  <td className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-500">
+                <tr className="tbl-total">
+                  <td>
                     Totale mese
                   </td>
                   {colonne.map((v) => (
-                    <td key={v} className="px-4 py-3 text-right text-sm font-semibold text-gray-700">
+                    <td key={v} className="text-right font-semibold">
                       {totCol(v) > 0 ? fmt(totCol(v)) : "—"}
                     </td>
                   ))}
-                  <td className="px-4 py-3 text-right text-sm font-semibold" style={{ color: "#e8308a" }}>
+                  <td className="text-right font-semibold" style={{ color: "#e8308a" }}>
                     {fmt(totale)}
                   </td>
                 </tr>
@@ -514,7 +514,7 @@ function PagamentoModal({
             <button
               onClick={salva}
               disabled={busy || !importo || (!!VOCI[voce].multiplo && !note.trim())}
-              className="glass-btn-primary text-white text-sm font-medium px-5 py-2 rounded-xl disabled:opacity-60"
+              className="btn btn-primary disabled:opacity-60"
             >
               {busy ? "Salvataggio…" : esistente ? "Salva" : "Registra"}
             </button>

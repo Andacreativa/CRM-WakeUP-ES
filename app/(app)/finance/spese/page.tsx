@@ -1,7 +1,9 @@
 "use client";
 
+import { ExportBar, ExportButton } from "@/components/ExportBar";
+import { Kpi, KpiGrid } from "@/components/Kpi";
 import SearchBox from "@/components/SearchBox";
-import { matchQ } from "@/lib/utils";
+import { cn, matchQ } from "@/lib/utils";
 import { useEffect, useState, useRef } from "react";
 import {
   Plus,
@@ -19,6 +21,7 @@ import {
   MESI,
   CATEGORIE_SPESA,
   CATEGORIE_COLORI,
+  CATEGORIE_COLORI_CHART,
   CATEGORIA_TEXT,
 } from "@/lib/constants";
 import FiltriBar from "@/components/FiltriBar";
@@ -70,6 +73,10 @@ export default function SpesePage() {
   const [form, setForm] = useState({ ...emptyForm });
   const [filtroMese, setFiltroMese] = useState(0);
   const [q, setQ] = useState("");
+  // Esporta: come in Fatture, spunte sulle righe e barra in fondo
+  const [exportMode, setExportMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const [tutte, setTutte] = useState(false);
   const [filtroCategoria, setFiltroCategoria] = useState("");
   const [filtroFornitore, setFiltroFornitore] = useState("");
   const { anno, setAnno } = useAnno();
@@ -217,6 +224,20 @@ export default function SpesePage() {
     setPage(1);
   }, [filtroMese, filtroCategoria, filtroFornitore, q, anno, azienda, pageSize]);
   const paged = filtered.slice((page - 1) * pageSize, page * pageSize);
+  const selected = filtered.filter((s) => selectedIds.has(s.id));
+  const exportList = tutte ? filtered : selected;
+  const esciExport = () => {
+    setExportMode(false);
+    setTutte(false);
+    setSelectedIds(new Set());
+  };
+  const toggleSel = (id: number) =>
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
 
   const totale = filtered.reduce((s, e) => s + (e?.importo ?? 0), 0);
   const perCategoria: Record<string, number> = {};
@@ -227,13 +248,13 @@ export default function SpesePage() {
 
   const annoLabel = anno > 0 ? String(anno) : "tutti gli anni";
   const annoFile = anno > 0 ? String(anno) : "tutti";
-  const handleExcelExport = () =>
-    exportExcel(speseToExcel(filtered, MESI), `spese_${annoFile}`);
-  const handlePDFExport = () =>
+  const handleExcelExport = (rows: Spesa[] = filtered) =>
+    exportExcel(speseToExcel(rows, MESI), `spese_${annoFile}`);
+  const handlePDFExport = (rows: Spesa[] = filtered) =>
     exportPDF(
       `Spese ${annoLabel}`,
       ["Fornitore", "Categoria", "Azienda", "Mese", "Importo", "Descrizione"],
-      filtered.map((s) => [
+      rows.map((s) => [
         s.fornitore,
         s.categoria,
         s.azienda,
@@ -248,8 +269,8 @@ export default function SpesePage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Spese</h1>
-          <p className="text-gray-500 text-sm mt-0.5">{filtered.length} voci</p>
+          <h1 className="page-title">Spese</h1>
+          <p className="page-sub">{filtered.length} voci</p>
         </div>
         <div className="flex items-center gap-3 flex-wrap">
           <FiltriBar
@@ -262,27 +283,20 @@ export default function SpesePage() {
             showAzienda={false}
           />
           <PageSizeSelect pageSize={pageSize} onChange={setPageSize} />
-          <button
-            onClick={handleExcelExport}
-            className="flex items-center gap-1.5 border border-gray-200 text-gray-600 text-sm font-medium px-3 py-2 rounded-xl hover:bg-gray-50"
-          >
-            <FileSpreadsheet className="w-4 h-4 text-ok" /> Excel
-          </button>
-          <button
-            onClick={handlePDFExport}
-            className="flex items-center gap-1.5 border border-gray-200 text-gray-600 text-sm font-medium px-3 py-2 rounded-xl hover:bg-gray-50"
-          >
-            <Download className="w-4 h-4 text-bad" /> PDF
-          </button>
+          <ExportButton
+            active={exportMode}
+            onClick={() => (exportMode ? esciExport() : setExportMode(true))}
+            title="Scegli le spese e scaricale in Excel o PDF"
+          />
           <button
             onClick={() => setShowEstrai(true)}
-            className="flex items-center gap-1.5 border border-gray-200 text-gray-600 text-sm font-medium px-3 py-2 rounded-xl hover:bg-gray-50"
+            className="btn btn-secondary"
           >
             <Camera className="w-4 h-4 text-brand" /> Carica da foto/PDF
           </button>
           <button
             onClick={openNew}
-            className="glass-btn-primary flex items-center gap-2 text-white text-sm font-medium px-4 py-2 rounded-xl"
+            className="btn btn-primary"
           >
             <Plus className="w-4 h-4" /> Nuova Spesa
           </button>
@@ -290,30 +304,28 @@ export default function SpesePage() {
       </div>
 
       {/* KPI */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="glass-card rounded-2xl p-4 lg:col-span-1 col-span-2">
-          <p className="text-xs text-gray-500 uppercase tracking-wide">
-            Totale Anno
-          </p>
-          <p className="text-xl font-bold text-bad mt-1">
-            {fmt((spese ?? []).reduce((s, e) => s + (e?.importo ?? 0), 0))}
-          </p>
-        </div>
+      <KpiGrid>
+        <Kpi
+          label="Totale anno"
+          value={fmt((spese ?? []).reduce((s, e) => s + (e?.importo ?? 0), 0))}
+          valueClass="text-bad"
+        />
         {Object.entries(perCategoria)
           .slice(0, 3)
           .map(([cat, val]) => (
-            <div key={cat} className="glass-card rounded-2xl p-4">
-              <div className="flex items-center gap-2 mb-1">
-                <span
-                  className="w-2 h-2 rounded-full"
-                  style={{ background: CATEGORIE_COLORI[cat] || "#9ca3af" }}
-                />
-                <p className="text-xs text-gray-500 truncate">{cat}</p>
-              </div>
-              <p className="text-lg font-bold text-gray-900">{fmt(val)}</p>
-            </div>
+            <Kpi
+              key={cat}
+              label={cat}
+              value={fmt(val)}
+              sub={
+                <span className="inline-flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full" style={{ background: CATEGORIE_COLORI_CHART[cat] || "#9ca3af" }} />
+                  categoria
+                </span>
+              }
+            />
           ))}
-      </div>
+      </KpiGrid>
 
       {/* Filtri */}
       <div className="flex gap-3 flex-wrap">
@@ -321,7 +333,7 @@ export default function SpesePage() {
         <select
           value={filtroMese}
           onChange={(e) => setFiltroMese(parseInt(e.target.value))}
-          className="text-sm border border-gray-200 rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-brand/30"
+          className="sel"
         >
           <option value={0}>Tutti i mesi</option>
           {MESI.map((m, i) => (
@@ -333,7 +345,7 @@ export default function SpesePage() {
         <select
           value={filtroCategoria}
           onChange={(e) => setFiltroCategoria(e.target.value)}
-          className="text-sm border border-gray-200 rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-brand/30"
+          className="sel"
         >
           <option value="">Tutte le categorie</option>
           {CATEGORIE_SPESA.map((c) => (
@@ -345,7 +357,7 @@ export default function SpesePage() {
         <select
           value={filtroFornitore}
           onChange={(e) => setFiltroFornitore(e.target.value)}
-          className="text-xs border border-gray-200 rounded-lg px-2 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-brand/30 max-w-[160px]"
+          className="sel max-w-[160px]"
         >
           <option value="">Fornitore</option>
           {fornitoriUnici.map((f) => (
@@ -364,9 +376,24 @@ export default function SpesePage() {
       {/* Tabella spese */}
       {(
         <div className="glass-card rounded-2xl overflow-hidden">
-          <table className="w-full">
+          <table className="tbl">
             <thead>
-              <tr className="border-b border-gray-100 bg-gray-50">
+              <tr>
+                {exportMode && (
+                  <th className="w-10">
+                    <input
+                      type="checkbox"
+                      checked={filtered.length > 0 && selected.length === filtered.length}
+                      onChange={() =>
+                        setSelectedIds(
+                          selected.length === filtered.length ? new Set() : new Set(filtered.map((s) => s.id)),
+                        )
+                      }
+                      className="accent-pink-600"
+                      aria-label="Seleziona tutte le spese filtrate"
+                    />
+                  </th>
+                )}
                 {[
                   "Fornitore",
                   "Descrizione",
@@ -377,18 +404,18 @@ export default function SpesePage() {
                 ].map((h) => (
                   <th
                     key={h}
-                    className={`text-xs font-semibold text-gray-500 uppercase tracking-wide px-4 py-3 ${h === "Importo" ? "text-right" : "text-left"}`}
+                    className={`${h ==="Importo" ? "text-right" : "text-left"}`}
                   >
                     {h}
                   </th>
                 ))}
               </tr>
             </thead>
-            <tbody className="zebra">
+            <tbody>
               {filtered.length === 0 && (
                 <tr>
                   <td
-                    colSpan={6}
+                    colSpan={exportMode ? 7 : 6}
                     className="text-center text-gray-400 py-12 text-sm"
                   >
                     Nessuna spesa trovata
@@ -398,15 +425,27 @@ export default function SpesePage() {
               {paged.map((s) => (
                 <tr
                   key={s.id}
-                  className="border-b border-gray-50 hover:bg-gray-50 transition-colors"
+                  onClick={() => exportMode && toggleSel(s.id)}
+                  className={cn(exportMode && "cursor-pointer", exportMode && selectedIds.has(s.id) && "bg-brand/10 hover:bg-brand/15")}
                 >
-                  <td className="px-4 py-3 text-sm font-medium text-gray-900">
+                  {exportMode && (
+                    <td className="w-10" onClick={(e) => e.stopPropagation()}>
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.has(s.id)}
+                        onChange={() => toggleSel(s.id)}
+                        className="accent-pink-600"
+                        aria-label={`Seleziona la spesa ${s.fornitore}`}
+                      />
+                    </td>
+                  )}
+                  <td className="font-medium text-gray-900">
                     {s.fornitore}
                   </td>
-                  <td className="px-4 py-3 text-sm text-gray-600 max-w-[220px] truncate">
+                  <td className="max-w-[220px] truncate">
                     {s.descrizione || s.note || "—"}
                   </td>
-                  <td className="px-4 py-3">
+                  <td>
                     <span
                       className="inline-flex items-center text-xs font-semibold px-2.5 py-1 rounded-full"
                       style={{
@@ -417,13 +456,13 @@ export default function SpesePage() {
                       {s.categoria}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-sm text-gray-600">
+                  <td>
                     {MESI[s.mese - 1]}
                   </td>
-                  <td className="px-4 py-3 text-sm font-semibold text-gray-900 text-right">
+                  <td className="font-semibold text-gray-900 text-right">
                     {fmt(s.importo)}
                   </td>
-                  <td className="px-4 py-3">
+                  <td>
                     <div className="flex items-center gap-2 justify-end">
                       <button
                         onClick={() => openEdit(s)}
@@ -452,6 +491,26 @@ export default function SpesePage() {
           pageSize={pageSize}
           onPage={setPage}
           labelSuffix="spese"
+        />
+      )}
+
+      {exportMode && (
+        <ExportBar
+          selected={selected.length}
+          total={filtered.length}
+          unit="spese"
+          importo={fmt(exportList.reduce((t, e) => t + (e?.importo ?? 0), 0))}
+          tutte={tutte}
+          onTutte={() => setTutte((t) => !t)}
+          onClose={esciExport}
+          groups={[
+            {
+              actions: [
+                { label: "Excel", icon: <FileSpreadsheet className="text-ok" />, onClick: () => handleExcelExport(exportList) },
+                { label: "PDF", icon: <Download />, primary: true, onClick: () => handlePDFExport(exportList) },
+              ],
+            },
+          ]}
         />
       )}
 
@@ -612,14 +671,14 @@ export default function SpesePage() {
             <div className="flex gap-3 pt-2">
               <button
                 onClick={() => setShowForm(false)}
-                className="flex-1 border border-gray-200 text-gray-600 text-sm font-medium py-2.5 rounded-xl hover:bg-gray-50"
+                className="btn btn-secondary flex-1 .5"
               >
                 Annulla
               </button>
               <button
                 onClick={save}
                 disabled={uploading}
-                className="glass-btn-primary flex-1 text-white text-sm font-medium py-2.5 rounded-xl disabled:opacity-60"
+                className="btn btn-primary flex-1 .5 disabled:opacity-60"
               >
                 {editing ? "Salva" : "Aggiungi"}
               </button>
