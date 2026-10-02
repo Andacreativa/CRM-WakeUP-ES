@@ -30,7 +30,6 @@ import {
   fattureToExcel,
   fattureToPDF,
 } from "@/lib/export";
-import AltriIngressi from "@/components/AltriIngressi";
 import { PageSizeSelect, PageNav } from "@/components/Pagination";
 import ImportFattureModal from "@/components/ImportFattureModal";
 
@@ -167,13 +166,34 @@ export default function FatturePage() {
     load();
   }, [anno, azienda]);
 
-  const openNew = () => {
+  const openNew = async () => {
     setEditing(null);
     const annoNuova = anno > 0 ? anno : new Date().getFullYear();
+    // Numero e scadenza dalle Impostazioni fatture (riserva: calcolo locale)
+    let numero = nextNumero(fatture, annoNuova);
+    let scadenza = "";
+    let tipoIva: TipoIva = emptyForm.tipoIva;
+    try {
+      const [n, c] = await Promise.all([
+        fetch(`/api/impostazioni/fatture/prossimo-numero?anno=${annoNuova}`).then((r) => r.json()),
+        fetch("/api/impostazioni/fatture").then((r) => r.json()),
+      ]);
+      if (n?.numero) numero = n.numero;
+      if (c?.giorniScadenza > 0) {
+        const d = new Date();
+        d.setDate(d.getDate() + Number(c.giorniScadenza));
+        scadenza = d.toISOString().slice(0, 10);
+      }
+      if (c?.tipoIvaDefault === "igic7") tipoIva = "igic7";
+    } catch {
+      /* usa i valori locali */
+    }
     setForm({
       ...emptyForm,
       anno: annoNuova,
-      numero: nextNumero(fatture, annoNuova),
+      numero,
+      scadenza,
+      tipoIva,
     });
     setShowForm(true);
   };
@@ -811,7 +831,6 @@ export default function FatturePage() {
       )}
 
       {/* Tabella Altri Ingressi — stesso formato delle fatture */}
-      <AltriIngressi anno={anno} azienda={azienda} onChanged={load} />
 
       {/* Grafico Spagna vs Italia (solo pagate) */}
       <div className="glass-card rounded-2xl p-5">

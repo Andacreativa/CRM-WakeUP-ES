@@ -33,6 +33,18 @@ export const CATEGORIE_SPESA = [
 
 export const AZIENDE = ["Spagna", "Italia", "Altro"];
 
+// Categorie degli altri ingressi (entrate non da fattura)
+export const CATEGORIE_INGRESSO: { value: string; label: string }[] = [
+  { value: "cashback", label: "Cashback" },
+  { value: "rimborso_tasse", label: "Rimborso tasse" },
+  { value: "apporto_socio", label: "Apporto socio" },
+  { value: "incasso_senza_fattura", label: "Incasso senza fattura" },
+  { value: "ritenuta_commerciale", label: "Ritenuta commerciale" },
+  { value: "altro", label: "Altro" },
+];
+export const CATEGORIA_INGRESSO_LABEL: Record<string, string> =
+  Object.fromEntries(CATEGORIE_INGRESSO.map((c) => [c.value, c.label]));
+
 export const AZIENDA_COLORI: Record<
   string,
   { bg: string; text: string; border: string }

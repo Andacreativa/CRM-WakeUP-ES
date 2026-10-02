@@ -80,25 +80,6 @@ export async function nextCodiceRichiesta(
   return `${prefix}${String(max + 1).padStart(4, "0")}`;
 }
 
-// Prossimo numero fattura come lo calcola la pagina Fatture: F{anno}{n}.
-export async function nextNumeroFattura(
-  tx: Prisma.TransactionClient,
-  anno: number,
-): Promise<string> {
-  const rows = await tx.fattura.findMany({
-    where: { numero: { startsWith: `F${anno}` } },
-    select: { numero: true },
-  });
-  let max = 0;
-  for (const r of rows) {
-    const m = r.numero?.match(/^F(\d{4})(\d+)$/);
-    if (!m || parseInt(m[1], 10) !== anno) continue;
-    const n = parseInt(m[2], 10);
-    if (n > max) max = n;
-  }
-  return `F${anno}${max + 1}`;
-}
-
 export const RICHIESTA_INCLUDE = {
   cliente: { select: { id: true, nome: true, paese: true } },
   contratto: { select: { id: true, numero: true, oggetto: true } },

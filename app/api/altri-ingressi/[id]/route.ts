@@ -12,6 +12,7 @@ export async function PATCH(
       where: { id: parseInt(id) },
       data: {
         ...(body.fonte !== undefined && { fonte: body.fonte }),
+        ...(body.categoria !== undefined && { categoria: body.categoria || "altro" }),
         ...(body.azienda !== undefined && { azienda: body.azienda }),
         ...(body.aziendaNota !== undefined && {
           aziendaNota: body.aziendaNota || null,

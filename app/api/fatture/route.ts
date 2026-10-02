@@ -18,6 +18,8 @@ export async function GET(request: Request) {
     include: {
       cliente: true,
       acconti: { orderBy: { data: "desc" } },
+      solleciti: { orderBy: { data: "desc" }, take: 1 },
+      _count: { select: { solleciti: true } },
     },
     orderBy: [
       { anno: "desc" },

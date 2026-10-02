@@ -27,6 +27,7 @@ export async function POST(request: Request) {
     const row = await prisma.altroIngresso.create({
       data: {
         fonte: body.fonte,
+        categoria: body.categoria || "altro",
         azienda: body.azienda || "Spagna",
         aziendaNota: body.aziendaNota || null,
         descrizione: body.descrizione || null,

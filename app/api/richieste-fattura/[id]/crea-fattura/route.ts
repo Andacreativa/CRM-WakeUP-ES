@@ -1,10 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import {
-  RICHIESTA_INCLUDE,
-  nextNumeroFattura,
-  serializzaRichiesta,
-} from "@/lib/richieste";
+import { RICHIESTA_INCLUDE, serializzaRichiesta } from "@/lib/richieste";
+import { prossimoNumeroFattura } from "@/lib/impostazioni";
 
 // Converte la richiesta in una fattura vera (registro Fatture) e la collega.
 // Richiede la validazione. I dati della fattura (numero, data, scadenza,
@@ -44,7 +41,7 @@ export async function POST(
     const dataFattura = body.data ? new Date(body.data) : new Date();
     const result = await prisma.$transaction(async (tx) => {
       const numero =
-        body.numero?.trim() || (await nextNumeroFattura(tx, r.anno));
+        body.numero?.trim() || (await prossimoNumeroFattura(tx, r.anno));
       const fattura = await tx.fattura.create({
         data: {
           numero,

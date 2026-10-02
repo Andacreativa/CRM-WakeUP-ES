@@ -44,8 +44,10 @@ export const NAV: NavSection[] = [
           { label: "Bilancio", href: "/finance/bilancio" },
           { label: "Fatture", href: "/finance/fatture" },
           { label: "Da emettere", href: "/finance/da-emettere" },
+          { label: "Altri ingressi", href: "/finance/altri-ingressi" },
           { label: "Spese", href: "/finance/spese" },
           { label: "Scadenze", href: "/finance/scadenze" },
+          { label: "Impostazioni", href: "/finance/impostazioni" },
         ],
       },
       {

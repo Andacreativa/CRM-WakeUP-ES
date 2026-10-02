@@ -57,9 +57,32 @@ model Fattura {
   acconti       Acconto[]
   richiesta     RichiestaFattura?
   commissioni   PagamentoMensile[] @relation("CommissioneFattura")
+  solleciti     Sollecito[]
 
   @@index([contrattoId])
   @@index([commercialeId])
+}
+
+// Solleciti di pagamento registrati su una fattura (come i reminders di
+// Northstar): canale email | telefono | whatsapp | altro, con nota libera.
+model Sollecito {
+  id        Int      @id @default(autoincrement())
+  fatturaId Int
+  fattura   Fattura  @relation(fields: [fatturaId], references: [id], onDelete: Cascade)
+  data      DateTime @default(now())
+  canale    String   @default("email")
+  nota      String?
+  createdAt DateTime @default(now())
+
+  @@index([fatturaId])
+}
+
+// Impostazioni dell'app (JSON per chiave). Chiave "fatture": dati emittente,
+// fiscalità, pagamento, numerazione, PDF, testi dei solleciti.
+model Impostazione {
+  chiave    String   @id
+  valore    String   @default("{}")
+  updatedAt DateTime @updatedAt
 }
 
 model Acconto {
@@ -78,6 +101,7 @@ model Acconto {
 model AltroIngresso {
   id          Int       @id @default(autoincrement())
   fonte       String
+  categoria   String? // cashback | rimborso_tasse | apporto_socio | incasso_senza_fattura | ritenuta_commerciale | altro
   azienda     String    @default("Spagna")
   aziendaNota String?
   descrizione String?

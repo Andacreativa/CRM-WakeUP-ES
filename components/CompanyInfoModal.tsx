@@ -2,26 +2,32 @@
 
 import { useEffect, useState } from "react";
 import { X, Copy, Check } from "lucide-react";
+import {
+  IMPOSTAZIONI_FATTURE_DEFAULT,
+  type ImpostazioniFatture,
+} from "@/lib/impostazioni";
 
 interface Field {
   label: string;
   value: string;
 }
 
-const FIELDS: Field[] = [
-  { label: "Ragione sociale", value: "ANDA AGENCIA DE PUBLICIDAD SL" },
-  {
-    label: "Indirizzo",
-    value: "Avenida Quinto Centenario, 23 - Piso 2 Int 21",
-  },
-  {
-    label: "Località",
-    value: "38683, Puerto de Santiago (Santa Cruz de Tenerife)",
-  },
-  { label: "NIF", value: "B16451536" },
-  { label: "Email", value: "info@andacreativa.com" },
-  { label: "IBAN BBVA", value: "ES9301820205970202087468" },
-];
+// Dati aziendali letti dalle Impostazioni fatture (con i default di Anda
+// come riserva), ognuno copiabile con un clic.
+function campi(c: ImpostazioniFatture): Field[] {
+  const localita = [c.cap, c.citta, c.provincia ? `(${c.provincia})` : ""]
+    .filter(Boolean)
+    .join(" ");
+  return [
+    { label: "Ragione sociale", value: c.ragioneSociale },
+    { label: "Indirizzo", value: c.indirizzo },
+    { label: "Località", value: localita },
+    { label: "NIF", value: c.nif },
+    { label: "Email", value: c.email },
+    { label: "Telefono", value: c.telefono },
+    { label: `IBAN${c.banca ? ` ${c.banca}` : ""}`, value: c.iban },
+  ].filter((f) => f.value);
+}
 
 export default function CompanyInfoModal({
   open,
@@ -31,6 +37,7 @@ export default function CompanyInfoModal({
   onClose: () => void;
 }) {
   const [copied, setCopied] = useState<string | null>(null);
+  const [cfg, setCfg] = useState<ImpostazioniFatture>(IMPOSTAZIONI_FATTURE_DEFAULT);
 
   useEffect(() => {
     if (!open) return;
@@ -38,6 +45,12 @@ export default function CompanyInfoModal({
       if (e.key === "Escape") onClose();
     };
     window.addEventListener("keydown", handler);
+    fetch("/api/impostazioni/fatture")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        if (d) setCfg(d);
+      })
+      .catch(() => {});
     return () => window.removeEventListener("keydown", handler);
   }, [open, onClose]);
 
@@ -52,6 +65,7 @@ export default function CompanyInfoModal({
   };
 
   if (!open) return null;
+  const fields = campi(cfg);
 
   return (
     <div
@@ -73,26 +87,17 @@ export default function CompanyInfoModal({
           </button>
         </div>
 
-        <div className="space-y-2" style={{ textAlign: "left" }}>
-          {FIELDS.map((f) => (
+        <div className="space-y-2 text-left">
+          {fields.map((f) => (
             <div
-              key={f.value}
+              key={f.label}
               className="flex items-start justify-between gap-3 px-3 py-2 rounded-lg border border-gray-100 hover:bg-gray-50 transition-colors"
-              style={{ textAlign: "left" }}
             >
-              <div className="flex-1 min-w-0" style={{ textAlign: "left" }}>
-                <p
-                  className="text-[10px] uppercase tracking-wide text-gray-400 font-medium"
-                  style={{ textAlign: "left" }}
-                >
+              <div className="flex-1 min-w-0">
+                <p className="text-[10px] uppercase tracking-wide text-gray-400 font-medium">
                   {f.label}
                 </p>
-                <p
-                  className="text-xs text-gray-800 break-words"
-                  style={{ textAlign: "left", wordBreak: "break-word" }}
-                >
-                  {f.value}
-                </p>
+                <p className="text-xs text-gray-800 break-words">{f.value}</p>
               </div>
               <button
                 onClick={() => copy(f.value)}
@@ -109,6 +114,9 @@ export default function CompanyInfoModal({
             </div>
           ))}
         </div>
+        <p className="text-[11px] text-gray-400">
+          Si modificano in Finance › Impostazioni.
+        </p>
       </div>
     </div>
   );
