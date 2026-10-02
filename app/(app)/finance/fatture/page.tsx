@@ -5,24 +5,27 @@ import Pills from "@/components/Pills";
 import { Kpi, KpiGrid } from "@/components/Kpi";
 import SearchBox from "@/components/SearchBox";
 import { useEffect, useState } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   Plus,
-  Pencil,
-  Trash2,
   Check,
   X,
   Download,
   FileSpreadsheet,
   FileText,
-  Receipt,
+  FileDown,
   PencilLine,
-  ClipboardList,
   Upload,
   Wallet,
+  Send,
+  Mail,
+  MailOpen,
+  ExternalLink,
 } from "lucide-react";
 import { fmt, MESI, CANALI, canaleLabel } from "@/lib/constants";
 import RichiesteFattureView from "@/components/richieste/RichiesteFattureView";
-import { cn, matchQ } from "@/lib/utils";
+import { matchQ } from "@/lib/utils";
 import { useAnno } from "@/lib/anno-context";
 import {
   exportExcel,
@@ -34,57 +37,24 @@ import {
 } from "@/lib/export";
 import { PageSizeSelect, PageNav } from "@/components/Pagination";
 import ImportFattureModal from "@/components/ImportFattureModal";
+import FatturaFormModal from "@/components/fatture/FatturaFormModal";
+import RowMenu from "@/components/RowMenu";
+import Spunta from "@/components/Spunta";
+import {
+  type Fattura,
+  totalePagato,
+  residuo,
+  statoCalcolato,
+  isScaduta,
+  dataIt,
+} from "@/lib/fatture";
+import { scaricaFatturaPDF, inviaFatturaMail } from "@/lib/fattura-pdf";
 
 interface Cliente {
   id: number;
   nome: string;
   paese: string;
 }
-interface Acconto {
-  id: number;
-  importo: number;
-  data: string;
-  metodoPagamento: string | null;
-  note: string | null;
-}
-interface Fattura {
-  id: number;
-  numero: string | null;
-  data: string | null;
-  clienteId: number | null;
-  cliente: Cliente | null;
-  azienda: string;
-  aziendaNota: string | null;
-  mese: number;
-  anno: number;
-  importo: number;
-  tipoIva: string;
-  iva: number;
-  pagato: boolean;
-  metodo: string | null;
-  commerciale: string | null;
-  commercialeId: number | null;
-  scadenza: string | null;
-  acconti: Acconto[];
-}
-
-const totalePagato = (f: Fattura) =>
-  (f.acconti ?? []).reduce((s, a) => s + a.importo, 0);
-const residuo = (f: Fattura) => Math.max(0, f.importo - totalePagato(f));
-const statoCalcolato = (f: Fattura): "pagato" | "acconto" | "attesa" => {
-  if (f.pagato) return "pagato";
-  if (totalePagato(f) >= f.importo) return "pagato";
-  if (totalePagato(f) > 0) return "acconto";
-  return "attesa";
-};
-
-type TipoIva = "igic_exenta" | "igic7";
-const TIPO_IVA_OPTIONS: { value: TipoIva; label: string }[] = [
-  { value: "igic_exenta", label: "IGIC Exenta" },
-  { value: "igic7", label: "IGIC 7%" },
-];
-
-const MESI_NUMS = Array.from({ length: 12 }, (_, i) => i + 1);
 
 const numeroKey = (n: string | null): number => {
   if (!n) return -Infinity;
@@ -92,87 +62,87 @@ const numeroKey = (n: string | null): number => {
   return digits ? parseInt(digits, 10) : -Infinity;
 };
 
-const nextNumero = (
-  fatture: { numero: string | null }[],
-  year: number,
-): string => {
-  let maxCounter = 0;
-  for (const f of fatture) {
-    if (!f.numero) continue;
-    const m = f.numero.match(/^F(\d{4})(\d+)$/);
-    if (!m || parseInt(m[1], 10) !== year) continue;
-    const counter = parseInt(m[2], 10);
-    if (counter > maxCounter) maxCounter = counter;
-  }
-  return `F${year}${maxCounter + 1}`;
-};
-
-const emptyForm = {
-  numero: "",
-  clienteId: "",
-  azienda: CANALI[0],
-  aziendaNota: "",
-  commerciale: "",
-  commercialeId: "",
-  mese: new Date().getMonth() + 1,
-  anno: 2025,
-  importo: "",
-  tipoIva: "igic_exenta" as TipoIva,
-  pagato: false,
-  scadenza: "",
-};
-
 // Sotto-tab della pagina (come "Fatture emesse" di Northstar). Bozze e
 // proforma arrivano con la creazione fatture: per ora sono segnaposto.
 type TabFatture = "emesse" | "bozze" | "da-emettere" | "proforma";
 const TAB_VALIDE: TabFatture[] = ["emesse", "bozze", "da-emettere", "proforma"];
 
+// Filtri e pagina della lista, ricordati mentre si apre una fattura: al
+// ritorno dal pannello si ritrova la lista dov'era.
+const CHIAVE_LISTA = "fatture:lista";
+type FiltroPagato = "tutti" | "pagato" | "attesa";
+
 export default function FatturePage() {
+  const router = useRouter();
   const [fatture, setFatture] = useState<Fattura[]>([]);
   const [clienti, setClienti] = useState<Cliente[]>([]);
   const [commerciali, setCommerciali] = useState<
     { id: number; nome: string; cognome: string | null; percentualeCommissione: number }[]
   >([]);
   const [showForm, setShowForm] = useState(false);
-  const [editing, setEditing] = useState<Fattura | null>(null);
-  const [form, setForm] = useState({ ...emptyForm });
   const [filtroMese, setFiltroMese] = useState(0);
   const [q, setQ] = useState("");
   const [filtroClienteId, setFiltroClienteId] = useState<number>(0);
-  const [filtroPagato, setFiltroPagato] = useState<
-    "tutti" | "pagato" | "attesa"
-  >("tutti");
+  const [filtroPagato, setFiltroPagato] = useState<FiltroPagato>("tutti");
   const { anno } = useAnno();
   const [azienda, setAzienda] = useState("");
   const [pageSize, setPageSize] = useState(10);
   const [page, setPage] = useState(1);
   const [showImport, setShowImport] = useState(false);
-  const [accontoTarget, setAccontoTarget] = useState<Fattura | null>(null);
   const [togglingId, setTogglingId] = useState<number | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [lastClickedId, setLastClickedId] = useState<number | null>(null);
   // Modalità Esporta (come Northstar): le caselle compaiono solo quando serve
   const [exportMode, setExportMode] = useState(false);
   const [tab, setTab] = useState<TabFatture>("emesse");
-  const [daEmettere, setDaEmettere] = useState(0);
+
+  // Cambio anno = dataset diverso: si riparte dalla prima pagina
+  useEffect(() => {
+    setPage(1);
+  }, [anno]);
   // La tab vive nell'indirizzo (?tab=), senza useSearchParams per non
   // richiedere un confine Suspense alla pagina.
   useEffect(() => {
     const t = new URLSearchParams(window.location.search).get("tab");
     if (t && (TAB_VALIDE as string[]).includes(t)) setTab(t as TabFatture);
+    try {
+      const salvata = sessionStorage.getItem(CHIAVE_LISTA);
+      if (!salvata) return;
+      sessionStorage.removeItem(CHIAVE_LISTA);
+      const s = JSON.parse(salvata);
+      setQ(s.q ?? "");
+      setFiltroMese(s.filtroMese ?? 0);
+      setFiltroClienteId(s.filtroClienteId ?? 0);
+      setFiltroPagato(s.filtroPagato ?? "tutti");
+      setAzienda(s.azienda ?? "");
+      setPageSize(s.pageSize ?? 10);
+      setPage(s.page ?? 1);
+    } catch {
+      /* niente da ripristinare */
+    }
   }, []);
+  const ricordaLista = () => {
+    try {
+      sessionStorage.setItem(
+        CHIAVE_LISTA,
+        JSON.stringify({ q, filtroMese, filtroClienteId, filtroPagato, azienda, pageSize, page }),
+      );
+    } catch {
+      /* sessionStorage non disponibile */
+    }
+  };
+  // Ogni filtro riporta alla prima pagina
+  const filtra =
+    <T,>(set: (v: T) => void) =>
+    (v: T) => {
+      set(v);
+      setPage(1);
+    };
+
   const vaiTab = (t: TabFatture) => {
     setTab(t);
     window.history.replaceState(null, "", t === "emesse" ? "/finance/fatture" : `/finance/fatture?tab=${t}`);
   };
-  useEffect(() => {
-    fetch(`/api/richieste-fattura?anno=${anno}`)
-      .then((r) => (r.ok ? r.json() : []))
-      .then((rows) =>
-        setDaEmettere(Array.isArray(rows) ? rows.filter((r) => !r.emessaEff).length : 0),
-      )
-      .catch(() => {});
-  }, [anno, tab]);
   const [tutte, setTutte] = useState(false); // tutte quelle del filtro
   const [smhCfg, setSmhCfg] = useState({
     nome: "SocialMediaHouse S.R.L.",
@@ -226,149 +196,73 @@ export default function FatturePage() {
     if (anno > 0) params.set("anno", String(anno));
     if (azienda) params.set("azienda", azienda);
     const [f, c] = await Promise.all([
-      (await fetch(`/api/fatture?${params}`)).json() as Promise<any>,
-      (await fetch("/api/clienti")).json() as Promise<any>,
+      (await fetch(`/api/fatture?${params}`)).json() as Promise<unknown>,
+      (await fetch("/api/clienti")).json() as Promise<unknown>,
     ]);
-    setFatture(Array.isArray(f) ? f : []);
-    setClienti(Array.isArray(c) ? c : []);
+    setFatture(Array.isArray(f) ? (f as Fattura[]) : []);
+    setClienti(Array.isArray(c) ? (c as Cliente[]) : []);
   };
   useEffect(() => {
     load();
   }, [anno, azienda]);
 
-  const openNew = async () => {
-    setEditing(null);
-    const annoNuova = anno > 0 ? anno : new Date().getFullYear();
-    // Numero e scadenza dalle Impostazioni fatture (riserva: calcolo locale)
-    let numero = nextNumero(fatture, annoNuova);
-    let scadenza = "";
-    let tipoIva: TipoIva = emptyForm.tipoIva;
-    try {
-      const [n, c] = await Promise.all([
-        fetch(`/api/impostazioni/fatture/prossimo-numero?anno=${annoNuova}`).then((r) => r.json()),
-        fetch("/api/impostazioni/fatture").then((r) => r.json()),
-      ]);
-      if (n?.numero) numero = n.numero;
-      if (c?.giorniScadenza > 0) {
-        const d = new Date();
-        d.setDate(d.getDate() + Number(c.giorniScadenza));
-        scadenza = d.toISOString().slice(0, 10);
-      }
-      if (c?.tipoIvaDefault === "igic7") tipoIva = "igic7";
-    } catch {
-      /* usa i valori locali */
-    }
-    setForm({
-      ...emptyForm,
-      anno: annoNuova,
-      numero,
-      scadenza,
-      tipoIva,
-    });
-    setShowForm(true);
-  };
-  const openEdit = (f: Fattura) => {
-    setEditing(f);
-    setForm({
-      numero: f.numero || "",
-      clienteId: f.clienteId != null ? String(f.clienteId) : "",
-      azienda: f.azienda,
-      aziendaNota: f.aziendaNota || "",
-      commerciale: f.commerciale || "",
-      commercialeId: f.commercialeId ? String(f.commercialeId) : "",
-      mese: f.mese,
-      anno: f.anno,
-      importo: String(f.importo),
-      tipoIva: (f.tipoIva === "igic7" ? "igic7" : "igic_exenta") as TipoIva,
-      pagato: f.pagato,
-      scadenza: f.scadenza ? f.scadenza.slice(0, 10) : "",
-    });
-    setShowForm(true);
-  };
-  const save = async () => {
-    if (!form.importo) return;
-    const ivaPct = form.tipoIva === "igic7" ? 7 : 0;
-    const payload = {
-      ...form,
-      clienteId: form.clienteId ? parseInt(form.clienteId) : null,
-      importo: parseFloat(form.importo),
-      iva: ivaPct,
-      scadenza: form.scadenza || null,
-      aziendaNota: form.azienda === "Altro" ? form.aziendaNota : null,
-    };
-    console.log(
-      `[save] ${editing ? "PATCH" : "POST"} /api/fatture${editing ? "/" + editing.id : ""}`,
-      payload,
-    );
-    const url = editing ? `/api/fatture/${editing.id}` : "/api/fatture";
-    const method = editing ? "PATCH" : "POST";
-    const res = await fetch(url, {
-      method,
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
-    const body = await res
-      .json()
-      .catch(() => ({ error: "non-JSON response" }));
-    if (!res.ok) {
-      console.error(
-        `[save] ${method} FAILED status=${res.status}`,
-        body,
-      );
-      alert(
-        `Errore salvataggio (${res.status}): ${body.error ?? "errore"}${body.stage ? ` [stage=${body.stage}]` : ""}`,
-      );
-      return;
-    }
-    console.log(`[save] OK pagato=${body.pagato}`);
-    setShowForm(false);
-    if (editing) {
-      setFatture((prev) =>
-        prev.map((x) => (x.id === editing.id ? { ...x, ...body } : x)),
-      );
-    }
-    load();
-  };
+  const patchRiga = (id: number, patch: Partial<Fattura>) =>
+    setFatture((prev) => prev.map((x) => (x.id === id ? { ...x, ...patch } : x)));
+
   const togglePagato = async (f: Fattura) => {
     if (togglingId === f.id) return;
     setTogglingId(f.id);
     try {
-      const newPagato = !f.pagato;
-      console.log(
-        `[togglePagato] fattura #${f.id} (${f.numero}) ${f.pagato} → ${newPagato}`,
-      );
       const res = await fetch(`/api/fatture/${f.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ pagato: newPagato }),
+        body: JSON.stringify({ pagato: !f.pagato }),
       });
-      const body = await res
-        .json()
-        .catch(() => ({ error: "non-JSON response" }));
+      const body = await res.json().catch(() => ({ error: "non-JSON response" }));
       if (!res.ok) {
-        console.error(
-          `[togglePagato] PATCH FAILED status=${res.status}`,
-          body,
-        );
         alert(
           `Errore aggiornamento stato (${res.status}): ${body.error ?? "errore"}${body.stage ? ` [stage=${body.stage}]` : ""}`,
         );
       } else {
-        console.log(
-          `[togglePagato] OK pagato=${body.pagato} (server response)`,
-        );
-        setFatture((prev) =>
-          prev.map((x) => (x.id === f.id ? { ...x, pagato: body.pagato } : x)),
-        );
+        patchRiga(f.id, { pagato: body.pagato });
       }
     } finally {
       setTogglingId(null);
     }
   };
-  const del = async (id: number) => {
-    if (!confirm("Eliminare questa fattura?")) return;
-    await fetch(`/api/fatture/${id}`, { method: "DELETE" });
-    load();
+
+  // Spunta a mano «presentata» (VeriFactu), come «Contab.» di Northstar
+  const togglePresentata = async (f: Fattura) => {
+    const presentata = !f.presentata;
+    patchRiga(f.id, { presentata });
+    const res = await fetch(`/api/fatture/${f.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ presentata }),
+    });
+    if (!res.ok) {
+      patchRiga(f.id, { presentata: f.presentata });
+      alert("Non sono riuscito ad aggiornare la spunta «presentata».");
+      return;
+    }
+    const body = await res.json();
+    patchRiga(f.id, { presentata: body.presentata, presentataIl: body.presentataIl });
+  };
+
+  const scaricaPdf = async (f: Fattura) => {
+    try {
+      await scaricaFatturaPDF(f.id);
+    } catch {
+      alert("Non sono riuscito a creare il PDF della fattura.");
+    }
+  };
+  const inviaMail = async (f: Fattura) => {
+    try {
+      const dataInvio = await inviaFatturaMail(f.id);
+      if (dataInvio) patchRiga(f.id, { inviata: true, dataInvio });
+    } catch {
+      alert("Non sono riuscito a preparare l'invio della fattura.");
+    }
   };
 
   const filtered = (fatture ?? [])
@@ -398,10 +292,6 @@ export default function FatturePage() {
     setLastClickedId(null);
   }, [anno, azienda]);
 
-  // Reset page se i filtri restringono il dataset
-  useEffect(() => {
-    setPage(1);
-  }, [filtroMese, filtroClienteId, filtroPagato, q, anno, azienda, pageSize]);
   const paged = filtered.slice((page - 1) * pageSize, page * pageSize);
 
   // ── Selezione righe per export ──────────────────────────────────────────
@@ -523,8 +413,6 @@ export default function FatturePage() {
   };
 
   const oggi = new Date();
-  const isScaduta = (f: Fattura) =>
-    !f.pagato && f.scadenza && new Date(f.scadenza) < oggi;
   const isInScadenza = (f: Fattura) => {
     if (!f.scadenza || f.pagato) return false;
     const d = new Date(f.scadenza);
@@ -544,7 +432,7 @@ export default function FatturePage() {
         </div>
         {tab === "emesse" && (
           <div className="flex items-center gap-3 flex-wrap">
-            <PageSizeSelect pageSize={pageSize} onChange={setPageSize} />
+            <PageSizeSelect pageSize={pageSize} onChange={filtra(setPageSize)} />
             <ExportButton
               active={exportMode}
               onClick={() => (exportMode ? esciExport() : setExportMode(true))}
@@ -557,7 +445,7 @@ export default function FatturePage() {
               <Upload className="w-4 h-4 text-brand" /> Importa Fatture
             </button>
             <button
-              onClick={openNew}
+              onClick={() => setShowForm(true)}
               className="btn btn-primary"
             >
               <Plus className="w-4 h-4" /> Nuova Fattura
@@ -571,9 +459,9 @@ export default function FatturePage() {
         value={tab}
         onChange={(v) => vaiTab(v)}
         options={[
-          { val: "emesse", label: `Emesse (${fatture.length})` },
+          { val: "emesse", label: "Emesse" },
           { val: "bozze", label: "Bozze" },
-          { val: "da-emettere", label: `Da emettere (${daEmettere})` },
+          { val: "da-emettere", label: "Da emettere" },
           { val: "proforma", label: "Proforma" },
         ]}
       />
@@ -597,10 +485,10 @@ export default function FatturePage() {
 
       {/* Filtri */}
       <div className="flex gap-3 flex-wrap items-center">
-        <SearchBox value={q} onChange={setQ} placeholder="Cerca numero, cliente…" />
+        <SearchBox value={q} onChange={filtra(setQ)} placeholder="Cerca numero, cliente…" />
         <select
           value={filtroMese}
-          onChange={(e) => setFiltroMese(parseInt(e.target.value))}
+          onChange={(e) => filtra(setFiltroMese)(parseInt(e.target.value))}
           className="sel"
         >
           <option value={0}>Tutti i mesi</option>
@@ -613,7 +501,7 @@ export default function FatturePage() {
         <div className="flex items-center gap-1">
           <select
             value={filtroClienteId}
-            onChange={(e) => setFiltroClienteId(parseInt(e.target.value) || 0)}
+            onChange={(e) => filtra(setFiltroClienteId)(parseInt(e.target.value) || 0)}
             className="sel min-w-[180px]"
           >
             <option value={0}>Tutti i clienti</option>
@@ -627,7 +515,7 @@ export default function FatturePage() {
           </select>
           {filtroClienteId > 0 && (
             <button
-              onClick={() => setFiltroClienteId(0)}
+              onClick={() => filtra(setFiltroClienteId)(0)}
               title="Rimuovi filtro cliente"
               className="p-1.5 rounded-lg text-gray-400 hover:text-bad hover:bg-bad/10 transition-colors"
             >
@@ -637,7 +525,7 @@ export default function FatturePage() {
         </div>
         <select
           value={azienda}
-          onChange={(e) => setAzienda(e.target.value)}
+          onChange={(e) => filtra(setAzienda)(e.target.value)}
           className="sel"
         >
           <option value="">Tutti i canali</option>
@@ -649,7 +537,7 @@ export default function FatturePage() {
         </select>
         <Pills
           value={filtroPagato}
-          onChange={setFiltroPagato}
+          onChange={filtra(setFiltroPagato)}
           options={[
             { val: "tutti", label: "Tutti" },
             { val: "pagato", label: "Incassate" },
@@ -664,7 +552,8 @@ export default function FatturePage() {
 
       {/* Tabella fatture */}
       <div className="glass-card rounded-2xl overflow-hidden">
-        <table className="tbl">
+        <div className="overflow-x-auto">
+        <table className="tbl min-w-[980px]">
           <thead>
             <tr>
               {exportMode && (
@@ -684,30 +573,30 @@ export default function FatturePage() {
                   />
                 </th>
               )}
-              {[
-                "Numero",
-                "Cliente",
-                "Canale",
-                "Mese",
-                "Scadenza",
-                "Importo",
-                "Stato",
-                "",
-              ].map((h) => (
-                <th
-                  key={h}
-                  className={`${h ==="Importo" ? "text-right" : h === "Stato" ? "text-center" : "text-left"}`}
+              <th>Numero</th>
+              <th>Data</th>
+              <th>Cliente</th>
+              <th>Canale</th>
+              <th>Scadenza</th>
+              <th className="text-right">Importo</th>
+              <th className="text-center">Stato</th>
+              <th className="text-center">
+                <span
+                  className="inline-flex items-center gap-1.5"
+                  title="Presentata all'Agencia Tributaria (VeriFactu). Per ora la spunta si mette a mano."
                 >
-                  {h}
-                </th>
-              ))}
+                  Presentata
+                  <img src="/verifactu-logo.png" alt="VeriFactu" className="h-3.5 w-auto" />
+                </span>
+              </th>
+              <th />
             </tr>
           </thead>
           <tbody>
             {filtered.length === 0 && (
               <tr>
                 <td
-                  colSpan={exportMode ? 9 : 8}
+                  colSpan={exportMode ? 10 : 9}
                   className="text-center text-gray-400 py-12 text-sm"
                 >
                   Nessuna fattura trovata
@@ -741,15 +630,27 @@ export default function FatturePage() {
                   </td>
                 )}
                 <td
-                  className="px-4 py-3 text-sm font-mono font-medium text-gray-700 whitespace-nowrap"
+                  className="whitespace-nowrap"
                   style={
                     exportMode && selectedIds.has(f.id)
                       ? { boxShadow: "inset 3px 0 0 0 #e8308a" }
                       : undefined
                   }
                 >
-                  {f.numero ?? "—"}
+                  {/* Il numero apre il pannello della fattura (come Northstar) */}
+                  <Link
+                    href={`/finance/fatture/${f.id}`}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      ricordaLista();
+                    }}
+                    className="font-mono font-medium text-brand hover:underline"
+                    title="Apri la fattura"
+                  >
+                    {f.numero ?? "senza numero"}
+                  </Link>
                 </td>
+                <td className="whitespace-nowrap">{dataIt(f.data)}</td>
                 <td className="font-medium text-gray-900">
                   {f.cliente?.nome ?? "—"}
                   <span className="ml-1 text-xs text-gray-400">
@@ -762,39 +663,44 @@ export default function FatturePage() {
                   </span>
                 </td>
                 <td>
-                  {MESI[f.mese - 1]}
-                </td>
-                <td>
                   {f.scadenza ? (
                     <span
-                      className={`text-xs font-medium ${isScaduta(f) ? "text-bad" : isInScadenza(f) ? "text-warn" : "text-gray-500"}`}
+                      className={`text-xs font-medium ${isScaduta(f, oggi) ? "text-bad" : isInScadenza(f) ? "text-warn" : "text-gray-500"}`}
                     >
-                      {new Date(f.scadenza).toLocaleDateString("it-IT")}
+                      {dataIt(f.scadenza)}
                     </span>
                   ) : (
                     <span className="text-gray-400">—</span>
                   )}
                 </td>
-                <td className="font-semibold text-gray-900 text-right">
+                <td className="font-semibold text-gray-900 text-right whitespace-nowrap">
                   {fmt(f.importo)}
                 </td>
                 <td className="text-center">
                   {(() => {
                     const stato = statoCalcolato(f);
+                    const apri = (e: React.MouseEvent) => {
+                      e.stopPropagation();
+                      ricordaLista();
+                      router.push(`/finance/fatture/${f.id}`);
+                    };
                     if (stato === "pagato") {
+                      const conIncassi = f.acconti && f.acconti.length > 0;
                       return (
                         <button
                           onClick={(e) => {
+                            // Con incassi registrati lo stato si cambia dal pannello
+                            if (conIncassi) return apri(e);
                             e.stopPropagation();
-                            if (f.acconti && f.acconti.length > 0) {
-                              setAccontoTarget(f);
-                            } else {
-                              togglePagato(f);
-                            }
+                            togglePagato(f);
                           }}
                           disabled={togglingId === f.id}
                           className="pill-ok disabled:opacity-60 disabled:cursor-wait"
-                          title="Incassata: clicca per cambiare"
+                          title={
+                            conIncassi
+                              ? "Incassata: apri la fattura per vedere gli incassi"
+                              : "Incassata: clicca per cambiare"
+                          }
                         >
                           <Check /> Incassato
                         </button>
@@ -802,12 +708,13 @@ export default function FatturePage() {
                     }
                     if (stato === "acconto") {
                       return (
-                        <span
-                          title={`${fmt(totalePagato(f))} ricevuti / ${fmt(residuo(f))} residuo`}
+                        <button
+                          onClick={apri}
+                          title={`${fmt(totalePagato(f))} ricevuti / ${fmt(residuo(f))} residuo: apri la fattura`}
                           className="pill-partial"
                         >
                           <Wallet /> Acconto
-                        </span>
+                        </button>
                       );
                     }
                     return (
@@ -825,35 +732,92 @@ export default function FatturePage() {
                     );
                   })()}
                 </td>
+                <td className="text-center" onClick={(e) => e.stopPropagation()}>
+                  <Spunta
+                    on={f.presentata}
+                    onClick={() => togglePresentata(f)}
+                    title={
+                      f.presentata
+                        ? `Presentata${f.presentataIl ? ` il ${dataIt(f.presentataIl)}` : ""}: clicca per annullare`
+                        : "Non presentata: clicca per segnarla come presentata"
+                    }
+                  />
+                </td>
                 <td onClick={(e) => e.stopPropagation()}>
-                  <div className="flex items-center gap-2 justify-end">
-                    {statoCalcolato(f) !== "pagato" && (
-                      <button
-                        onClick={() => setAccontoTarget(f)}
-                        title="Registra acconto"
-                        className="p-1.5 rounded-lg text-gray-400 hover:text-partial hover:bg-partial/10 transition-colors"
+                  <div className="flex items-center gap-1 justify-end">
+                    {/* La busta è un segno (mail partita), non un bottone: l'invio sta nel menu */}
+                    {f.inviata && (
+                      <span
+                        className="inline-flex items-center justify-center w-7 h-7 text-gray-400 cursor-help"
+                        title={
+                          f.dataInvio
+                            ? `Inviata via email il ${dataIt(f.dataInvio)}`
+                            : "Segnata come inviata al cliente"
+                        }
                       >
-                        <Wallet className="w-4 h-4" />
-                      </button>
+                        <MailOpen className="w-4 h-4" />
+                      </span>
                     )}
-                    <button
-                      onClick={() => openEdit(f)}
-                      className="p-1.5 rounded-lg text-gray-400 hover:text-brand hover:bg-brand/10 transition-colors"
-                    >
-                      <Pencil className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={() => del(f.id)}
-                      className="p-1.5 rounded-lg text-gray-400 hover:text-bad hover:bg-bad/10 transition-colors"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
+                    <RowMenu title="Azioni sulla fattura">
+                      {(chiudi) => (
+                        <>
+                          {/* Spento finché non c'è il collegamento a VeriFactu */}
+                          <span
+                            className="menu-item spenta"
+                            title="Si accende con il collegamento a VeriFactu"
+                          >
+                            <Send /> Presenta
+                          </span>
+                          <div className="menu-nota">
+                            Collegamento a VeriFactu non ancora attivo.
+                          </div>
+                          <div className="menu-sep" />
+                          {f.cliente?.email ? (
+                            <button
+                              className="menu-item"
+                              title={`Invia a ${f.cliente.email}`}
+                              onClick={() => {
+                                chiudi();
+                                inviaMail(f);
+                              }}
+                            >
+                              <Mail /> Invia via Mail
+                            </button>
+                          ) : (
+                            <span
+                              className="menu-item spenta"
+                              title="Il cliente non ha un indirizzo email: completare l'anagrafica"
+                            >
+                              <Mail /> Invia via Mail
+                            </span>
+                          )}
+                          <button
+                            className="menu-item"
+                            onClick={() => {
+                              chiudi();
+                              scaricaPdf(f);
+                            }}
+                          >
+                            <FileDown /> Scarica PDF
+                          </button>
+                          <div className="menu-sep" />
+                          <Link
+                            href={`/finance/fatture/${f.id}`}
+                            className="menu-item"
+                            onClick={ricordaLista}
+                          >
+                            <ExternalLink /> Apri la fattura
+                          </Link>
+                        </>
+                      )}
+                    </RowMenu>
                   </div>
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
+        </div>
       </div>
       {filtered.length > 0 && (
         <PageNav
@@ -903,9 +867,6 @@ export default function FatturePage() {
           ]}
         />
       )}
-
-      {/* Tabella Altri Ingressi — stesso formato delle fatture */}
-
         </>
       )}
 
@@ -923,254 +884,17 @@ export default function FatturePage() {
         </div>
       )}
 
-      {/* Modal */}
       {showForm && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-          <div className="glass-modal rounded-2xl w-full max-w-md p-6 space-y-4">
-            <h2 className="text-lg font-bold text-gray-900">
-              {editing ? "Modifica Fattura" : "Nuova Fattura"}
-            </h2>
-            <div className="space-y-3">
-              <div>
-                <label className="text-xs font-medium text-gray-600 block mb-1">
-                  Numero Fattura
-                </label>
-                <input
-                  type="text"
-                  value={form.numero}
-                  onChange={(e) =>
-                    setForm((f) => ({ ...f, numero: e.target.value }))
-                  }
-                  placeholder="Es. F202641"
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-brand/30"
-                />
-              </div>
-              <div>
-                <label className="text-xs font-medium text-gray-600 block mb-1">
-                  Canale *
-                </label>
-                <div className="flex gap-2">
-                  {CANALI.map((a) => {
-                    const active = form.azienda === a;
-                    return (
-                      <button
-                        key={a}
-                        onClick={() =>
-                          setForm((f) => ({
-                            ...f,
-                            azienda: a,
-                            aziendaNota: "",
-                          }))
-                        }
-                        className="flex-1 text-sm py-2 rounded-lg border font-semibold transition-all"
-                        style={
-                          active
-                            ? {
-                                background: "#e8308a",
-                                color: "#fff",
-                                borderColor: "#e8308a",
-                              }
-                            : {
-                                background: "#fff",
-                                borderColor: "#e5e7eb",
-                                color: "#9ca3af",
-                              }
-                        }
-                      >
-                        {canaleLabel(a)}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-              <div>
-                <label className="text-xs font-medium text-gray-600 block mb-1">
-                  Cliente *
-                </label>
-                <select
-                  value={form.clienteId}
-                  onChange={(e) =>
-                    setForm((f) => ({ ...f, clienteId: e.target.value }))
-                  }
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30"
-                >
-                  <option value="">Seleziona cliente...</option>
-                  {clienti.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.nome}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-xs font-medium text-gray-600 block mb-1">
-                    Mese *
-                  </label>
-                  <select
-                    value={form.mese}
-                    onChange={(e) =>
-                      setForm((f) => ({ ...f, mese: parseInt(e.target.value) }))
-                    }
-                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30"
-                  >
-                    {MESI_NUMS.map((m) => (
-                      <option key={m} value={m}>
-                        {MESI[m - 1]}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="text-xs font-medium text-gray-600 block mb-1">
-                    Importo (€) *
-                  </label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={form.importo}
-                    onChange={(e) =>
-                      setForm((f) => ({ ...f, importo: e.target.value }))
-                    }
-                    placeholder="0.00"
-                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30"
-                  />
-                </div>
-              </div>
-              {/* Tipo Imposta */}
-              <div>
-                <label className="text-xs font-medium text-gray-600 block mb-1">
-                  Tipo Imposta
-                </label>
-                <div className="flex gap-2">
-                  {TIPO_IVA_OPTIONS.map((o) => {
-                    const active = form.tipoIva === o.value;
-                    return (
-                      <button
-                        key={o.value}
-                        onClick={() =>
-                          setForm((f) => ({ ...f, tipoIva: o.value }))
-                        }
-                        className="flex-1 text-sm py-2 rounded-lg border font-semibold transition-all"
-                        style={
-                          active
-                            ? {
-                                background: "#fce7f3",
-                                color: "#be185d",
-                                borderColor: "#f9a8d4",
-                              }
-                            : {
-                                background: "#fff",
-                                borderColor: "#e5e7eb",
-                                color: "#9ca3af",
-                              }
-                        }
-                      >
-                        {o.label}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Riepilogo */}
-              {(() => {
-                const sub = parseFloat(form.importo) || 0;
-                const pct = form.tipoIva === "igic7" ? 7 : 0;
-                const imposta = (sub * pct) / 100;
-                const tot = sub + imposta;
-                const label =
-                  form.tipoIva === "igic7" ? "IGIC 7%" : "IGIC Exenta";
-                return (
-                  <div className="bg-gray-50 rounded-lg p-3 space-y-1 text-sm">
-                    <div className="flex justify-between text-gray-600">
-                      <span>Subtotale</span>
-                      <span className="font-medium">{fmt(sub)}</span>
-                    </div>
-                    <div className="flex justify-between text-gray-600">
-                      <span>{label}</span>
-                      <span className="font-medium">{fmt(imposta)}</span>
-                    </div>
-                    <div className="flex justify-between font-bold text-gray-900 border-t border-gray-200 pt-1">
-                      <span>TOTALE</span>
-                      <span>{fmt(tot)}</span>
-                    </div>
-                    <div className="flex justify-between text-ok pt-1">
-                      <span>Guadagno netto</span>
-                      <span className="font-semibold">{fmt(sub)}</span>
-                    </div>
-                  </div>
-                );
-              })()}
-
-              <div>
-                <label className="text-xs font-medium text-gray-600 block mb-1">
-                  Scadenza
-                </label>
-                <input
-                  type="date"
-                  value={form.scadenza}
-                  onChange={(e) =>
-                    setForm((f) => ({ ...f, scadenza: e.target.value }))
-                  }
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30"
-                />
-              </div>
-              <div>
-                <label className="text-xs font-medium text-gray-600 block mb-1">
-                  Commerciale
-                </label>
-                <select
-                  value={form.commercialeId}
-                  onChange={(e) =>
-                    setForm((f) => ({ ...f, commercialeId: e.target.value }))
-                  }
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30 bg-white"
-                >
-                  <option value="">— nessuno —</option>
-                  {commerciali.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.nome}
-                      {c.cognome ? ` ${c.cognome}` : ""} · {c.percentualeCommissione}%
-                    </option>
-                  ))}
-                </select>
-                <p className="text-[11px] text-gray-400 mt-1">
-                  All&apos;incasso crea la commissione in automatico (voce Commissioni).
-                  {form.commerciale && !form.commercialeId
-                    ? ` Valore storico: ${form.commerciale}.`
-                    : ""}
-                </p>
-              </div>
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={form.pagato}
-                  onChange={(e) =>
-                    setForm((f) => ({ ...f, pagato: e.target.checked }))
-                  }
-                  className="w-4 h-4"
-                  style={{ accentColor: "#e8308a" }}
-                />
-                <span className="text-sm text-gray-700">Già pagata</span>
-              </label>
-            </div>
-            <div className="flex gap-3 pt-2">
-              <button
-                onClick={() => setShowForm(false)}
-                className="btn btn-secondary flex-1"
-              >
-                Annulla
-              </button>
-              <button
-                onClick={save}
-                className="btn btn-primary flex-1"
-              >
-                {editing ? "Salva" : "Aggiungi"}
-              </button>
-            </div>
-          </div>
-        </div>
+        <FatturaFormModal
+          annoDefault={anno}
+          clienti={clienti}
+          commerciali={commerciali}
+          onClose={() => setShowForm(false)}
+          onSaved={() => {
+            setShowForm(false);
+            load();
+          }}
+        />
       )}
 
       <ImportFattureModal
@@ -1178,190 +902,6 @@ export default function FatturePage() {
         onClose={() => setShowImport(false)}
         onImported={load}
       />
-
-      {accontoTarget && (
-        <AccontoModal
-          fattura={accontoTarget}
-          onClose={() => setAccontoTarget(null)}
-          onSaved={load}
-        />
-      )}
-    </div>
-  );
-}
-
-function AccontoModal({
-  fattura,
-  onClose,
-  onSaved,
-}: {
-  fattura: Fattura;
-  onClose: () => void;
-  onSaved: () => void;
-}) {
-  const giaPagato = totalePagato(fattura);
-  const residuoCorrente = residuo(fattura);
-  const [importo, setImporto] = useState(
-    residuoCorrente > 0 ? String(residuoCorrente) : "",
-  );
-  const [data, setData] = useState(new Date().toISOString().slice(0, 10));
-  const [metodoPagamento, setMetodoPagamento] = useState("");
-  const [note, setNote] = useState("");
-  const [saving, setSaving] = useState(false);
-
-  const submit = async () => {
-    const importoNum = parseFloat(importo);
-    if (!importoNum || importoNum <= 0) return;
-    setSaving(true);
-    const res = await fetch("/api/acconti", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        fatturaId: fattura.id,
-        importo: importoNum,
-        data,
-        metodoPagamento: metodoPagamento || null,
-        note: note || null,
-      }),
-    });
-    setSaving(false);
-    if (!res.ok) return;
-    onSaved();
-    onClose();
-  };
-
-  return (
-    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-      <div className="glass-modal rounded-2xl w-full max-w-md p-6 space-y-4">
-        <div>
-          <h2 className="text-lg font-bold text-gray-900">Registra Acconto</h2>
-          <p className="text-xs text-gray-500 mt-0.5">
-            Fattura {fattura.numero ?? "—"} · {fattura.cliente?.nome ?? "—"}
-          </p>
-        </div>
-
-        <div className="bg-partial/10 border border-partial/30 rounded-lg p-3 text-sm space-y-1">
-          <div className="flex justify-between text-gray-700">
-            <span>Importo fattura</span>
-            <span className="font-semibold">{fmt(fattura.importo)}</span>
-          </div>
-          <div className="flex justify-between text-gray-700">
-            <span>Già ricevuto</span>
-            <span className="font-semibold text-ok">
-              {fmt(giaPagato)}
-            </span>
-          </div>
-          <div className="flex justify-between font-bold text-gray-900 border-t border-partial/30 pt-1">
-            <span>Residuo da incassare</span>
-            <span className="text-partial">{fmt(residuoCorrente)}</span>
-          </div>
-        </div>
-
-        {fattura.acconti && fattura.acconti.length > 0 && (
-          <div className="space-y-1">
-            <p className="text-xs font-medium text-gray-600">
-              Acconti registrati
-            </p>
-            <div className="max-h-32 overflow-y-auto space-y-1">
-              {fattura.acconti.map((a) => (
-                <div
-                  key={a.id}
-                  className="flex items-center justify-between text-xs bg-gray-50 rounded px-2 py-1"
-                >
-                  <span className="text-gray-700">
-                    {new Date(a.data).toLocaleDateString("it-IT")}
-                    {a.metodoPagamento ? ` · ${a.metodoPagamento}` : ""}
-                  </span>
-                  <div className="flex items-center gap-2">
-                    <span className="font-semibold text-gray-900">
-                      {fmt(a.importo)}
-                    </span>
-                    <button
-                      onClick={async () => {
-                        if (!confirm("Eliminare questo acconto?")) return;
-                        await fetch(`/api/acconti/${a.id}`, {
-                          method: "DELETE",
-                        });
-                        onSaved();
-                        onClose();
-                      }}
-                      className="text-gray-400 hover:text-bad"
-                    >
-                      <Trash2 className="w-3 h-3" />
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        <div className="space-y-3">
-          <div>
-            <label className="text-xs font-medium text-gray-600 block mb-1">
-              Importo acconto (€) *
-            </label>
-            <input
-              type="number"
-              step="0.01"
-              value={importo}
-              onChange={(e) => setImporto(e.target.value)}
-              placeholder="0.00"
-              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30"
-            />
-          </div>
-          <div>
-            <label className="text-xs font-medium text-gray-600 block mb-1">
-              Data *
-            </label>
-            <input
-              type="date"
-              value={data}
-              onChange={(e) => setData(e.target.value)}
-              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30"
-            />
-          </div>
-          <div>
-            <label className="text-xs font-medium text-gray-600 block mb-1">
-              Metodo Pagamento
-            </label>
-            <input
-              type="text"
-              value={metodoPagamento}
-              onChange={(e) => setMetodoPagamento(e.target.value)}
-              placeholder="Bonifico, Contanti, ..."
-              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30"
-            />
-          </div>
-          <div>
-            <label className="text-xs font-medium text-gray-600 block mb-1">
-              Note
-            </label>
-            <textarea
-              value={note}
-              onChange={(e) => setNote(e.target.value)}
-              rows={2}
-              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30"
-            />
-          </div>
-        </div>
-
-        <div className="flex gap-3 pt-2">
-          <button
-            onClick={onClose}
-            className="btn btn-secondary flex-1"
-          >
-            Annulla
-          </button>
-          <button
-            onClick={submit}
-            disabled={saving}
-            className="btn btn-primary flex-1 disabled:opacity-50"
-          >
-            {saving ? "Salvataggio..." : "Registra"}
-          </button>
-        </div>
-      </div>
     </div>
   );
 }

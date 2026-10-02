@@ -12,8 +12,9 @@ import {
   Link2,
   Unlink,
   FileSignature,
+  FileText,
+  FilePlus2,
   Check,
-  Clock,
   Receipt,
 } from "lucide-react";
 import { fmt, MESI, CANALI, ANNI, canaleLabel } from "@/lib/constants";
@@ -98,9 +99,7 @@ const STATI = [
   { value: "", label: "Tutte" },
   { value: "da_validare", label: "Da validare" },
   { value: "da_fare", label: "Da fare" },
-  { value: "emesse", label: "Emesse" },
-  { value: "da_incassare", label: "Da incassare" },
-  { value: "incassate", label: "Incassate" },
+  { value: "emesse", label: "Fatte" },
 ];
 const RICORRENZE = [
   { value: "una_tantum", label: "Una tantum" },
@@ -166,7 +165,6 @@ export default function RichiesteFattureView({
   // Filtri
   const [mese, setMese] = useState(0);
   const [clienteId, setClienteId] = useState(0);
-  const [azienda, setAzienda] = useState("");
   const [stato, setStato] = useState("");
   const [q, setQ] = useState("");
   const [page, setPage] = useState(1);
@@ -191,7 +189,6 @@ export default function RichiesteFattureView({
     params.set("anno", String(anno));
     if (mese) params.set("mese", String(mese));
     if (clienteId) params.set("clienteId", String(clienteId));
-    if (azienda) params.set("azienda", azienda);
     if (stato) params.set("stato", stato);
     if (q.trim()) params.set("q", q.trim());
     try {
@@ -203,7 +200,7 @@ export default function RichiesteFattureView({
     } finally {
       setLoading(false);
     }
-  }, [anno, mese, clienteId, azienda, stato, q]);
+  }, [anno, mese, clienteId, stato, q]);
 
   useEffect(() => {
     load();
@@ -230,7 +227,7 @@ export default function RichiesteFattureView({
 
   useEffect(() => {
     setPage(1);
-  }, [anno, mese, clienteId, azienda, stato, q, pageSize]);
+  }, [anno, mese, clienteId, stato, q, pageSize]);
 
   // KPI sul set filtrato
   const kpi = useMemo(() => {
@@ -240,16 +237,13 @@ export default function RichiesteFattureView({
       righe: rows.length,
       daValidare: rows.filter((r) => r.stato === "da_validare").length,
       daFare: rows.filter((r) => r.stato === "da_fare").length,
-      daIncassare: rows
-        .filter((r) => r.emessaEff && !r.incassataEff)
-        .reduce((s, r) => s + r.totale, 0),
     };
   }, [rows]);
 
   const paged = rows.slice((page - 1) * pageSize, page * pageSize);
 
   // ── Azioni ────────────────────────────────────────────────────────────
-  const toggle = async (r: Richiesta, flag: "validazione" | "emessa" | "incassata") => {
+  const toggle = async (r: Richiesta, flag: "validazione" | "emessa") => {
     const res = await fetch(`/api/richieste-fattura/${r.id}/toggle`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -266,12 +260,14 @@ export default function RichiesteFattureView({
   const del = async (r: Richiesta) => {
     if (!confirm(`Eliminare la richiesta ${r.codice}?`)) return;
     await fetch(`/api/richieste-fattura/${r.id}`, { method: "DELETE" });
+    setShowForm(false);
     load();
   };
 
   const scollega = async (r: Richiesta) => {
     if (!confirm("Scollegare la fattura da questa richiesta?")) return;
     await fetch(`/api/richieste-fattura/${r.id}/collega`, { method: "DELETE" });
+    setShowForm(false);
     load();
   };
 
@@ -416,9 +412,9 @@ export default function RichiesteFattureView({
       <KpiGrid cols={4}>
         {[
           { label: "Da emettere", value: fmt(kpi.daEmettere), color: "#e8308a" },
+          { label: "Righe", value: String(kpi.righe), color: "#111827" },
           { label: "Da validare", value: String(kpi.daValidare), color: "#f59e0b" },
           { label: "Da fare", value: String(kpi.daFare), color: "#3b82f6" },
-          { label: "Da incassare", value: fmt(kpi.daIncassare), color: "#f59e0b" },
         ].map((k) => (
           <Kpi key={k.label} label={k.label} value={k.value} color={k.color} />
         ))}
@@ -447,14 +443,6 @@ export default function RichiesteFattureView({
             </option>
           ))}
         </select>
-        <select value={azienda} onChange={(e) => setAzienda(e.target.value)} className={selectCls}>
-          <option value="">Tutti i canali</option>
-          {CANALI.map((a) => (
-            <option key={a} value={a}>
-              {canaleLabel(a)}
-            </option>
-          ))}
-        </select>
         <select value={stato} onChange={(e) => setStato(e.target.value)} className={selectCls}>
           {STATI.map((s) => (
             <option key={s.value} value={s.value}>
@@ -468,43 +456,31 @@ export default function RichiesteFattureView({
       {/* Tabella */}
       <div className="glass-card rounded-2xl overflow-hidden">
         <div className="overflow-x-auto">
+          {/* Colonne come «Fatture da emettere» di Northstar */}
           <table className="tbl min-w-[900px]">
             <thead>
               <tr>
-                {[
-                  "Codice",
-                  "Cliente",
-                  "Canale",
-                  "Periodo",
-                  "Importo",
-                  "Validazione",
-                  "Emissione",
-                  "Incasso",
-                  "",
-                ].map((h, i) => (
-                  <th
-                    key={i}
-                    className={cn(
-                      "text-left ",
-                      h === "Importo" && "text-right",
-                    )}
-                  >
-                    {h}
-                  </th>
-                ))}
+                <th>Cliente</th>
+                <th>Responsabile</th>
+                <th>Mese</th>
+                <th>Data invio</th>
+                <th className="text-right">Importo</th>
+                <th className="text-center">Validazione</th>
+                <th className="text-center">Emissione</th>
+                <th />
               </tr>
             </thead>
             <tbody>
               {loading && (
                 <tr>
-                  <td colSpan={9} className="text-center text-gray-400">
+                  <td colSpan={8} className="text-center text-gray-400">
                     Caricamento…
                   </td>
                 </tr>
               )}
               {!loading && paged.length === 0 && (
                 <tr>
-                  <td colSpan={9} className="text-center text-gray-400">
+                  <td colSpan={8} className="text-center text-gray-400">
                     <Receipt className="w-10 h-10 mx-auto mb-2 text-gray-400" />
                     Nessuna richiesta per i filtri scelti
                   </td>
@@ -512,42 +488,30 @@ export default function RichiesteFattureView({
               )}
               {paged.map((r) => {
                 const validata = r.validazione === "ok";
+                const nVoci = parseVoci(r.voci).length;
                 return (
-                  <tr key={r.id} className="align-top">
-                    <td className="text-xs font-mono text-gray-500 whitespace-nowrap">
-                      {r.codice}
-                      {r.origine === "contratto" && r.contratto && (
-                        <div className="text-[10px] text-gray-400">{r.contratto.numero}</div>
-                      )}
-                    </td>
+                  <tr key={r.id}>
                     <td>
                       <div className="tbl-primary">{nomeCliente(r)}</div>
-                      <div className="text-xs text-gray-500 max-w-[320px] truncate" title={r.descrizione}>
+                      <div className="text-xs text-gray-500 max-w-[360px] truncate" title={r.descrizione}>
                         {r.descrizione}
                       </div>
-                      {(r.responsabile || r.serieTotale) && (
-                        <div className="text-[11px] text-gray-400 mt-0.5">
-                          {r.responsabile && <span>{r.responsabile}</span>}
-                          {r.responsabile && r.serieTotale && <span> · </span>}
-                          {r.serieTotale && (
-                            <span>
-                              serie {r.serieIndice}/{r.serieTotale}
-                            </span>
-                          )}
+                      {nVoci > 1 && <div className="tbl-muted">{nVoci} voci</div>}
+                    </td>
+                    <td className="whitespace-nowrap">
+                      {r.responsabile || <span className="text-xs text-warn">da assegnare</span>}
+                    </td>
+                    <td className="whitespace-nowrap">
+                      {MESI[r.mese - 1]}
+                      {anno > 0 ? "" : ` ${r.anno}`}
+                      {r.serieTotale && (
+                        <div className="tbl-muted">
+                          {r.serieIndice}/{r.serieTotale}
                         </div>
                       )}
                     </td>
-                    <td>
-                      <span className="text-xs font-medium text-gray-500 whitespace-nowrap">
-                        {canaleLabel(r.azienda, r.aziendaNota)}
-                      </span>
-                    </td>
                     <td className="whitespace-nowrap">
-                      {MESI[r.mese - 1]} {r.anno}
-                      <div className="tbl-muted">
-                        invio{" "}
-                        {r.dataInvio ? new Date(r.dataInvio).toLocaleDateString("it-IT") : "—"}
-                      </div>
+                      {r.dataInvio ? new Date(r.dataInvio).toLocaleDateString("it-IT") : "—"}
                     </td>
                     <td className="text-right whitespace-nowrap">
                       <div className="tbl-primary">{fmt(r.totale)}</div>
@@ -556,108 +520,63 @@ export default function RichiesteFattureView({
                         {r.iva > 0 && ` · IGIC ${r.iva}%`}
                       </div>
                     </td>
-                    <td>
+                    <td className="text-center">
                       <button
                         onClick={() => toggle(r, "validazione")}
-                        className={cn(
-                          "inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-1 rounded-md border transition-colors whitespace-nowrap",
+                        className={validata ? "pill-ok" : "pill-wait"}
+                        title={
                           validata
-                            ? "pill-ok"
-                            : "pill-wait",
-                        )}
-                        title="Clicca per cambiare"
+                            ? "Validata: clicca per rimetterla in attesa"
+                            : "Clicca quando è tutto ok per fatturare"
+                        }
                       >
-                        {validata ? <Check className="w-3 h-3" /> : <Clock className="w-3 h-3" />}
+                        {validata ? <Check /> : <X />}
                         {validata ? "Ok invia" : "In attesa"}
                       </button>
                     </td>
-                    <td>
+                    {/* Un solo bottone, tre passi: non emessa → crea fattura → emessa */}
+                    <td className="text-center">
                       {r.fatturaId ? (
-                        <div className="flex items-center gap-1">
-                          <Link
-                            href="/finance/fatture"
-                            className="pill-ok"
-                          >
-                            <Check className="w-3 h-3" />
-                            Emessa {r.fattura?.numero ? `N° ${r.fattura.numero}` : ""}
-                          </Link>
-                          <button
-                            onClick={() => scollega(r)}
-                            className="p-1 text-gray-400 hover:text-bad"
-                            title="Scollega fattura"
-                          >
-                            <Unlink className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
+                        <Link
+                          href={`/finance/fatture/${r.fatturaId}`}
+                          className="pill-ok"
+                          title={`Emessa con la fattura ${r.fattura?.numero ?? ""}: clicca per aprirla`}
+                        >
+                          <Check /> Emessa
+                        </Link>
                       ) : r.emessa ? (
                         <button
                           onClick={() => toggle(r, "emessa")}
                           className="pill-ok"
                           title="Segnata emessa a mano: clicca per annullare"
                         >
-                          <Check className="w-3 h-3" /> Emessa
+                          <Check /> Emessa
                         </button>
                       ) : validata ? (
-                        <div className="flex items-center gap-1 flex-wrap">
-                          <button
-                            onClick={() => setCreaFattura(r)}
-                            className="btn btn-primary text-[11px] px-2.5 py-1 rounded-md"
-                          >
-                            Crea fattura
-                          </button>
-                          <button
-                            onClick={() => setCollega(r)}
-                            className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-1 rounded-md border border-gray-200 text-gray-600 hover:bg-gray-50 whitespace-nowrap"
-                            title="Collega a una fattura esistente"
-                          >
-                            <Link2 className="w-3 h-3" /> Collega
-                          </button>
-                        </div>
-                      ) : (
-                        <span className="tbl-muted">da validare</span>
-                      )}
-                    </td>
-                    <td>
-                      {r.emessaEff ? (
                         <button
-                          onClick={() => !r.fatturaId && toggle(r, "incassata")}
-                          disabled={!!r.fatturaId}
-                          className={cn(
-                            "inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-1 rounded-md border whitespace-nowrap",
-                            r.incassataEff
-                              ? "pill-ok"
-                              : "pill-wait",
-                            r.fatturaId ? "cursor-default" : "hover:opacity-80",
-                          )}
-                          title={
-                            r.fatturaId
-                              ? "Stato letto dalla fattura collegata"
-                              : "Clicca per cambiare"
-                          }
+                          onClick={() => setCreaFattura(r)}
+                          className="pill-wait"
+                          title="Prepara la fattura con i dati di questa richiesta: non crea niente finché non confermi"
                         >
-                          {r.incassataEff ? "Incassata" : "Da incassare"}
+                          <FilePlus2 /> crea fattura
                         </button>
                       ) : (
-                        <span className="tbl-muted">—</span>
+                        <span
+                          className="tag tag-soft-off"
+                          title="Non ancora emessa: prima serve la validazione (colonna Validazione)"
+                        >
+                          <FileText /> Non emessa
+                        </span>
                       )}
                     </td>
-                    <td className="whitespace-nowrap">
-                      <div className="flex items-center gap-1 justify-end">
-                        <button
-                          onClick={() => openEdit(r)}
-                          className="p-1.5 text-gray-400 hover:text-gray-700"
-                          title="Modifica"
-                        >
-                          <Pencil className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => del(r)}
-                          className="p-1.5 text-gray-400 hover:text-bad"
-                          title="Elimina"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
+                    <td className="text-right">
+                      <button
+                        onClick={() => openEdit(r)}
+                        className="p-1.5 text-gray-400 hover:text-gray-700"
+                        title="Modifica"
+                      >
+                        <Pencil className="w-4 h-4" />
+                      </button>
                     </td>
                   </tr>
                 );
@@ -688,6 +607,27 @@ export default function RichiesteFattureView({
                 <X className="w-5 h-5" />
               </button>
             </div>
+
+            {editing?.fatturaId && (
+              <div className="flex items-center justify-between gap-3 text-sm rounded-lg px-3 py-2 border bg-ok/10 border-ok/30">
+                <span className="text-gray-700">
+                  Emessa con la fattura{" "}
+                  <Link
+                    href={`/finance/fatture/${editing.fatturaId}`}
+                    className="font-semibold text-brand hover:underline"
+                  >
+                    {editing.fattura?.numero ?? "senza numero"}
+                  </Link>
+                </span>
+                <button
+                  onClick={() => scollega(editing)}
+                  className="inline-flex items-center gap-1 text-xs font-semibold text-gray-600 hover:text-bad"
+                  title="Stacca la fattura da questa richiesta (la fattura resta)"
+                >
+                  <Unlink className="w-3.5 h-3.5" /> Scollega
+                </button>
+              </div>
+            )}
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <div>
@@ -950,6 +890,14 @@ export default function RichiesteFattureView({
                     Autorizza subito l&apos;invio
                   </label>
                 )}
+                {editing && (
+                  <button
+                    onClick={() => del(editing)}
+                    className="inline-flex items-center gap-1 text-sm text-bad hover:underline px-2 py-2"
+                  >
+                    <Trash2 className="w-4 h-4" /> Elimina
+                  </button>
+                )}
                 <button
                   onClick={() => setShowForm(false)}
                   className="text-sm text-gray-500 hover:text-gray-700 px-3 py-2"
@@ -973,6 +921,10 @@ export default function RichiesteFattureView({
         <CreaFatturaModal
           richiesta={creaFattura}
           onClose={() => setCreaFattura(null)}
+          onCollega={() => {
+            setCollega(creaFattura);
+            setCreaFattura(null);
+          }}
           onDone={(numero) => {
             setCreaFattura(null);
             notify(`Fattura ${numero} creata e collegata`);
@@ -1010,10 +962,12 @@ export default function RichiesteFattureView({
 function CreaFatturaModal({
   richiesta,
   onClose,
+  onCollega,
   onDone,
 }: {
   richiesta: Richiesta;
   onClose: () => void;
+  onCollega: () => void;
   onDone: (numero: string) => void;
 }) {
   const oggi = new Date();
@@ -1106,7 +1060,14 @@ function CreaFatturaModal({
           La fattura viene creata nel registro Fatture con origine finance e collegata a questa
           richiesta. Potrai completarla da lì.
         </p>
-        <div className="flex justify-end gap-2">
+        <div className="flex items-center justify-end gap-2">
+          <button
+            onClick={onCollega}
+            className="mr-auto inline-flex items-center gap-1 text-xs font-semibold text-gray-600 hover:text-brand"
+            title="La fattura esiste già nel registro: collegala invece di crearne una nuova"
+          >
+            <Link2 className="w-3.5 h-3.5" /> Collega a una esistente
+          </button>
           <button onClick={onClose} className="text-sm text-gray-500 hover:text-gray-700 px-3 py-2">
             Annulla
           </button>

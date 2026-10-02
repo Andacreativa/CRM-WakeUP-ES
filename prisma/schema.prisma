@@ -47,6 +47,10 @@ model Fattura {
   inviata       Boolean        @default(false)
   dataInvio     DateTime?
   checkInvio    String         @default("in_attesa")
+  // Presentata all'Agencia Tributaria (VeriFactu). Oggi è una spunta a mano,
+  // come «Contab.» di Northstar; la scriverà il collegamento quando ci sarà.
+  presentata    Boolean        @default(false)
+  presentataIl  DateTime?
   origine       String         @default("finance")
   metodo        String?
   commerciale   String? // storico (testo libero); oggi si usa commercialeId

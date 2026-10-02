@@ -7,6 +7,38 @@ import {
 } from "@/lib/finn-split";
 import { syncCommissioneFattura } from "@/lib/commissioni";
 
+// Scheda della singola fattura (pannello «Fattura N°» come in Northstar):
+// intestatario, incassi, solleciti e da dove nasce (richiesta, contratto).
+export async function GET(
+  _: Request,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  const { id } = await params;
+  const fatturaId = parseInt(id, 10);
+  if (!fatturaId) {
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
+  const fattura = await prisma.fattura.findUnique({
+    where: { id: fatturaId },
+    include: {
+      cliente: true,
+      acconti: { orderBy: { data: "asc" } },
+      solleciti: { orderBy: { data: "desc" } },
+      richiesta: {
+        select: { id: true, codice: true, descrizione: true, voci: true },
+      },
+      contratto: { select: { id: true, numero: true, oggetto: true } },
+      commercialeRef: {
+        select: { id: true, nome: true, cognome: true, email: true },
+      },
+    },
+  });
+  if (!fattura) {
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
+  return NextResponse.json(fattura);
+}
+
 export async function PATCH(
   request: Request,
   { params }: { params: Promise<{ id: string }> },
@@ -66,6 +98,10 @@ export async function PATCH(
           dataInvio: body.dataInvio ? new Date(body.dataInvio) : null,
         }),
         ...(body.checkInvio !== undefined && { checkInvio: body.checkInvio }),
+        ...(body.presentata !== undefined && {
+          presentata: !!body.presentata,
+          presentataIl: body.presentata ? new Date() : null,
+        }),
       },
       include: {
         cliente: true,
