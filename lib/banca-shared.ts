@@ -109,3 +109,37 @@ export interface Suggerimento {
   dipendenteNome: string | null;
   candidati: CandidatoSpesa[];
 }
+
+// ─── Riconciliazione entrate (Fase 4) ────────────────────────────────
+// Un bonifico in entrata si abbina a una o più fatture (crea un Acconto per
+// ciascuna, con la data del movimento) oppure diventa un Altro ingresso
+// (cashback, rimborso tasse, apporto socio…); i giroconti si escludono.
+export interface FatturaCandidata {
+  id: number;
+  numero: string | null;
+  cliente: string;
+  clienteId: number | null;
+  importo: number;
+  incassato: number; // acconti già registrati
+  residuo: number; // importo - incassato (0 se già segnata incassata)
+  pagato: boolean;
+  mese: number;
+  anno: number;
+  azienda: string;
+  punteggio: number;
+  motivi: string[]; // "numero citato", "cliente", "importo", "mese"
+}
+export type CategoriaAltroIngresso =
+  | "cashback"
+  | "rimborso_tasse"
+  | "apporto_socio"
+  | "incasso_senza_fattura"
+  | "altro";
+export interface SuggerimentoEntrata {
+  candidati: FatturaCandidata[]; // ordinati per punteggio, le proposte in testa
+  proposti: number[]; // id delle fatture preselezionate
+  certo: boolean; // numero citato (o cliente) + importi che quadrano: si può applicare in blocco
+  altro: CategoriaAltroIngresso | null; // non è un incasso di fattura
+  escludi: boolean; // giroconto / movimento tecnico
+  motivo: string; // riga esplicativa per l'utente
+}

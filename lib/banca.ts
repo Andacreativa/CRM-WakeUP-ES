@@ -2,6 +2,8 @@ import { createHash } from "crypto";
 import * as XLSX from "xlsx";
 import type { Prisma, PrismaClient } from "@prisma/client";
 import { nomeCompleto } from "./dipendenti";
+import { applySplit, deleteSplitForFattura, getSplitType } from "./finn-split";
+import { syncCommissioneFattura } from "./commissioni";
 import {
   ESCLUDI,
   CATEGORIA_DEFAULT,
@@ -12,6 +14,9 @@ import {
   type ImpostazioniBanca,
   type CandidatoSpesa,
   type Suggerimento,
+  type FatturaCandidata,
+  type SuggerimentoEntrata,
+  type CategoriaAltroIngresso,
 } from "./banca-shared";
 
 export * from "./banca-shared";
@@ -526,3 +531,205 @@ export const INCLUDE_MOVIMENTO = {
 export type MovimentoConAbbinamenti = Prisma.MovimentoBancarioGetPayload<{
   include: typeof INCLUDE_MOVIMENTO;
 }>;
+
+
+// ─── Riconciliazione entrate ─────────────────────────────────────────
+type FatturaCtx = Prisma.FatturaGetPayload<{
+  include: {
+    cliente: { select: { id: true; nome: true } };
+    acconti: { select: { importo: true } };
+    abbinamentiBancari: { select: { movimentoId: true } };
+  };
+}>;
+export interface ContestoEntrate {
+  fatture: FatturaCtx[];
+}
+
+// Fatture che un bonifico può saldare: tutte quelle degli anni interessati
+// (±1) non ancora collegate a un movimento bancario. Le già segnate
+// incassate a mano restano candidate (storico): l'abbinamento crea
+// l'acconto retroattivo senza toccare lo stato.
+export async function caricaContestoEntrate(db: Db, anni: number[]): Promise<ContestoEntrate> {
+  const anniEstesi = Array.from(new Set(anni.flatMap((a) => [a - 1, a, a + 1])));
+  const fatture = anniEstesi.length
+    ? await db.fattura.findMany({
+        where: { anno: { in: anniEstesi }, origine: { not: "sales" } },
+        include: {
+          cliente: { select: { id: true, nome: true } },
+          acconti: { select: { importo: true } },
+          abbinamentiBancari: { select: { movimentoId: true } },
+        },
+      })
+    : [];
+  return { fatture };
+}
+
+// Numeri di fattura citati nel testo: "F202685", "Factura F20266",
+// "n. 202649 202671 202678" (senza F), "F2026-12". Normalizzati in maiuscolo
+// senza spazi né trattini.
+export const normNumero = (n: string | null | undefined) =>
+  String(n ?? "")
+    .toUpperCase()
+    .replace(/[\s\-_./]/g, "");
+export function estraiNumeriFattura(testo: string): string[] {
+  const out = new Set<string>();
+  for (const m of testo.matchAll(/\bF\s?[-_]?(\d{4,8})\b/gi)) out.add("F" + m[1]);
+  // numeri nudi a 6-7 cifre che iniziano con l'anno (2025xx, 2026xx…)
+  for (const m of testo.matchAll(/(?<![\dA-Z])(20\d{2}\d{2,4})(?![\d])/g)) out.add("F" + m[1]);
+  return Array.from(out);
+}
+
+const PAROLE_VUOTE = new Set([
+  "srl", "srls", "sas", "snc", "spa", "sl", "slu", "sa", "ltd", "limited", "di", "de", "del", "della",
+  "e", "and", "the", "il", "la", "lo", "le", "gli", "dott", "dr", "studio", "ditta", "societa", "società",
+  "responsabilita", "responsabilità", "limitata", "societa", "club", "asd", "ass", "sportiva", "dilettantistica",
+]);
+// Parole del nome cliente da cercare nel testo del bonifico: almeno 3
+// lettere, oppure sigle con cifre ("b2", "3d"); via le forme societarie.
+const tokenCliente = (nome: string) =>
+  norm(nome)
+    .split(" ")
+    .filter((t) => (t.length >= 3 || (t.length === 2 && /\d/.test(t))) && !PAROLE_VUOTE.has(t));
+
+// Entrate che non sono incassi di fatture
+const REGOLE_ALTRO: { re: RegExp; categoria: CategoriaAltroIngresso | "escludi" }[] = [
+  { re: /CASHBACK|BONIF\. ?DEVOLUCION|DEVOLUCI[OÓ]N IMPUESTOS|PROMOCI[OÓ]N COMERCIAL/i, categoria: "cashback" },
+  { re: /DEVOLUCIONES TRIBUTARIAS|AEAT|AGENCIA TRIBUTARIA|HACIENDA|TRIBUTOS/i, categoria: "rimborso_tasse" },
+  { re: /TARJETA VIRTUAL|TRASPASO|RECARGA|TRANSFERENCIA INTERNA|ABONO .*TARJETA/i, categoria: "escludi" },
+  { re: /APORTACI[OÓ]N|APORTE .*SOCIO|AMPLIACI[OÓ]N CAPITAL/i, categoria: "apporto_socio" },
+];
+
+export function suggerisciEntrata(m: MovimentoLike, ctx: ContestoEntrate): SuggerimentoEntrata {
+  const testo = testoMovimento(m);
+  const testoN = norm(testo);
+  const { mese, anno } = meseAnno(m.dataContabile);
+  const cents = centesimi(m.importo);
+
+  const altro = REGOLE_ALTRO.find((r) => r.re.test(testo));
+  if (altro) {
+    return {
+      candidati: [],
+      proposti: [],
+      certo: altro.categoria !== "escludi",
+      altro: altro.categoria === "escludi" ? null : altro.categoria,
+      escludi: altro.categoria === "escludi",
+      motivo: altro.categoria === "escludi" ? "Giroconto o movimento tecnico: da escludere" : "Non è l'incasso di una fattura",
+    };
+  }
+
+  const numeri = estraiNumeriFattura(testo);
+  const candidati: FatturaCandidata[] = [];
+  for (const f of ctx.fatture) {
+    if (f.abbinamentiBancari.length) continue;
+    const incassato = f.acconti.reduce((t, a) => t + a.importo, 0);
+    const residuo = f.pagato ? 0 : Math.max(0, f.importo - incassato);
+    const motivi: string[] = [];
+    let p = 0;
+    const num = normNumero(f.numero);
+    if (num && numeri.includes(num)) {
+      p += 100;
+      motivi.push("numero citato");
+    }
+    const tok = tokenCliente(f.cliente?.nome ?? "");
+    const presenti = tok.filter((t) => testoN.includes(t));
+    if (tok.length && presenti.length) {
+      p += presenti.length === tok.length ? 50 : presenti.length >= 2 ? 45 : 30;
+      motivi.push("cliente");
+    }
+    const diffMesi = (anno - f.anno) * 12 + (mese - f.mese); // >0 = bonifico dopo la fattura
+    if (centesimi(f.importo) === cents) {
+      p += 35;
+      motivi.push("importo");
+    } else if (residuo > 0 && centesimi(residuo) === cents) {
+      p += 40;
+      motivi.push("residuo");
+    }
+    if (diffMesi >= 0 && diffMesi <= 2) {
+      p += 10;
+      motivi.push("mese");
+    } else if (diffMesi < -1) p -= 25; // pagata ben prima di essere emessa: improbabile
+    else if (diffMesi > 6) p -= 10;
+    if (f.pagato && !motivi.includes("numero citato")) p -= 10; // meglio le aperte
+    if (p <= 0) continue;
+    candidati.push({
+      id: f.id,
+      numero: f.numero,
+      cliente: f.cliente?.nome ?? "—",
+      clienteId: f.cliente?.id ?? null,
+      importo: f.importo,
+      incassato,
+      residuo,
+      pagato: f.pagato,
+      mese: f.mese,
+      anno: f.anno,
+      azienda: f.azienda,
+      punteggio: p,
+      motivi,
+    });
+  }
+  candidati.sort((a, b) => b.punteggio - a.punteggio || b.anno - a.anno || b.mese - a.mese);
+
+  // Proposta: le fatture citate per numero; altrimenti la migliore se è
+  // convincente (cliente + importo); se un cliente ha più fatture che sommate
+  // fanno il bonifico, tutte quelle.
+  const citate = candidati.filter((c) => c.motivi.includes("numero citato"));
+  let proposti: FatturaCandidata[] = [];
+  if (citate.length) proposti = citate;
+  else {
+    const top = candidati[0];
+    if (top && top.punteggio >= 75) proposti = [top];
+    else if (top && top.motivi.includes("cliente")) {
+      // combinazione di fatture dello stesso cliente che quadra l'importo
+      const stesse = candidati.filter((c) => c.clienteId === top.clienteId && c.motivi.includes("cliente")).slice(0, 6);
+      const combo = trovaCombinazione(stesse, cents);
+      if (combo.length > 1) proposti = combo;
+    }
+  }
+  const somma = proposti.reduce((t, c) => t + (c.residuo > 0 ? c.residuo : c.importo), 0);
+  const quadra = proposti.length > 0 && Math.abs(centesimi(somma) - cents) <= 5;
+  const certo = quadra && (citate.length > 0 || proposti.every((c) => c.motivi.includes("cliente")));
+  let motivo = "";
+  if (!candidati.length) motivo = "Nessuna fattura compatibile: scegli dall'elenco o registra un altro ingresso";
+  else if (certo) motivo = citate.length ? "Numero di fattura citato nel bonifico, importo che quadra" : "Cliente e importo che quadrano";
+  else if (proposti.length) motivo = quadra ? "Proposta da confermare" : `Proposta da confermare: ${somma < m.importo ? "resta un residuo" : "il bonifico è minore"}`;
+  else motivo = "Fatture possibili: scegli quella giusta";
+  return { candidati: candidati.slice(0, 8), proposti: proposti.map((c) => c.id), certo, altro: null, escludi: false, motivo };
+}
+
+// Sottoinsieme di fatture (max 6) la cui somma dei residui è l'importo
+function trovaCombinazione(fatture: FatturaCandidata[], cents: number): FatturaCandidata[] {
+  const n = fatture.length;
+  let best: FatturaCandidata[] = [];
+  for (let mask = 1; mask < 1 << n; mask++) {
+    let somma = 0;
+    const sel: FatturaCandidata[] = [];
+    for (let i = 0; i < n; i++) {
+      if (mask & (1 << i)) {
+        const c = fatture[i];
+        somma += centesimi(c.residuo > 0 ? c.residuo : c.importo);
+        sel.push(c);
+      }
+    }
+    if (Math.abs(somma - cents) <= 5 && (best.length === 0 || sel.length < best.length)) best = sel;
+  }
+  return best;
+}
+
+// ─── Effetti dell'incasso di una fattura (come il PATCH di /api/fatture) ──
+// Quando lo stato "pagato" cambia: ripartizione storica "anda" (solo senza
+// commerciale in anagrafica) e commissione del commerciale.
+export const NOTA_BANCA = "Incasso da banca";
+export const NOTA_GIA_INCASSATA = "fattura già segnata incassata a mano";
+export async function dopoCambioIncasso(prisma: PrismaClient, fatturaId: number, primaPagato: boolean) {
+  const f = await prisma.fattura.findUnique({
+    where: { id: fatturaId },
+    include: { cliente: { select: { nome: true } } },
+  });
+  if (!f || f.pagato === primaPagato) return;
+  const tipo = f.commercialeId ? null : getSplitType(f.commerciale);
+  if (tipo) {
+    if (f.pagato) await applySplit(prisma, f, tipo);
+    else await deleteSplitForFattura(prisma, f.id);
+  }
+  await syncCommissioneFattura(prisma, f.id);
+}

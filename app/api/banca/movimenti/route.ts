@@ -3,11 +3,14 @@ import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import {
   INCLUDE_MOVIMENTO,
+  caricaContestoEntrate,
   caricaContestoSuggerimenti,
   isStatoMovimento,
   meseAnno,
   suggerisci,
+  suggerisciEntrata,
   type Suggerimento,
+  type SuggerimentoEntrata,
 } from "@/lib/banca";
 
 // GET ?anno= (0 = tutti) &mese= &tipo=uscite|entrate &stato=da_abbinare|
@@ -56,6 +59,7 @@ export async function GET(request: Request) {
     });
 
     const suggerimenti = new Map<number, Suggerimento>();
+    const entrate = new Map<number, SuggerimentoEntrata>();
     if (conSuggerimenti) {
       const target = rows.filter((r) => r.importo < 0 && r.stato === "da_abbinare");
       if (target.length) {
@@ -63,9 +67,21 @@ export async function GET(request: Request) {
         const ctx = await caricaContestoSuggerimenti(prisma, anni);
         for (const r of target) suggerimenti.set(r.id, suggerisci(r, ctx));
       }
+      // Entrate da rivedere (anche quelle assegnate solo in parte): proposte
+      // di fatture da incassare o di altro ingresso.
+      const targetE = rows.filter((r) => r.importo > 0 && r.stato === "da_abbinare");
+      if (targetE.length) {
+        const anni = Array.from(new Set(targetE.map((r) => meseAnno(r.dataContabile).anno)));
+        const ctx = await caricaContestoEntrate(prisma, anni);
+        for (const r of targetE) entrate.set(r.id, suggerisciEntrata(r, ctx));
+      }
     }
     return NextResponse.json(
-      rows.map((r) => ({ ...r, suggerimento: suggerimenti.get(r.id) ?? null })),
+      rows.map((r) => ({
+        ...r,
+        suggerimento: suggerimenti.get(r.id) ?? null,
+        entrata: entrate.get(r.id) ?? null,
+      })),
     );
   } catch (e) {
     console.error("[GET /api/banca/movimenti]", e);
