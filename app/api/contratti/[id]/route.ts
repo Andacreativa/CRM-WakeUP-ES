@@ -6,9 +6,42 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params;
+  // Scheda del contratto: anche le richieste di fattura generate e le
+  // fatture collegate, per vedere a che punto è la fatturazione.
   const c = await prisma.contratto.findUnique({
-    where: { id: parseInt(id) },
-    include: { cliente: true, preventivo: true },
+    where: { id: parseInt(id) || 0 },
+    include: {
+      cliente: true,
+      preventivo: true,
+      richiesteFattura: {
+        where: { deletedAt: null },
+        orderBy: [{ anno: "asc" }, { mese: "asc" }, { id: "asc" }],
+        select: {
+          id: true,
+          codice: true,
+          mese: true,
+          anno: true,
+          totale: true,
+          validazione: true,
+          emessa: true,
+          fatturaId: true,
+          fattura: { select: { id: true, numero: true, pagato: true } },
+        },
+      },
+      fatture: {
+        where: { annullata: false },
+        orderBy: [{ anno: "desc" }, { mese: "desc" }, { id: "desc" }],
+        select: {
+          id: true,
+          numero: true,
+          data: true,
+          mese: true,
+          anno: true,
+          importo: true,
+          pagato: true,
+        },
+      },
+    },
   });
   if (!c) return NextResponse.json({ error: "Not found" }, { status: 404 });
   return NextResponse.json(c);

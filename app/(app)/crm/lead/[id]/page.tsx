@@ -204,7 +204,7 @@ export default function LeadDettaglioPage() {
                 {lead.preventivi.map((p) => (
                   <div key={p.id} className="flex items-center justify-between py-2 text-sm gap-3">
                     <div className="min-w-0">
-                      <span className="font-mono text-xs text-gray-500 mr-2">{p.numero}</span>
+                      <Link href={`/sales/preventivi/${p.id}`} className="font-mono text-xs text-brand hover:underline mr-2">{p.numero}</Link>
                       <span className="text-gray-900 truncate">{p.oggetto}</span>
                     </div>
                     <div className="flex items-center gap-3 shrink-0">

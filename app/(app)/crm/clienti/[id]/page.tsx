@@ -218,7 +218,7 @@ export default function ClienteDettaglioPage() {
                 {c.richiesteFattura.map((r) => (
                   <div key={r.id} className="flex items-center justify-between px-5 py-2.5 text-sm gap-3">
                     <div className="min-w-0">
-                      <span className="font-mono text-xs text-gray-500 mr-2">{r.codice}</span>
+                      <Link href={`/sales/richieste/${r.id}`} className="font-mono text-xs text-brand hover:underline mr-2">{r.codice}</Link>
                       <span className="text-gray-900 truncate">{r.descrizione}</span>
                       <span className="text-xs text-gray-400 ml-2">{MESI[r.mese - 1]} {r.anno}</span>
                     </div>
@@ -245,7 +245,7 @@ export default function ClienteDettaglioPage() {
                 {c.contratti.map((k) => (
                   <div key={k.id} className="flex items-center justify-between px-5 py-2.5 text-sm gap-3">
                     <div className="min-w-0">
-                      <span className="font-mono text-xs text-gray-500 mr-2">{k.numero}</span>
+                      <Link href={`/sales/contratti/${k.id}`} className="font-mono text-xs text-brand hover:underline mr-2">{k.numero}</Link>
                       <span className="text-gray-900 truncate">{k.oggetto}</span>
                       <span className="text-xs text-gray-400 ml-2">dal {new Date(k.dataDecorrenza).toLocaleDateString("it-IT")}</span>
                     </div>

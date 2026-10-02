@@ -456,7 +456,7 @@ export default function FatturaPage() {
             <h2 className="card-title">Sorgente</h2>
             {f.richiesta ? (
               <Link
-                href="/sales/richieste"
+                href={`/sales/richieste/${f.richiesta.id}`}
                 className="flex items-center gap-2.5 rounded-lg bg-gray-50 px-3 py-2.5 text-[13px] text-gray-900 hover:bg-brand/10"
               >
                 <Receipt className="w-4 h-4 text-brand shrink-0" />
@@ -471,7 +471,7 @@ export default function FatturaPage() {
             )}
             {f.contratto && (
               <Link
-                href="/sales/contratti"
+                href={`/sales/contratti/${f.contratto.id}`}
                 className="mt-2 flex items-center gap-2.5 rounded-lg bg-gray-50 px-3 py-2.5 text-[13px] text-gray-900 hover:bg-brand/10"
               >
                 <FileSignature className="w-4 h-4 text-brand shrink-0" />

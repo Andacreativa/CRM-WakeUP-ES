@@ -2,6 +2,32 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { nextContrattoNumero } from "@/lib/contratto-numero";
 
+// Scheda del preventivo: con il lead da cui nasce e i contratti generati.
+export async function GET(
+  _: Request,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  const { id } = await params;
+  const p = await prisma.preventivo.findUnique({
+    where: { id: parseInt(id, 10) || 0 },
+    include: {
+      lead: { select: { id: true, codice: true, nome: true, azienda: true, stato: true } },
+      contratti: {
+        orderBy: { createdAt: "desc" },
+        select: {
+          id: true,
+          numero: true,
+          status: true,
+          totaleContratto: true,
+          dataDecorrenza: true,
+        },
+      },
+    },
+  });
+  if (!p) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  return NextResponse.json(p);
+}
+
 export async function PATCH(
   request: Request,
   { params }: { params: Promise<{ id: string }> },

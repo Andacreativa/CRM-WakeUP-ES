@@ -885,7 +885,7 @@ export function speseToExcel(
 }
 
 // ── Helpers contratto ─────────────────────────────────────────────────────
-const FIRMA_LEO_MARKER = "[FIRMA_LEO]";
+export const FIRMA_LEO_MARKER = "[FIRMA_LEO]";
 
 async function loadFirmaInvertita(): Promise<HTMLCanvasElement | null> {
   try {
