@@ -24,7 +24,6 @@ import {
 import FiltriBar from "@/components/FiltriBar";
 import { useAnno } from "@/lib/anno-context";
 import { exportExcel, exportPDF, speseToExcel } from "@/lib/export";
-import SpeseFisse from "@/components/SpeseFisse";
 import { PageSizeSelect, PageNav } from "@/components/Pagination";
 
 interface Spesa {
@@ -257,6 +256,7 @@ export default function SpesePage() {
             onAnno={setAnno}
             onAzienda={setAzienda}
             includeAllYears
+            hideOptions={["Altro"]}
           />
           <PageSizeSelect pageSize={pageSize} onChange={setPageSize} />
           <button
@@ -357,8 +357,8 @@ export default function SpesePage() {
         )}
       </div>
 
-      {/* Tabella spese variabili — nascosta quando filtro = Spese Fisse */}
-      {azienda !== "Altro" && (
+      {/* Tabella spese */}
+      {(
         <div className="glass-card rounded-2xl overflow-hidden">
           <table className="w-full">
             <thead>
@@ -465,7 +465,7 @@ export default function SpesePage() {
           </table>
         </div>
       )}
-      {azienda !== "Altro" && filtered.length > 0 && (
+      {filtered.length > 0 && (
         <PageNav
           total={filtered.length}
           page={page}
@@ -474,9 +474,6 @@ export default function SpesePage() {
           labelSuffix="spese"
         />
       )}
-
-      {/* Blocco Spese Fisse */}
-      <SpeseFisse />
 
       {/* Modal */}
       {showForm && (

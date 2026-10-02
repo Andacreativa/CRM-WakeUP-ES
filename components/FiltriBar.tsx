@@ -38,7 +38,7 @@ const PILL_SHADOW: Record<string, string> = {
 };
 
 // Label default per la pill "Altro"; può essere override via prop altroLabel
-const DEFAULT_ALTRO_LABEL = "Spese Fisse";
+const DEFAULT_ALTRO_LABEL = "Altro";
 
 export default function FiltriBar({
   anno,
