@@ -20,7 +20,7 @@ interface Cliente extends ClienteBase {
 }
 
 const inputCls =
-  "w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-300 bg-white";
+  "w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30 bg-white";
 
 export default function ClienteDettaglioPage() {
   const { id } = useParams<{ id: string }>();
@@ -110,7 +110,7 @@ export default function ClienteDettaglioPage() {
           <div className="flex items-center gap-2 flex-wrap">
             <h1 className="text-2xl font-bold text-gray-900">{c.nome}</h1>
             <span className="text-[11px] font-semibold px-2 py-0.5 rounded-md bg-gray-100 text-gray-600">{c.paese}</span>
-            {c.tipoImposta && <span className="text-[11px] font-semibold px-2 py-0.5 rounded-md bg-pink-50 text-pink-700">{c.tipoImposta}</span>}
+            {c.tipoImposta && <span className="text-[11px] font-semibold px-2 py-0.5 rounded-md bg-brand/10 text-brand">{c.tipoImposta}</span>}
           </div>
           <p className="text-gray-500 text-sm mt-1">
             {c.partitaIva ? `P.IVA ${c.partitaIva}` : "P.IVA non indicata"} · cliente dal {new Date(c.createdAt).toLocaleDateString("it-IT")}
@@ -123,7 +123,7 @@ export default function ClienteDettaglioPage() {
           <button onClick={() => setEdit(true)} className="glass-btn-primary inline-flex items-center gap-1.5 text-white text-sm font-medium px-3 py-2 rounded-xl">
             <Pencil className="w-4 h-4" /> Modifica
           </button>
-          <button onClick={del} className="p-2 rounded-xl text-gray-500 hover:text-red-600 hover:bg-red-50" title="Elimina">
+          <button onClick={del} className="p-2 rounded-xl text-gray-500 hover:text-bad hover:bg-bad/10" title="Elimina">
             <Trash2 className="w-4 h-4" />
           </button>
         </div>
@@ -134,17 +134,17 @@ export default function ClienteDettaglioPage() {
           {/* Dati di fatturazione */}
           <section className="glass-card rounded-2xl p-5 space-y-3">
             <div className="flex items-center justify-between">
-              <h2 className="text-sm font-bold text-gray-900">Dati di fatturazione</h2>
+              <h2 className="text-sm font-semibold text-gray-900">Dati di fatturazione</h2>
               <button
                 onClick={() => copy("intestazione", intestazione)}
                 className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50"
               >
-                {copied === "intestazione" ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+                {copied === "intestazione" ? <Check className="w-3.5 h-3.5 text-ok" /> : <Copy className="w-3.5 h-3.5" />}
                 Copia intestazione
               </button>
             </div>
             {mancanti.length > 0 && (
-              <div className="text-xs rounded-lg px-3 py-2 border bg-amber-50 border-amber-200 text-amber-800 flex items-center justify-between gap-3">
+              <div className="text-xs rounded-lg px-3 py-2 border bg-warn/10 border-warn/30 text-warn flex items-center justify-between gap-3">
                 <span className="inline-flex items-center gap-1.5"><AlertTriangle className="w-3.5 h-3.5" /> Mancano: {mancanti.join(", ")}</span>
                 <button onClick={() => setEdit(true)} className="font-semibold underline">Completa i dati</button>
               </div>
@@ -153,10 +153,10 @@ export default function ClienteDettaglioPage() {
               {campi.map((f) => (
                 <div key={f.key} className="grid grid-cols-[150px_1fr_32px] items-center gap-2 py-2">
                   <span className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">{f.label}</span>
-                  <span className={cn("text-sm break-words", f.value ? "text-gray-900" : "text-gray-300")}>{f.value || "non indicato"}</span>
+                  <span className={cn("text-sm break-words", f.value ? "text-gray-900" : "text-gray-400")}>{f.value || "non indicato"}</span>
                   {f.value ? (
                     <button onClick={() => copy(f.key, f.value!)} className="p-1.5 rounded-md text-gray-400 hover:text-gray-700 hover:bg-gray-100" title={`Copia ${f.label}`}>
-                      {copied === f.key ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+                      {copied === f.key ? <Check className="w-3.5 h-3.5 text-ok" /> : <Copy className="w-3.5 h-3.5" />}
                     </button>
                   ) : (
                     <span />
@@ -172,8 +172,8 @@ export default function ClienteDettaglioPage() {
           {/* Fatture */}
           <section className="glass-card rounded-2xl overflow-hidden">
             <div className="px-5 py-3 border-b border-gray-100 flex items-center justify-between">
-              <h2 className="text-sm font-bold text-gray-900">Fatture</h2>
-              <Link href="/finance/fatture" className="text-xs font-semibold text-pink-600 hover:text-pink-700">Registro fatture</Link>
+              <h2 className="text-sm font-semibold text-gray-900">Fatture</h2>
+              <Link href="/finance/fatture" className="text-xs font-semibold text-brand hover:text-brand">Registro fatture</Link>
             </div>
             {c.fatture.length === 0 ? (
               <p className="text-sm text-gray-400 px-5 py-4">Nessuna fattura.</p>
@@ -211,8 +211,8 @@ export default function ClienteDettaglioPage() {
           {c.richiesteFattura.length > 0 && (
             <section className="glass-card rounded-2xl overflow-hidden">
               <div className="px-5 py-3 border-b border-gray-100 flex items-center justify-between">
-                <h2 className="text-sm font-bold text-gray-900">Richieste di fattura</h2>
-                <Link href="/finance/fatture?tab=da-emettere" className="text-xs font-semibold text-pink-600 hover:text-pink-700">Da emettere</Link>
+                <h2 className="text-sm font-semibold text-gray-900">Richieste di fattura</h2>
+                <Link href="/finance/fatture?tab=da-emettere" className="text-xs font-semibold text-brand hover:text-brand">Da emettere</Link>
               </div>
               <div className="divide-y divide-gray-50">
                 {c.richiesteFattura.map((r) => (
@@ -238,8 +238,8 @@ export default function ClienteDettaglioPage() {
           {c.contratti.length > 0 && (
             <section className="glass-card rounded-2xl overflow-hidden">
               <div className="px-5 py-3 border-b border-gray-100 flex items-center justify-between">
-                <h2 className="text-sm font-bold text-gray-900">Contratti</h2>
-                <Link href="/sales/contratti" className="text-xs font-semibold text-pink-600 hover:text-pink-700">Tutti</Link>
+                <h2 className="text-sm font-semibold text-gray-900">Contratti</h2>
+                <Link href="/sales/contratti" className="text-xs font-semibold text-brand hover:text-brand">Tutti</Link>
               </div>
               <div className="divide-y divide-gray-50">
                 {c.contratti.map((k) => (
@@ -262,7 +262,7 @@ export default function ClienteDettaglioPage() {
 
           {c.note && (
             <section className="glass-card rounded-2xl p-5">
-              <h2 className="text-sm font-bold text-gray-900 mb-2">Note</h2>
+              <h2 className="text-sm font-semibold text-gray-900 mb-2">Note</h2>
               <p className="text-sm text-gray-700 whitespace-pre-wrap">{c.note}</p>
             </section>
           )}
@@ -272,8 +272,8 @@ export default function ClienteDettaglioPage() {
           <section className="glass-card rounded-2xl p-5 space-y-3">
             {[
               { label: "Fatturato", value: fmt(fatturato), color: "#111827" },
-              { label: "Incassato", value: fmt(incassato), color: "#059669" },
-              { label: "Da incassare", value: fmt(daIncassare), color: daIncassare > 0 ? "#d97706" : "#9ca3af" },
+              { label: "Incassato", value: fmt(incassato), color: "#22c55e" },
+              { label: "Da incassare", value: fmt(daIncassare), color: daIncassare > 0 ? "#f59e0b" : "#9ca3af" },
               { label: "Fatture", value: String(c.fatture.length), color: "#111827" },
             ].map((k) => (
               <div key={k.label}>
@@ -284,11 +284,11 @@ export default function ClienteDettaglioPage() {
           </section>
           {c.leads.length > 0 && (
             <section className="glass-card rounded-2xl p-5 space-y-2">
-              <h2 className="text-sm font-bold text-gray-900">Lead collegati</h2>
+              <h2 className="text-sm font-semibold text-gray-900">Lead collegati</h2>
               {c.leads.map((l) => {
                 const st = STATO_LEAD[l.stato] ?? STATO_LEAD.nuovo;
                 return (
-                  <Link key={l.id} href={`/crm/lead/${l.id}`} className="flex items-center justify-between text-sm hover:text-pink-600">
+                  <Link key={l.id} href={`/crm/lead/${l.id}`} className="flex items-center justify-between text-sm hover:text-brand">
                     <span className="truncate">{l.codice ?? ""} {l.azienda ?? l.nome}</span>
                     <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded" style={{ background: st.color, color: "#fff" }}>{st.label}</span>
                   </Link>
@@ -351,8 +351,8 @@ function Referenti({
   return (
     <section className="glass-card rounded-2xl p-5 space-y-3">
       <div className="flex items-center justify-between">
-        <h2 className="text-sm font-bold text-gray-900">Referenti</h2>
-        <button onClick={() => setOpen((o) => !o)} className="text-xs font-semibold text-pink-600 hover:text-pink-700">{open ? "Chiudi" : "+ Aggiungi"}</button>
+        <h2 className="text-sm font-semibold text-gray-900">Referenti</h2>
+        <button onClick={() => setOpen((o) => !o)} className="text-xs font-semibold text-brand hover:text-brand">{open ? "Chiudi" : "+ Aggiungi"}</button>
       </div>
       {open && (
         <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
@@ -380,9 +380,9 @@ function Referenti({
               </div>
               <div className="flex items-center gap-1 shrink-0">
                 {!r.principale && (
-                  <button onClick={() => principale(r.id)} className="p-1.5 text-gray-300 hover:text-amber-600" title="Imposta principale"><Star className="w-4 h-4" /></button>
+                  <button onClick={() => principale(r.id)} className="p-1.5 text-gray-400 hover:text-warn" title="Imposta principale"><Star className="w-4 h-4" /></button>
                 )}
-                <button onClick={() => del(r.id, r.nome)} className="p-1.5 text-gray-300 hover:text-red-500" title="Elimina"><X className="w-4 h-4" /></button>
+                <button onClick={() => del(r.id, r.nome)} className="p-1.5 text-gray-400 hover:text-bad" title="Elimina"><X className="w-4 h-4" /></button>
               </div>
             </div>
           ))}

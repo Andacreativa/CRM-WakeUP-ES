@@ -27,7 +27,7 @@ const stats = (c: Cliente) => {
 };
 
 const selectCls =
-  "text-sm border border-gray-200 rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-pink-300";
+  "text-sm border border-gray-200 rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-brand/30";
 
 export default function ClientiPage() {
   const router = useRouter();
@@ -91,8 +91,8 @@ export default function ClientiPage() {
       <div className="grid grid-cols-3 gap-4">
         {[
           { label: "Clienti", value: String(clienti.length), color: "#111827" },
-          { label: "Fatturato totale", value: fmt(tot.fatturato), color: "#059669" },
-          { label: "Da incassare", value: fmt(tot.daIncassare), color: "#d97706" },
+          { label: "Fatturato totale", value: fmt(tot.fatturato), color: "#22c55e" },
+          { label: "Da incassare", value: fmt(tot.daIncassare), color: "#f59e0b" },
         ].map((k) => (
           <div key={k.label} className="glass-card rounded-2xl p-4">
             <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">{k.label}</p>
@@ -108,7 +108,7 @@ export default function ClientiPage() {
         </div>
         <div className="flex gap-1 bg-gray-100 rounded-xl p-1">
           {["", "Italia", "Spagna", "Altri"].map((p) => (
-            <button key={p} onClick={() => setPaese(p)} className="text-sm px-3 py-1.5 rounded-lg font-medium" style={paese === p ? { background: "#e8308a", color: "#fff" } : { color: "#64748b" }}>
+            <button key={p} onClick={() => setPaese(p)} className="text-sm px-3 py-1.5 rounded-lg font-medium" style={paese === p ? { background: "#e8308a", color: "#fff" } : { color: "#6b7280" }}>
               {p || "Tutti"}
             </button>
           ))}
@@ -150,13 +150,13 @@ export default function ClientiPage() {
                       <span className="text-[11px] font-semibold px-2 py-0.5 rounded-md bg-gray-100 text-gray-600 whitespace-nowrap">{c.tipoImposta ?? "—"}</span>
                     </td>
                     <td className="px-4 py-3 text-sm font-semibold text-gray-900 text-right tabular-nums">{fmt(s.fatturato)}</td>
-                    <td className="px-4 py-3 text-sm text-emerald-700 text-right tabular-nums">{fmt(s.incassato)}</td>
-                    <td className={cn("px-4 py-3 text-sm text-right tabular-nums", s.daIncassare > 0 ? "text-amber-700 font-semibold" : "text-gray-400")}>{fmt(s.daIncassare)}</td>
+                    <td className="px-4 py-3 text-sm text-ok text-right tabular-nums">{fmt(s.incassato)}</td>
+                    <td className={cn("px-4 py-3 text-sm text-right tabular-nums", s.daIncassare > 0 ? "text-warn font-semibold" : "text-gray-400")}>{fmt(s.daIncassare)}</td>
                     <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
                       <div className="flex items-center gap-1 justify-end">
-                        <Link href={`/crm/clienti/${c.id}`} className="p-1.5 text-gray-400 hover:text-pink-600" title="Apri scheda"><ExternalLink className="w-4 h-4" /></Link>
+                        <Link href={`/crm/clienti/${c.id}`} className="p-1.5 text-gray-400 hover:text-brand" title="Apri scheda"><ExternalLink className="w-4 h-4" /></Link>
                         <button onClick={() => setForm({ open: true, cliente: c })} className="p-1.5 text-gray-400 hover:text-gray-700" title="Modifica"><Pencil className="w-4 h-4" /></button>
-                        <button onClick={() => del(c)} className="p-1.5 text-gray-400 hover:text-red-500" title="Elimina"><Trash2 className="w-4 h-4" /></button>
+                        <button onClick={() => del(c)} className="p-1.5 text-gray-400 hover:text-bad" title="Elimina"><Trash2 className="w-4 h-4" /></button>
                       </div>
                     </td>
                   </tr>

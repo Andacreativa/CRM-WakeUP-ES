@@ -97,7 +97,7 @@ export default function CompanyInfoModal({
                 <p className="text-[10px] uppercase tracking-wide text-gray-400 font-medium">
                   {f.label}
                 </p>
-                <p className="text-xs text-gray-800 break-words">{f.value}</p>
+                <p className="text-xs text-gray-700 break-words">{f.value}</p>
               </div>
               <button
                 onClick={() => copy(f.value)}
@@ -106,7 +106,7 @@ export default function CompanyInfoModal({
                 aria-label={`Copia ${f.label}`}
               >
                 {copied === f.value ? (
-                  <Check className="w-3.5 h-3.5 text-emerald-500" />
+                  <Check className="w-3.5 h-3.5 text-ok" />
                 ) : (
                   <Copy className="w-3.5 h-3.5" />
                 )}

@@ -43,7 +43,7 @@ function LoginForm() {
       className="glass-card rounded-2xl w-full max-w-sm p-8 space-y-5"
     >
       <div className="text-center space-y-2">
-        <div className="mx-auto w-16 h-16 rounded-full bg-white border border-gray-100 flex items-center justify-center shadow-sm">
+        <div className="mx-auto w-16 h-16 rounded-full bg-white border border-gray-100 flex items-center justify-center">
           <img
             src="/logo anda.png"
             alt="Anda"
@@ -68,7 +68,7 @@ function LoginForm() {
             autoComplete="username"
             autoFocus
             required
-            className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-300 bg-white"
+            className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30 bg-white"
           />
         </div>
         <div>
@@ -82,7 +82,7 @@ function LoginForm() {
               onChange={(e) => setPassword(e.target.value)}
               autoComplete="current-password"
               required
-              className="w-full border border-gray-200 rounded-lg px-3 py-2 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-pink-300 bg-white"
+              className="w-full border border-gray-200 rounded-lg px-3 py-2 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30 bg-white"
             />
             <button
               type="button"
@@ -100,7 +100,7 @@ function LoginForm() {
       </div>
 
       {error && (
-        <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+        <div className="text-sm text-bad bg-bad/10 border border-bad/30 rounded-lg px-3 py-2">
           {error}
         </div>
       )}

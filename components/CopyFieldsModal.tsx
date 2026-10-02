@@ -90,7 +90,7 @@ export default function CopyFieldsModal({
                       {f.label}
                     </p>
                     <p
-                      className="text-xs text-gray-800 break-words"
+                      className="text-xs text-gray-700 break-words"
                       style={{ textAlign: "left", wordBreak: "break-word" }}
                     >
                       {v}
@@ -103,7 +103,7 @@ export default function CopyFieldsModal({
                     aria-label={`Copia ${f.label}`}
                   >
                     {copied === v ? (
-                      <Check className="w-3.5 h-3.5 text-emerald-500" />
+                      <Check className="w-3.5 h-3.5 text-ok" />
                     ) : (
                       <Copy className="w-3.5 h-3.5" />
                     )}

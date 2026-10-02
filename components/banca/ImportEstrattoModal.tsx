@@ -74,7 +74,7 @@ export default function ImportEstrattoModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4">
-      <div className="glass-modal w-full max-w-lg rounded-2xl bg-white p-6 shadow-xl">
+      <div className="glass-modal w-full max-w-lg rounded-2xl bg-white p-6">
         <div className="flex items-start justify-between mb-4">
           <div>
             <h2 className="text-lg font-bold text-gray-900">Importa estratto BBVA</h2>
@@ -103,7 +103,7 @@ export default function ImportEstrattoModal({
             onClick={() => !busy && inputRef.current?.click()}
             className={cn(
               "border-2 border-dashed rounded-2xl p-8 text-center cursor-pointer transition-colors",
-              drag ? "border-pink-400 bg-pink-50" : "border-gray-200 hover:border-pink-300 hover:bg-gray-50",
+              drag ? "border-brand/40 bg-brand/10" : "border-gray-200 hover:border-brand/40 hover:bg-gray-50",
             )}
           >
             <input
@@ -114,9 +114,9 @@ export default function ImportEstrattoModal({
               onChange={(e) => invia(e.target.files?.[0])}
             />
             {busy ? (
-              <Loader2 className="w-8 h-8 mx-auto text-pink-500 animate-spin" />
+              <Loader2 className="w-8 h-8 mx-auto text-brand animate-spin" />
             ) : (
-              <Upload className="w-8 h-8 mx-auto text-gray-300" />
+              <Upload className="w-8 h-8 mx-auto text-gray-400" />
             )}
             <p className="text-sm text-gray-700 mt-3 font-medium">
               {busy ? "Lettura del file in corso…" : "Trascina qui il file o clicca per sceglierlo"}
@@ -126,7 +126,7 @@ export default function ImportEstrattoModal({
         )}
 
         {errore && (
-          <div className="mt-4 flex items-start gap-2 text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+          <div className="mt-4 flex items-start gap-2 text-sm text-bad bg-bad/10 border border-bad/30 rounded-lg px-3 py-2">
             <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" /> {errore}
           </div>
         )}
@@ -137,8 +137,8 @@ export default function ImportEstrattoModal({
               className={cn(
                 "flex items-start gap-2 text-sm rounded-lg px-3 py-2 border",
                 esito.giaImportato
-                  ? "bg-amber-50 border-amber-200 text-amber-800"
-                  : "bg-emerald-50 border-emerald-200 text-emerald-700",
+                  ? "bg-warn/10 border-warn/30 text-warn"
+                  : "bg-ok/10 border-ok/30 text-ok",
               )}
             >
               {esito.giaImportato ? (
@@ -153,8 +153,8 @@ export default function ImportEstrattoModal({
               </div>
             </div>
             <div className="glass-card rounded-xl p-4 text-sm">
-              <div className="flex items-center gap-2 text-gray-800 font-medium">
-                <FileSpreadsheet className="w-4 h-4 text-emerald-600" /> {esito.nomeFile}
+              <div className="flex items-center gap-2 text-gray-700 font-medium">
+                <FileSpreadsheet className="w-4 h-4 text-ok" /> {esito.nomeFile}
               </div>
               <div className="text-xs text-gray-500 mt-1">
                 Conto {esito.conto ?? "—"} · periodo {data(esito.periodoDa)} – {data(esito.periodoA)}

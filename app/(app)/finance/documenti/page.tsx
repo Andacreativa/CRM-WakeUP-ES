@@ -131,7 +131,7 @@ export default function DocumentiPage() {
                   colSpan={tab === "soci" ? 6 : 5}
                   className="text-center text-gray-400 py-12 text-sm"
                 >
-                  <Folder className="w-10 h-10 text-gray-300 mx-auto mb-2" />
+                  <Folder className="w-10 h-10 text-gray-400 mx-auto mb-2" />
                   Nessun documento
                 </td>
               </tr>
@@ -139,13 +139,13 @@ export default function DocumentiPage() {
             {docs.map((d, i) => (
               <tr
                 key={d.id}
-                className={`border-b border-gray-50 hover:bg-gray-50 transition-colors ${i % 2 === 1 ? "bg-[#F9F9F9]" : "bg-white"}`}
+                className={`border-b border-gray-50 hover:bg-gray-50 transition-colors ${i % 2 === 1 ? "bg-[#f9fafb]" : "bg-white"}`}
               >
-                <td className="px-4 py-3 text-sm font-medium text-gray-800">
+                <td className="px-4 py-3 text-sm font-medium text-gray-700">
                   {d.nome}
                 </td>
                 <td className="px-4 py-3 text-sm text-gray-700">
-                  <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-pink-50 text-pink-700">
+                  <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-brand/10 text-brand">
                     {d.categoria}
                   </span>
                 </td>
@@ -157,7 +157,7 @@ export default function DocumentiPage() {
                 <td className="px-4 py-3 text-xs text-gray-500 max-w-[200px] truncate">
                   <button
                     onClick={() => setPreview(d)}
-                    className="hover:text-pink-600 hover:underline text-left"
+                    className="hover:text-brand hover:underline text-left"
                   >
                     {d.fileName}
                   </button>
@@ -170,14 +170,14 @@ export default function DocumentiPage() {
                     <button
                       onClick={() => downloadDoc(d)}
                       title="Scarica"
-                      className="p-1.5 rounded-lg text-gray-400 hover:text-pink-600 hover:bg-pink-50 transition-colors"
+                      className="p-1.5 rounded-lg text-gray-400 hover:text-brand hover:bg-brand/10 transition-colors"
                     >
                       <Download className="w-4 h-4" />
                     </button>
                     <button
                       onClick={() => del(d.id)}
                       title="Elimina"
-                      className="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                      className="p-1.5 rounded-lg text-gray-400 hover:text-bad hover:bg-bad/10 transition-colors"
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
@@ -293,8 +293,8 @@ function UploadDocumentoModal({
           onClick={() => document.getElementById("doc-file-input")?.click()}
           className={`border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-colors ${
             dragOver
-              ? "border-pink-400 bg-pink-50"
-              : "border-gray-300 hover:border-pink-300 hover:bg-gray-50"
+              ? "border-brand/40 bg-brand/10"
+              : "border-gray-300 hover:border-brand/40 hover:bg-gray-50"
           }`}
         >
           <Upload className="w-8 h-8 text-gray-400 mx-auto mb-2" />
@@ -324,7 +324,7 @@ function UploadDocumentoModal({
               value={nome}
               onChange={(e) => setNome(e.target.value)}
               placeholder="Es. Visura camerale 2025"
-              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-300"
+              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30"
             />
           </div>
           <div>
@@ -336,7 +336,7 @@ function UploadDocumentoModal({
               value={categoria}
               onChange={(e) => setCategoria(e.target.value)}
               placeholder="Es. Visura, Contratto, Certificato..."
-              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-300"
+              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30"
             />
           </div>
           {tab === "soci" && (
@@ -347,7 +347,7 @@ function UploadDocumentoModal({
               <select
                 value={socio}
                 onChange={(e) => setSocio(e.target.value)}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-300"
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30"
               >
                 {SOCI.map((s) => (
                   <option key={s} value={s}>
@@ -358,7 +358,7 @@ function UploadDocumentoModal({
             </div>
           )}
           {error && (
-            <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+            <div className="text-sm text-bad bg-bad/10 border border-bad/30 rounded-lg px-3 py-2">
               {error}
             </div>
           )}

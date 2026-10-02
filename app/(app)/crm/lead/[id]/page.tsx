@@ -74,7 +74,7 @@ const ICONE: Record<string, typeof Phone> = {
   task: CheckSquare,
 };
 const inputCls =
-  "w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-300 bg-white";
+  "w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30 bg-white";
 const labelCls = "text-xs font-medium text-gray-600 block mb-1";
 
 export default function LeadDettaglioPage() {
@@ -129,7 +129,7 @@ export default function LeadDettaglioPage() {
 
   return (
     <div className="space-y-5">
-      {msg && <div className="text-sm rounded-lg px-3 py-2 border bg-emerald-50 border-emerald-200 text-emerald-700">{msg}</div>}
+      {msg && <div className="text-sm rounded-lg px-3 py-2 border bg-ok/10 border-ok/30 text-ok">{msg}</div>}
 
       <Link href="/crm/lead" className="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-900">
         <ArrowLeft className="w-4 h-4" /> Lead
@@ -184,7 +184,7 @@ export default function LeadDettaglioPage() {
           <button onClick={() => setEdit(true)} className="p-2 rounded-xl text-gray-500 hover:bg-gray-100" title="Modifica">
             <Pencil className="w-4 h-4" />
           </button>
-          <button onClick={del} className="p-2 rounded-xl text-gray-500 hover:text-red-600 hover:bg-red-50" title="Elimina">
+          <button onClick={del} className="p-2 rounded-xl text-gray-500 hover:text-bad hover:bg-bad/10" title="Elimina">
             <Trash2 className="w-4 h-4" />
           </button>
         </div>
@@ -196,7 +196,7 @@ export default function LeadDettaglioPage() {
           <Referenti lead={lead} onChanged={load} />
 
           <section className="glass-card rounded-2xl p-5">
-            <h2 className="text-sm font-bold text-gray-900 mb-3">Preventivi</h2>
+            <h2 className="text-sm font-semibold text-gray-900 mb-3">Preventivi</h2>
             {lead.preventivi.length === 0 ? (
               <p className="text-sm text-gray-400">Nessun preventivo collegato.</p>
             ) : (
@@ -219,7 +219,7 @@ export default function LeadDettaglioPage() {
 
           {(lead.note || lead.appunti.length > 0) && (
             <section className="glass-card rounded-2xl p-5 space-y-2">
-              <h2 className="text-sm font-bold text-gray-900">Note</h2>
+              <h2 className="text-sm font-semibold text-gray-900">Note</h2>
               {lead.note && <p className="text-sm text-gray-700 whitespace-pre-wrap">{lead.note}</p>}
               {lead.appunti.map((a) => (
                 <p key={a.id} className="text-sm text-gray-600 border-l-2 border-gray-200 pl-3">
@@ -234,13 +234,13 @@ export default function LeadDettaglioPage() {
         <aside className="space-y-5">
           <section className="glass-card rounded-2xl p-5" style={{ borderColor: st.color }}>
             <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">Consiglio</p>
-            <p className="text-sm text-gray-800 mt-1">{st.consiglio}</p>
+            <p className="text-sm text-gray-700 mt-1">{st.consiglio}</p>
             {(lead.prossimaAzione || lead.prossimaAzioneData) && (
               <div className="mt-3 text-sm">
                 <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">Prossima azione</p>
                 <p className="text-gray-900 font-medium">{lead.prossimaAzione ?? "—"}</p>
                 {lead.prossimaAzioneData && (
-                  <p className={cn("text-xs", new Date(lead.prossimaAzioneData).getTime() < Date.now() ? "text-red-600 font-semibold" : "text-gray-500")}>
+                  <p className={cn("text-xs", new Date(lead.prossimaAzioneData).getTime() < Date.now() ? "text-bad font-semibold" : "text-gray-500")}>
                     entro il {new Date(lead.prossimaAzioneData).toLocaleDateString("it-IT")}
                   </p>
                 )}
@@ -248,7 +248,7 @@ export default function LeadDettaglioPage() {
             )}
           </section>
           <section className="glass-card rounded-2xl p-5 space-y-2 text-sm">
-            <h2 className="text-sm font-bold text-gray-900">Informazioni</h2>
+            <h2 className="text-sm font-semibold text-gray-900">Informazioni</h2>
             {[
               ["Email", lead.email],
               ["Telefono", lead.telefono],
@@ -263,7 +263,7 @@ export default function LeadDettaglioPage() {
             ].map(([k, v]) => (
               <div key={k as string} className="flex justify-between gap-3 border-b border-gray-50 py-1.5 last:border-0">
                 <span className="text-gray-500">{k}</span>
-                <span className="text-gray-900 text-right break-all">{v || <span className="text-gray-300">—</span>}</span>
+                <span className="text-gray-900 text-right break-all">{v || <span className="text-gray-400">—</span>}</span>
               </div>
             ))}
           </section>
@@ -342,7 +342,7 @@ function Attivita({ lead, onChanged }: { lead: Lead; onChanged: () => void }) {
 
   return (
     <section className="glass-card rounded-2xl p-5 space-y-4">
-      <h2 className="text-sm font-bold text-gray-900">Attività</h2>
+      <h2 className="text-sm font-semibold text-gray-900">Attività</h2>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
         <select value={tipo} onChange={(e) => setTipo(e.target.value)} className={inputCls}>
           {TIPI_ATTIVITA.map((t) => (
@@ -365,7 +365,7 @@ function Attivita({ lead, onChanged }: { lead: Lead; onChanged: () => void }) {
           </button>
         </div>
       </div>
-      {err && <div className="text-sm text-red-600">{err}</div>}
+      {err && <div className="text-sm text-bad">{err}</div>}
 
       <div className="space-y-3">
         {lead.attivita.length === 0 && <p className="text-sm text-gray-400">Nessuna attività registrata.</p>}
@@ -397,11 +397,11 @@ function Attivita({ lead, onChanged }: { lead: Lead; onChanged: () => void }) {
               </div>
               <div className="flex items-center gap-1 shrink-0">
                 {(a.prossimaAzione || a.prossimaAzioneData) && (
-                  <button onClick={() => completa(a)} className={cn("p-1.5 rounded-lg", a.completata ? "text-emerald-600" : "text-gray-400 hover:text-emerald-600")} title={a.completata ? "Riapri" : "Segna fatta"}>
+                  <button onClick={() => completa(a)} className={cn("p-1.5 rounded-lg", a.completata ? "text-ok" : "text-gray-400 hover:text-ok")} title={a.completata ? "Riapri" : "Segna fatta"}>
                     <Check className="w-4 h-4" />
                   </button>
                 )}
-                <button onClick={() => elimina(a)} className="p-1.5 rounded-lg text-gray-300 hover:text-red-500" title="Elimina">
+                <button onClick={() => elimina(a)} className="p-1.5 rounded-lg text-gray-400 hover:text-bad" title="Elimina">
                   <X className="w-4 h-4" />
                 </button>
               </div>
@@ -435,8 +435,8 @@ function Referenti({ lead, onChanged }: { lead: Lead; onChanged: () => void }) {
   return (
     <section className="glass-card rounded-2xl p-5 space-y-3">
       <div className="flex items-center justify-between">
-        <h2 className="text-sm font-bold text-gray-900">Referenti</h2>
-        <button onClick={() => setOpen((o) => !o)} className="text-xs font-semibold text-pink-600 hover:text-pink-700">
+        <h2 className="text-sm font-semibold text-gray-900">Referenti</h2>
+        <button onClick={() => setOpen((o) => !o)} className="text-xs font-semibold text-brand hover:text-brand">
           {open ? "Chiudi" : "+ Aggiungi"}
         </button>
       </div>
@@ -463,7 +463,7 @@ function Referenti({ lead, onChanged }: { lead: Lead; onChanged: () => void }) {
                 {c.ruolo && <span className="text-gray-500"> · {c.ruolo}</span>}
                 <div className="text-xs text-gray-500">{[c.email, c.telefono].filter(Boolean).join(" · ")}</div>
               </div>
-              <button onClick={() => del(c)} className="p-1.5 text-gray-300 hover:text-red-500"><X className="w-4 h-4" /></button>
+              <button onClick={() => del(c)} className="p-1.5 text-gray-400 hover:text-bad"><X className="w-4 h-4" /></button>
             </div>
           ))}
         </div>
@@ -504,7 +504,7 @@ function CollegaClienteModal({ leadId, onClose, onDone }: { leadId: number; onCl
           </select>
         </div>
         <div className="flex justify-end gap-2">
-          <button onClick={onClose} className="text-sm text-gray-500 hover:text-gray-800 px-3 py-2">Annulla</button>
+          <button onClick={onClose} className="text-sm text-gray-500 hover:text-gray-700 px-3 py-2">Annulla</button>
           <button onClick={salva} disabled={!sel} className="glass-btn-primary text-white text-sm font-medium px-5 py-2 rounded-xl disabled:opacity-60">Collega</button>
         </div>
       </div>

@@ -555,7 +555,7 @@ export default function FatturePage() {
               onClick={() => setShowImport(true)}
               className="flex items-center gap-1.5 border border-gray-200 text-gray-600 text-sm font-medium px-3 py-2 rounded-xl hover:bg-gray-50 transition-colors"
             >
-              <Upload className="w-4 h-4 text-pink-600" /> Importa Fatture
+              <Upload className="w-4 h-4 text-brand" /> Importa Fatture
             </button>
             <button
               onClick={openNew}
@@ -587,8 +587,8 @@ export default function FatturePage() {
               className={cn(
                 "flex items-center gap-2 pb-3 -mb-px text-[15px] font-semibold border-b-2 whitespace-nowrap transition-colors",
                 attiva
-                  ? "border-pink-600 text-pink-600"
-                  : "border-transparent text-gray-500 hover:text-gray-800",
+                  ? "border-brand text-brand"
+                  : "border-transparent text-gray-500 hover:text-gray-700",
               )}
             >
               <Icon className="w-4 h-4" />
@@ -596,8 +596,8 @@ export default function FatturePage() {
               {t.count !== undefined && (
                 <span
                   className={cn(
-                    "text-xs font-bold px-2 py-0.5 rounded-full",
-                    attiva ? "bg-pink-50 text-pink-600" : "bg-gray-100 text-gray-500",
+                    "text-xs font-semibold px-2 py-0.5 rounded-full",
+                    attiva ? "bg-brand/10 text-brand" : "bg-gray-100 text-gray-500",
                   )}
                 >
                   {t.count}
@@ -614,11 +614,11 @@ export default function FatturePage() {
       <div className="grid grid-cols-3 gap-4">
         {[
           { label: "Totale", val: fmt(totale), color: "text-gray-900" },
-          { label: "Incassato", val: fmt(pagate), color: "text-emerald-600" },
+          { label: "Incassato", val: fmt(pagate), color: "text-ok" },
           {
             label: "Da Incassare",
             val: fmt(daIncassare),
-            color: "text-amber-600",
+            color: "text-warn",
           },
         ].map((k) => (
           <div key={k.label} className="glass-card rounded-2xl p-4">
@@ -635,7 +635,7 @@ export default function FatturePage() {
         <select
           value={filtroMese}
           onChange={(e) => setFiltroMese(parseInt(e.target.value))}
-          className="text-sm border border-gray-200 rounded-lg px-3 py-2 bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-pink-300"
+          className="text-sm border border-gray-200 rounded-lg px-3 py-2 bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-brand/30"
         >
           <option value={0}>Tutti i mesi</option>
           {MESI.map((m, i) => (
@@ -648,7 +648,7 @@ export default function FatturePage() {
           <select
             value={filtroClienteId}
             onChange={(e) => setFiltroClienteId(parseInt(e.target.value) || 0)}
-            className="text-sm border border-gray-200 rounded-lg px-3 py-2 bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-pink-300 min-w-[180px]"
+            className="text-sm border border-gray-200 rounded-lg px-3 py-2 bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-brand/30 min-w-[180px]"
           >
             <option value={0}>Tutti i clienti</option>
             {[...clienti]
@@ -663,7 +663,7 @@ export default function FatturePage() {
             <button
               onClick={() => setFiltroClienteId(0)}
               title="Rimuovi filtro cliente"
-              className="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+              className="p-1.5 rounded-lg text-gray-400 hover:text-bad hover:bg-bad/10 transition-colors"
             >
               <X className="w-4 h-4" />
             </button>
@@ -672,7 +672,7 @@ export default function FatturePage() {
         <select
           value={azienda}
           onChange={(e) => setAzienda(e.target.value)}
-          className="text-sm border border-gray-200 rounded-lg px-3 py-2 bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-pink-300"
+          className="text-sm border border-gray-200 rounded-lg px-3 py-2 bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-brand/30"
         >
           <option value="">Tutti i canali</option>
           {CANALI.map((a) => (
@@ -690,7 +690,7 @@ export default function FatturePage() {
               style={
                 filtroPagato === v
                   ? { background: "#e8308a", color: "#fff" }
-                  : { color: "#64748b" }
+                  : { color: "#6b7280" }
               }
             >
               {v === "tutti"
@@ -770,8 +770,8 @@ export default function FatturePage() {
                 title={exportMode ? "Click per selezionare · Shift+click per un intervallo" : undefined}
                 className={`border-b border-gray-50 transition-colors ${exportMode ? "cursor-pointer" : ""} ${
                   exportMode && selectedIds.has(f.id)
-                    ? "bg-pink-50 hover:bg-pink-100"
-                    : `${i % 2 === 1 ? "bg-[#F9F9F9]" : "bg-white"} hover:bg-gray-50`
+                    ? "bg-brand/10 hover:bg-brand/15"
+                    : `${i % 2 === 1 ? "bg-[#f9fafb]" : "bg-white"} hover:bg-gray-50`
                 }`}
               >
                 {exportMode && (
@@ -812,12 +812,12 @@ export default function FatturePage() {
                 <td className="px-4 py-3 text-sm">
                   {f.scadenza ? (
                     <span
-                      className={`text-xs font-medium ${isScaduta(f) ? "text-red-600" : isInScadenza(f) ? "text-amber-600" : "text-gray-500"}`}
+                      className={`text-xs font-medium ${isScaduta(f) ? "text-bad" : isInScadenza(f) ? "text-warn" : "text-gray-500"}`}
                     >
                       {new Date(f.scadenza).toLocaleDateString("it-IT")}
                     </span>
                   ) : (
-                    <span className="text-gray-300">—</span>
+                    <span className="text-gray-400">—</span>
                   )}
                 </td>
                 <td className="px-4 py-3 text-sm font-semibold text-gray-900 text-right">
@@ -874,20 +874,20 @@ export default function FatturePage() {
                       <button
                         onClick={() => setAccontoTarget(f)}
                         title="Registra acconto"
-                        className="p-1.5 rounded-lg text-gray-400 hover:text-orange-600 hover:bg-orange-50 transition-colors"
+                        className="p-1.5 rounded-lg text-gray-400 hover:text-partial hover:bg-partial/10 transition-colors"
                       >
                         <Wallet className="w-4 h-4" />
                       </button>
                     )}
                     <button
                       onClick={() => openEdit(f)}
-                      className="p-1.5 rounded-lg text-gray-400 hover:text-pink-600 hover:bg-pink-50 transition-colors"
+                      className="p-1.5 rounded-lg text-gray-400 hover:text-brand hover:bg-brand/10 transition-colors"
                     >
                       <Pencil className="w-4 h-4" />
                     </button>
                     <button
                       onClick={() => del(f.id)}
-                      className="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                      className="p-1.5 rounded-lg text-gray-400 hover:text-bad hover:bg-bad/10 transition-colors"
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
@@ -933,7 +933,7 @@ export default function FatturePage() {
               <button
                 type="button"
                 onClick={() => setTutte((t) => !t)}
-                className="text-pink-600 underline underline-offset-4 hover:text-pink-700"
+                className="text-brand underline underline-offset-4 hover:text-brand"
               >
                 {tutte ? "torna alle spuntate" : `oppure tutte quelle del filtro (${filtered.length})`}
               </button>
@@ -947,7 +947,7 @@ export default function FatturePage() {
                 disabled={!canExport}
                 className="flex items-center gap-1.5 border border-gray-200 text-gray-700 text-sm font-medium px-3 py-1.5 rounded-xl hover:bg-gray-50 transition-colors disabled:opacity-40"
               >
-                <FileSpreadsheet className="w-4 h-4 text-emerald-600" /> Excel
+                <FileSpreadsheet className="w-4 h-4 text-ok" /> Excel
               </button>
               <button
                 onClick={() => runExportPDF(exportList)}
@@ -966,7 +966,7 @@ export default function FatturePage() {
                 title="Fatture ai clienti SMH con ritenuta, netto e fattura diretta da emettere"
                 className="flex items-center gap-1.5 border border-gray-200 text-gray-700 text-sm font-medium px-3 py-1.5 rounded-xl hover:bg-gray-50 transition-colors disabled:opacity-40"
               >
-                <FileSpreadsheet className="w-4 h-4 text-emerald-600" /> Excel
+                <FileSpreadsheet className="w-4 h-4 text-ok" /> Excel
               </button>
               <button
                 onClick={() => runRapportoSmh(exportList, "pdf")}
@@ -974,11 +974,11 @@ export default function FatturePage() {
                 title="Fatture ai clienti SMH con ritenuta, netto e fattura diretta da emettere"
                 className="glass-btn-secondary flex items-center gap-1.5 text-gray-700 text-sm font-medium px-3 py-1.5 rounded-xl disabled:opacity-40"
               >
-                <FileText className="w-4 h-4 text-pink-600" /> PDF
+                <FileText className="w-4 h-4 text-brand" /> PDF
               </button>
               <button
                 onClick={esciExport}
-                className="text-sm font-medium text-gray-500 hover:text-gray-800 px-3 py-1.5"
+                className="text-sm font-medium text-gray-500 hover:text-gray-700 px-3 py-1.5"
               >
                 Annulla
               </button>
@@ -996,9 +996,9 @@ export default function FatturePage() {
       {(tab === "bozze" || tab === "proforma") && (
         <div className="glass-card rounded-2xl p-12 text-center text-sm text-gray-400">
           {tab === "bozze" ? (
-            <PencilLine className="w-10 h-10 mx-auto mb-2 text-gray-300" />
+            <PencilLine className="w-10 h-10 mx-auto mb-2 text-gray-400" />
           ) : (
-            <FileText className="w-10 h-10 mx-auto mb-2 text-gray-300" />
+            <FileText className="w-10 h-10 mx-auto mb-2 text-gray-400" />
           )}
           {tab === "bozze"
             ? "Le bozze di fattura arrivano con la creazione fatture (prossimo piano)."
@@ -1025,7 +1025,7 @@ export default function FatturePage() {
                     setForm((f) => ({ ...f, numero: e.target.value }))
                   }
                   placeholder="Es. F202641"
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-pink-300"
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-brand/30"
                 />
               </div>
               <div>
@@ -1055,8 +1055,8 @@ export default function FatturePage() {
                               }
                             : {
                                 background: "#fff",
-                                borderColor: "#e2e8f0",
-                                color: "#94a3b8",
+                                borderColor: "#e5e7eb",
+                                color: "#9ca3af",
                               }
                         }
                       >
@@ -1075,7 +1075,7 @@ export default function FatturePage() {
                   onChange={(e) =>
                     setForm((f) => ({ ...f, clienteId: e.target.value }))
                   }
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-300"
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30"
                 >
                   <option value="">Seleziona cliente...</option>
                   {clienti.map((c) => (
@@ -1095,7 +1095,7 @@ export default function FatturePage() {
                     onChange={(e) =>
                       setForm((f) => ({ ...f, mese: parseInt(e.target.value) }))
                     }
-                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-300"
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30"
                   >
                     {MESI_NUMS.map((m) => (
                       <option key={m} value={m}>
@@ -1116,7 +1116,7 @@ export default function FatturePage() {
                       setForm((f) => ({ ...f, importo: e.target.value }))
                     }
                     placeholder="0.00"
-                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-300"
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30"
                   />
                 </div>
               </div>
@@ -1144,8 +1144,8 @@ export default function FatturePage() {
                               }
                             : {
                                 background: "#fff",
-                                borderColor: "#e2e8f0",
-                                color: "#94a3b8",
+                                borderColor: "#e5e7eb",
+                                color: "#9ca3af",
                               }
                         }
                       >
@@ -1178,7 +1178,7 @@ export default function FatturePage() {
                       <span>TOTALE</span>
                       <span>{fmt(tot)}</span>
                     </div>
-                    <div className="flex justify-between text-emerald-700 pt-1">
+                    <div className="flex justify-between text-ok pt-1">
                       <span>Guadagno netto</span>
                       <span className="font-semibold">{fmt(sub)}</span>
                     </div>
@@ -1196,7 +1196,7 @@ export default function FatturePage() {
                   onChange={(e) =>
                     setForm((f) => ({ ...f, scadenza: e.target.value }))
                   }
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-300"
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30"
                 />
               </div>
               <div>
@@ -1208,7 +1208,7 @@ export default function FatturePage() {
                   onChange={(e) =>
                     setForm((f) => ({ ...f, commercialeId: e.target.value }))
                   }
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-300 bg-white"
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30 bg-white"
                 >
                   <option value="">— nessuno —</option>
                   {commerciali.map((c) => (
@@ -1323,20 +1323,20 @@ function AccontoModal({
           </p>
         </div>
 
-        <div className="bg-orange-50 border border-orange-200 rounded-lg p-3 text-sm space-y-1">
+        <div className="bg-partial/10 border border-partial/30 rounded-lg p-3 text-sm space-y-1">
           <div className="flex justify-between text-gray-700">
             <span>Importo fattura</span>
             <span className="font-semibold">{fmt(fattura.importo)}</span>
           </div>
           <div className="flex justify-between text-gray-700">
             <span>Già ricevuto</span>
-            <span className="font-semibold text-emerald-700">
+            <span className="font-semibold text-ok">
               {fmt(giaPagato)}
             </span>
           </div>
-          <div className="flex justify-between font-bold text-gray-900 border-t border-orange-200 pt-1">
+          <div className="flex justify-between font-bold text-gray-900 border-t border-partial/30 pt-1">
             <span>Residuo da incassare</span>
-            <span className="text-orange-700">{fmt(residuoCorrente)}</span>
+            <span className="text-partial">{fmt(residuoCorrente)}</span>
           </div>
         </div>
 
@@ -1368,7 +1368,7 @@ function AccontoModal({
                         onSaved();
                         onClose();
                       }}
-                      className="text-gray-400 hover:text-red-600"
+                      className="text-gray-400 hover:text-bad"
                     >
                       <Trash2 className="w-3 h-3" />
                     </button>
@@ -1390,7 +1390,7 @@ function AccontoModal({
               value={importo}
               onChange={(e) => setImporto(e.target.value)}
               placeholder="0.00"
-              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-300"
+              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30"
             />
           </div>
           <div>
@@ -1401,7 +1401,7 @@ function AccontoModal({
               type="date"
               value={data}
               onChange={(e) => setData(e.target.value)}
-              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-300"
+              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30"
             />
           </div>
           <div>
@@ -1413,7 +1413,7 @@ function AccontoModal({
               value={metodoPagamento}
               onChange={(e) => setMetodoPagamento(e.target.value)}
               placeholder="Bonifico, Contanti, ..."
-              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-300"
+              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30"
             />
           </div>
           <div>
@@ -1424,7 +1424,7 @@ function AccontoModal({
               value={note}
               onChange={(e) => setNote(e.target.value)}
               rows={2}
-              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-300"
+              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30"
             />
           </div>
         </div>

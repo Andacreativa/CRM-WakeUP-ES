@@ -209,15 +209,15 @@ export default function ScadenzePage() {
   };
 
   const kpi = [
-    { label: "Scadute", rows: scadute, color: "#dc2626", icon: AlertTriangle },
-    { label: "Urgenti (7 gg)", rows: urgenti, color: "#d97706", icon: Clock },
-    { label: "Prossime (30 gg)", rows: prossime, color: "#2563eb", icon: Clock },
+    { label: "Scadute", rows: scadute, color: "#ef4444", icon: AlertTriangle },
+    { label: "Urgenti (7 gg)", rows: urgenti, color: "#f59e0b", icon: Clock },
+    { label: "Prossime (30 gg)", rows: prossime, color: "#3b82f6", icon: Clock },
   ];
 
   return (
     <div className="space-y-6">
       {msg && (
-        <div className="text-sm rounded-lg px-3 py-2 border bg-emerald-50 border-emerald-200 text-emerald-700">
+        <div className="text-sm rounded-lg px-3 py-2 border bg-ok/10 border-ok/30 text-ok">
           {msg}
         </div>
       )}
@@ -230,7 +230,7 @@ export default function ScadenzePage() {
           <select
             value={filtroAzienda}
             onChange={(e) => setFiltroAzienda(e.target.value)}
-            className="text-sm border border-gray-200 rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-pink-300"
+            className="text-sm border border-gray-200 rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-brand/30"
           >
             <option value="">Tutte le aziende</option>
             {AZIENDE.map((a) => (
@@ -240,7 +240,7 @@ export default function ScadenzePage() {
           <select
             value={filtroCliente}
             onChange={(e) => setFiltroCliente(e.target.value)}
-            className="text-sm border border-gray-200 rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-pink-300 max-w-[220px]"
+            className="text-sm border border-gray-200 rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-brand/30 max-w-[220px]"
           >
             <option value="">Tutti i clienti</option>
             {clientiUnici.map((c) => (
@@ -268,7 +268,7 @@ export default function ScadenzePage() {
       </div>
 
       {maiSollecitate.length > 0 && (
-        <div className="text-sm rounded-xl px-4 py-3 border bg-amber-50 border-amber-200 text-amber-800 flex items-center gap-2">
+        <div className="text-sm rounded-xl px-4 py-3 border bg-warn/10 border-warn/30 text-warn flex items-center gap-2">
           <AlertTriangle className="w-4 h-4 shrink-0" />
           {maiSollecitate.length} {maiSollecitate.length === 1 ? "fattura scaduta non è mai stata sollecitata" : "fatture scadute non sono mai state sollecitate"}
           {" · "}
@@ -288,7 +288,7 @@ export default function ScadenzePage() {
               key={val}
               onClick={() => setFiltroStato(val as typeof filtroStato)}
               className="text-sm px-3 py-1.5 rounded-lg font-medium transition-colors"
-              style={filtroStato === val ? { background: "#e8308a", color: "#fff" } : { color: "#64748b" }}
+              style={filtroStato === val ? { background: "#e8308a", color: "#fff" } : { color: "#6b7280" }}
             >
               {label}
             </button>
@@ -307,7 +307,7 @@ export default function ScadenzePage() {
             disabled={selected.size === 0}
             className="flex items-center gap-1.5 border border-gray-200 text-gray-600 text-sm font-medium px-3 py-2 rounded-xl hover:bg-gray-50 disabled:opacity-50"
           >
-            <Download className="w-4 h-4 text-red-500" />
+            <Download className="w-4 h-4 text-bad" />
             Esporta PDF{selected.size > 0 ? ` (${selected.size})` : ""}
           </button>
         </div>
@@ -315,7 +315,7 @@ export default function ScadenzePage() {
 
       {filtered.length === 0 ? (
         <div className="glass-card rounded-2xl p-16 text-center">
-          <CheckCircle className="w-12 h-12 text-emerald-400 mx-auto mb-3" />
+          <CheckCircle className="w-12 h-12 text-ok mx-auto mb-3" />
           <p className="text-gray-600 font-medium">Nessuna scadenza pendente</p>
           <p className="text-gray-400 text-sm mt-1">Tutte le fatture con scadenza sono in ordine</p>
         </div>
@@ -367,13 +367,13 @@ export default function ScadenzePage() {
                       </td>
                       <td className="px-4 py-3 text-sm font-mono text-gray-600 whitespace-nowrap">{f.numero ?? "—"}</td>
                       <td className="px-4 py-3 text-right whitespace-nowrap">
-                        <div className="text-sm font-bold text-gray-900">{fmt(residuo(f))}</div>
-                        {acc > 0 && <div className="text-[10px] text-amber-700">acconto {fmt(acc)} su {fmt(f.importo)}</div>}
+                        <div className="text-sm font-semibold text-gray-900">{fmt(residuo(f))}</div>
+                        {acc > 0 && <div className="text-[10px] text-warn">acconto {fmt(acc)} su {fmt(f.importo)}</div>}
                       </td>
                       <td className="px-4 py-3 text-sm text-gray-700 whitespace-nowrap">
                         {new Date(f.scadenza!).toLocaleDateString("it-IT")}
                       </td>
-                      <td className={cn("px-4 py-3 text-sm text-right font-semibold whitespace-nowrap", g < 0 ? "text-red-600" : "text-gray-700")}>
+                      <td className={cn("px-4 py-3 text-sm text-right font-semibold whitespace-nowrap", g < 0 ? "text-bad" : "text-gray-700")}>
                         {g > 0 ? `+${g}` : g} gg
                       </td>
                       <td className="px-4 py-3">
@@ -388,11 +388,11 @@ export default function ScadenzePage() {
                             <span className="text-gray-400">({n}{ultimo.canale !== "email" ? ` · ${ultimo.canale}` : ""})</span>
                           </>
                         ) : f.stato === "scaduta" ? (
-                          <span className="pill-late text-[11px] font-semibold px-2 py-0.5 rounded-md">
+                          <span className="pill-wait text-[11px] font-semibold px-2 py-0.5 rounded-md">
                             mai sollecitata
                           </span>
                         ) : (
-                          <span className="text-gray-300">—</span>
+                          <span className="text-gray-400">—</span>
                         )}
                       </td>
                       <td className="px-4 py-3">
@@ -400,7 +400,7 @@ export default function ScadenzePage() {
                           <button
                             onClick={() => sollecita(f)}
                             disabled={!email || !cfg}
-                            className="p-1.5 rounded-lg text-gray-400 hover:text-pink-600 hover:bg-pink-50 disabled:opacity-30 disabled:cursor-not-allowed"
+                            className="p-1.5 rounded-lg text-gray-400 hover:text-brand hover:bg-brand/10 disabled:opacity-30 disabled:cursor-not-allowed"
                             title={email ? "Sollecita via email (apre la posta e registra il sollecito)" : "Il cliente non ha un'email"}
                           >
                             <Send className="w-4 h-4" />
@@ -414,7 +414,7 @@ export default function ScadenzePage() {
                           </button>
                           <button
                             onClick={() => segnaPagata(f)}
-                            className="p-1.5 rounded-lg text-gray-400 hover:text-emerald-600 hover:bg-emerald-50"
+                            className="p-1.5 rounded-lg text-gray-400 hover:text-ok hover:bg-ok/10"
                             title="Segna pagata"
                           >
                             <Check className="w-4 h-4" />

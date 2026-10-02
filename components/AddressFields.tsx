@@ -68,7 +68,7 @@ export default function AddressFields({ value, onChange, inputClass }: Props) {
   const [loading, setLoading] = useState(false);
   const cls =
     inputClass ??
-    "w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-300";
+    "w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30";
 
   const fetchCap = async (cap: string, paese: string) => {
     const iso = COUNTRY_TO_ISO[paese];

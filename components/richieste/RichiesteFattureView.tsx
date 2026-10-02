@@ -143,10 +143,10 @@ const emptyForm = () => ({
 type FormState = ReturnType<typeof emptyForm>;
 
 const inputCls =
-  "w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-300 bg-white";
+  "w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30 bg-white";
 const labelCls = "text-xs font-medium text-gray-600 block mb-1";
 const selectCls =
-  "text-sm border border-gray-200 rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-pink-300";
+  "text-sm border border-gray-200 rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-brand/30";
 
 export default function RichiesteFattureView({
   mode,
@@ -377,8 +377,8 @@ export default function RichiesteFattureView({
           className={cn(
             "text-sm rounded-lg px-3 py-2 border",
             msg.kind === "ok"
-              ? "bg-emerald-50 border-emerald-200 text-emerald-700"
-              : "bg-red-50 border-red-200 text-red-600",
+              ? "bg-ok/10 border-ok/30 text-ok"
+              : "bg-bad/10 border-bad/30 text-bad",
           )}
         >
           {msg.text}
@@ -415,9 +415,9 @@ export default function RichiesteFattureView({
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {[
           { label: "Da emettere", value: fmt(kpi.daEmettere), color: "#e8308a" },
-          { label: "Da validare", value: String(kpi.daValidare), color: "#b45309" },
-          { label: "Da fare", value: String(kpi.daFare), color: "#1d4ed8" },
-          { label: "Da incassare", value: fmt(kpi.daIncassare), color: "#d97706" },
+          { label: "Da validare", value: String(kpi.daValidare), color: "#f59e0b" },
+          { label: "Da fare", value: String(kpi.daFare), color: "#3b82f6" },
+          { label: "Da incassare", value: fmt(kpi.daIncassare), color: "#f59e0b" },
         ].map((k) => (
           <div key={k.label} className="glass-card rounded-2xl p-4">
             <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">
@@ -519,7 +519,7 @@ export default function RichiesteFattureView({
               {!loading && paged.length === 0 && (
                 <tr>
                   <td colSpan={9} className="px-4 py-12 text-center text-sm text-gray-400">
-                    <Receipt className="w-10 h-10 mx-auto mb-2 text-gray-300" />
+                    <Receipt className="w-10 h-10 mx-auto mb-2 text-gray-400" />
                     Nessuna richiesta per i filtri scelti
                   </td>
                 </tr>
@@ -564,7 +564,7 @@ export default function RichiesteFattureView({
                       </div>
                     </td>
                     <td className="px-4 py-3 text-right whitespace-nowrap">
-                      <div className="text-sm font-bold text-gray-900">{fmt(r.totale)}</div>
+                      <div className="text-sm font-semibold text-gray-900">{fmt(r.totale)}</div>
                       <div className="text-[11px] text-gray-400">
                         imp. {fmt(r.imponibile)}
                         {r.iva > 0 && ` · IGIC ${r.iva}%`}
@@ -597,7 +597,7 @@ export default function RichiesteFattureView({
                           </Link>
                           <button
                             onClick={() => scollega(r)}
-                            className="p-1 text-gray-400 hover:text-red-500"
+                            className="p-1 text-gray-400 hover:text-bad"
                             title="Scollega fattura"
                           >
                             <Unlink className="w-3.5 h-3.5" />
@@ -652,7 +652,7 @@ export default function RichiesteFattureView({
                           {r.incassataEff ? "Incassata" : "Da incassare"}
                         </button>
                       ) : (
-                        <span className="text-[11px] text-gray-300">—</span>
+                        <span className="text-[11px] text-gray-400">—</span>
                       )}
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">
@@ -666,7 +666,7 @@ export default function RichiesteFattureView({
                         </button>
                         <button
                           onClick={() => del(r)}
-                          className="p-1.5 text-gray-400 hover:text-red-500"
+                          className="p-1.5 text-gray-400 hover:text-bad"
                           title="Elimina"
                         >
                           <Trash2 className="w-4 h-4" />
@@ -771,7 +771,7 @@ export default function RichiesteFattureView({
                         style={
                           active
                             ? { background: "#e8308a", color: "#fff", borderColor: "#e8308a" }
-                            : { background: "#fff", borderColor: "#e2e8f0", color: "#94a3b8" }
+                            : { background: "#fff", borderColor: "#e5e7eb", color: "#9ca3af" }
                         }
                       >
                         {canaleLabel(a)}
@@ -791,7 +791,7 @@ export default function RichiesteFattureView({
                   onClick={() =>
                     setForm((f) => ({ ...f, voci: [...f.voci, { descrizione: "", importo: "" }] }))
                   }
-                  className="text-xs font-semibold text-pink-600 hover:text-pink-700 flex items-center gap-1"
+                  className="text-xs font-semibold text-brand hover:text-brand flex items-center gap-1"
                 >
                   <Plus className="w-3.5 h-3.5" /> Aggiungi voce
                 </button>
@@ -832,7 +832,7 @@ export default function RichiesteFattureView({
                           voci: f.voci.length > 1 ? f.voci.filter((_, j) => j !== i) : f.voci,
                         }))
                       }
-                      className="p-2 text-gray-400 hover:text-red-500"
+                      className="p-2 text-gray-400 hover:text-bad"
                       title="Rimuovi voce"
                     >
                       <Trash2 className="w-4 h-4" />
@@ -860,7 +860,7 @@ export default function RichiesteFattureView({
                         style={
                           active
                             ? { background: "#e8308a", color: "#fff", borderColor: "#e8308a" }
-                            : { background: "#fff", borderColor: "#e2e8f0", color: "#94a3b8" }
+                            : { background: "#fff", borderColor: "#e5e7eb", color: "#9ca3af" }
                         }
                       >
                         {o.label}
@@ -966,7 +966,7 @@ export default function RichiesteFattureView({
                 )}
                 <button
                   onClick={() => setShowForm(false)}
-                  className="text-sm text-gray-500 hover:text-gray-800 px-3 py-2"
+                  className="text-sm text-gray-500 hover:text-gray-700 px-3 py-2"
                 >
                   Annulla
                 </button>
@@ -1112,7 +1112,7 @@ function CreaFatturaModal({
           </div>
         </div>
         {err && (
-          <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+          <div className="text-sm text-bad bg-bad/10 border border-bad/30 rounded-lg px-3 py-2">
             {err}
           </div>
         )}
@@ -1121,7 +1121,7 @@ function CreaFatturaModal({
           richiesta. Potrai completarla da lì.
         </p>
         <div className="flex justify-end gap-2">
-          <button onClick={onClose} className="text-sm text-gray-500 hover:text-gray-800 px-3 py-2">
+          <button onClick={onClose} className="text-sm text-gray-500 hover:text-gray-700 px-3 py-2">
             Annulla
           </button>
           <button
@@ -1197,7 +1197,7 @@ function CollegaModal({
               key={f.id}
               className={cn(
                 "flex items-center gap-3 px-3 py-2 text-sm cursor-pointer hover:bg-gray-50",
-                sel === f.id && "bg-pink-50",
+                sel === f.id && "bg-brand/10",
               )}
             >
               <input type="radio" name="fat" checked={sel === f.id} onChange={() => setSel(f.id)} />
@@ -1210,9 +1210,9 @@ function CollegaModal({
             </label>
           ))}
         </div>
-        {err && <div className="text-sm text-red-600">{err}</div>}
+        {err && <div className="text-sm text-bad">{err}</div>}
         <div className="flex justify-end gap-2">
-          <button onClick={onClose} className="text-sm text-gray-500 hover:text-gray-800 px-3 py-2">
+          <button onClick={onClose} className="text-sm text-gray-500 hover:text-gray-700 px-3 py-2">
             Annulla
           </button>
           <button
@@ -1306,7 +1306,7 @@ function DaContrattoModal({
           ))}
         </div>
         {err && (
-          <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+          <div className="text-sm text-bad bg-bad/10 border border-bad/30 rounded-lg px-3 py-2">
             {err}
           </div>
         )}

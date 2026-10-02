@@ -77,7 +77,7 @@ export default function FiltriBar({
                 style={
                   active
                     ? { background: BRAND, color: "#fff" }
-                    : { color: "#64748b" }
+                    : { color: "#6b7280" }
                 }
               >
                 {label}

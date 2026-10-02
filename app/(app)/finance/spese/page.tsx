@@ -262,19 +262,19 @@ export default function SpesePage() {
             onClick={handleExcelExport}
             className="flex items-center gap-1.5 border border-gray-200 text-gray-600 text-sm font-medium px-3 py-2 rounded-xl hover:bg-gray-50"
           >
-            <FileSpreadsheet className="w-4 h-4 text-emerald-600" /> Excel
+            <FileSpreadsheet className="w-4 h-4 text-ok" /> Excel
           </button>
           <button
             onClick={handlePDFExport}
             className="flex items-center gap-1.5 border border-gray-200 text-gray-600 text-sm font-medium px-3 py-2 rounded-xl hover:bg-gray-50"
           >
-            <Download className="w-4 h-4 text-red-500" /> PDF
+            <Download className="w-4 h-4 text-bad" /> PDF
           </button>
           <button
             onClick={() => setShowEstrai(true)}
             className="flex items-center gap-1.5 border border-gray-200 text-gray-600 text-sm font-medium px-3 py-2 rounded-xl hover:bg-gray-50"
           >
-            <Camera className="w-4 h-4 text-pink-600" /> Carica da foto/PDF
+            <Camera className="w-4 h-4 text-brand" /> Carica da foto/PDF
           </button>
           <button
             onClick={openNew}
@@ -291,7 +291,7 @@ export default function SpesePage() {
           <p className="text-xs text-gray-500 uppercase tracking-wide">
             Totale Anno
           </p>
-          <p className="text-xl font-bold text-red-500 mt-1">
+          <p className="text-xl font-bold text-bad mt-1">
             {fmt((spese ?? []).reduce((s, e) => s + (e?.importo ?? 0), 0))}
           </p>
         </div>
@@ -302,7 +302,7 @@ export default function SpesePage() {
               <div className="flex items-center gap-2 mb-1">
                 <span
                   className="w-2 h-2 rounded-full"
-                  style={{ background: CATEGORIE_COLORI[cat] || "#94a3b8" }}
+                  style={{ background: CATEGORIE_COLORI[cat] || "#9ca3af" }}
                 />
                 <p className="text-xs text-gray-500 truncate">{cat}</p>
               </div>
@@ -316,7 +316,7 @@ export default function SpesePage() {
         <select
           value={filtroMese}
           onChange={(e) => setFiltroMese(parseInt(e.target.value))}
-          className="text-sm border border-gray-200 rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-pink-300"
+          className="text-sm border border-gray-200 rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-brand/30"
         >
           <option value={0}>Tutti i mesi</option>
           {MESI.map((m, i) => (
@@ -328,7 +328,7 @@ export default function SpesePage() {
         <select
           value={filtroCategoria}
           onChange={(e) => setFiltroCategoria(e.target.value)}
-          className="text-sm border border-gray-200 rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-pink-300"
+          className="text-sm border border-gray-200 rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-brand/30"
         >
           <option value="">Tutte le categorie</option>
           {CATEGORIE_SPESA.map((c) => (
@@ -340,7 +340,7 @@ export default function SpesePage() {
         <select
           value={filtroFornitore}
           onChange={(e) => setFiltroFornitore(e.target.value)}
-          className="text-xs border border-gray-200 rounded-lg px-2 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-pink-300 max-w-[160px]"
+          className="text-xs border border-gray-200 rounded-lg px-2 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-brand/30 max-w-[160px]"
         >
           <option value="">Fornitore</option>
           {fornitoriUnici.map((f) => (
@@ -422,13 +422,13 @@ export default function SpesePage() {
                     <div className="flex items-center gap-2 justify-end">
                       <button
                         onClick={() => openEdit(s)}
-                        className="p-1.5 rounded-lg text-gray-400 hover:text-pink-600 hover:bg-pink-50"
+                        className="p-1.5 rounded-lg text-gray-400 hover:text-brand hover:bg-brand/10"
                       >
                         <Pencil className="w-4 h-4" />
                       </button>
                       <button
                         onClick={() => del(s.id)}
-                        className="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50"
+                        className="p-1.5 rounded-lg text-gray-400 hover:text-bad hover:bg-bad/10"
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
@@ -485,7 +485,7 @@ export default function SpesePage() {
                     onChange={(e) =>
                       setForm((f) => ({ ...f, categoria: e.target.value }))
                     }
-                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-300"
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30"
                   >
                     {CATEGORIE_SPESA.map((c) => (
                       <option key={c} value={c}>
@@ -505,7 +505,7 @@ export default function SpesePage() {
                     onChange={(e) =>
                       setForm((f) => ({ ...f, mese: parseInt(e.target.value) }))
                     }
-                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-300"
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30"
                   >
                     {MESI_NUMS.map((m) => (
                       <option key={m} value={m}>
@@ -526,7 +526,7 @@ export default function SpesePage() {
                       setForm((f) => ({ ...f, importo: e.target.value }))
                     }
                     placeholder="0.00"
-                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-300"
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30"
                   />
                 </div>
               </div>
@@ -540,7 +540,7 @@ export default function SpesePage() {
                   onChange={(e) =>
                     setForm((f) => ({ ...f, descrizione: e.target.value }))
                   }
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-300"
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30"
                   placeholder="Es. Abbonamento mensile"
                 />
               </div>
@@ -554,7 +554,7 @@ export default function SpesePage() {
                     setForm((f) => ({ ...f, note: e.target.value }))
                   }
                   rows={2}
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-300 resize-none"
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30 resize-none"
                   placeholder="Note private..."
                 />
               </div>
@@ -568,7 +568,7 @@ export default function SpesePage() {
                       href={form.ricevutaPath}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-xs text-pink-600 hover:underline flex items-center gap-1"
+                      className="text-xs text-brand hover:underline flex items-center gap-1"
                     >
                       <Paperclip className="w-3 h-3" /> Visualizza allegato
                     </a>
@@ -576,7 +576,7 @@ export default function SpesePage() {
                       onClick={() =>
                         setForm((f) => ({ ...f, ricevutaPath: "" }))
                       }
-                      className="text-xs text-red-500 hover:underline"
+                      className="text-xs text-bad hover:underline"
                     >
                       Rimuovi
                     </button>
@@ -585,7 +585,7 @@ export default function SpesePage() {
                   <div className="flex items-center gap-2">
                     <button
                       onClick={() => fileRef.current?.click()}
-                      className="flex items-center gap-2 border border-dashed border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-500 hover:border-pink-400 hover:text-pink-600 transition-colors"
+                      className="flex items-center gap-2 border border-dashed border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-500 hover:border-brand/40 hover:text-brand transition-colors"
                     >
                       <Paperclip className="w-4 h-4" />{" "}
                       {uploading ? "Caricamento..." : "Allega file"}
@@ -678,10 +678,10 @@ function FornitoreAutocomplete({
         }}
         onFocus={() => setOpen(true)}
         placeholder="Es. Google, Stipendio Leo, ..."
-        className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-300"
+        className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30"
       />
       {selected && (
-        <p className="text-[10px] text-emerald-600 mt-0.5">
+        <p className="text-[10px] text-ok mt-0.5">
           ✓ collegato a anagrafica: {selected.nome}
         </p>
       )}
@@ -697,7 +697,7 @@ function FornitoreAutocomplete({
                   onChange(f.nome, f.id);
                   setOpen(false);
                 }}
-                className={`w-full text-left px-3 py-2 text-sm hover:bg-pink-50 flex items-center justify-between ${isActive ? "bg-pink-50 text-pink-700" : "text-gray-700"}`}
+                className={`w-full text-left px-3 py-2 text-sm hover:bg-brand/10 flex items-center justify-between ${isActive ? "bg-brand/10 text-brand" : "text-gray-700"}`}
               >
                 <span>{f.nome}</span>
                 {isActive && <span className="text-[10px]">✓</span>}
@@ -799,8 +799,8 @@ function EstraiRicevutaModal({
               onClick={() => inputRef.current?.click()}
               className={`border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-colors ${
                 dragOver
-                  ? "border-pink-400 bg-pink-50"
-                  : "border-gray-300 hover:border-pink-300 hover:bg-gray-50"
+                  ? "border-brand/40 bg-brand/10"
+                  : "border-gray-300 hover:border-brand/40 hover:bg-gray-50"
               }`}
             >
               <Upload className="w-10 h-10 text-gray-400 mx-auto mb-3" />
@@ -826,7 +826,7 @@ function EstraiRicevutaModal({
               modificarli prima di salvare.
             </p>
             {error && (
-              <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+              <div className="text-sm text-bad bg-bad/10 border border-bad/30 rounded-lg px-3 py-2">
                 {error}
               </div>
             )}
@@ -836,7 +836,7 @@ function EstraiRicevutaModal({
         {loading && (
           <div className="py-8 text-center space-y-2">
             <div className="inline-flex items-center gap-2 text-sm text-gray-600">
-              <Camera className="w-5 h-5 text-pink-600 animate-pulse" />
+              <Camera className="w-5 h-5 text-brand animate-pulse" />
               Estrazione dati in corso...
             </div>
             {fileName && <p className="text-xs text-gray-400">{fileName}</p>}

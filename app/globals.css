@@ -48,6 +48,21 @@
   --radius-4xl: calc(var(--radius) * 2.6);
 }
 
+/* ── Palette semantica unica ──────────────────────────────────────────────
+   Un solo verde, un solo rosso, un solo ambra… per pill, testi, KPI, tab e
+   grafici di tutte le pagine. Le utility Tailwind (text-ok, bg-bad/10,
+   border-warn/30, ring-brand/30…) e il CSS qui sotto leggono questi token. */
+@theme {
+  --color-brand: #e8308a;
+  --color-brand-hover: #d6237c;
+  --color-ok: #22c55e;
+  --color-warn: #f59e0b;
+  --color-bad: #ef4444;
+  --color-info: #3b82f6;
+  --color-partial: #f97316;
+  --color-off: #9ca3af;
+}
+
 :root {
   /* Token guscio (stile Northstar, accento rosa Anda) */
   --bg: #f6f6f9;
@@ -76,10 +91,10 @@
   --popover-foreground: #1a1d2e;
   --primary: #e8308a;
   --primary-foreground: #ffffff;
-  --secondary: #f1f5f9;
+  --secondary: #f3f4f6;
   --secondary-foreground: #1a1d2e;
-  --muted: #f1f5f9;
-  --muted-foreground: #64748b;
+  --muted: #f3f4f6;
+  --muted-foreground: #6b7280;
   --accent: #fce7f3;
   --accent-foreground: #e8308a;
   --destructive: #ef4444;
@@ -87,7 +102,7 @@
   --input: #e5e7eb;
   --ring: #e8308a;
   --chart-1: #e8308a;
-  --chart-2: #10b981;
+  --chart-2: #22c55e;
   --chart-3: #f59e0b;
   --chart-4: #ef4444;
   --chart-5: #8b5cf6;
@@ -183,36 +198,21 @@ tbody.zebra > tr:nth-child(even) {
   border: 1px solid var(--border-light);
 }
 
-/* Bottone primario (rosa Anda) */
+/* Bottone primario (rosa Anda), piatto: niente ombre né rilievo */
 .glass-btn-primary {
   background: var(--brand);
   border: 1px solid transparent;
   color: #ffffff;
-  box-shadow:
-    0 1px 0 0 rgba(255, 255, 255, 0.18) inset,
-    0 4px 12px rgba(232, 48, 138, 0.25);
-  transition:
-    background 0.15s ease,
-    box-shadow 0.15s ease,
-    transform 0.15s ease;
+  transition: background 0.15s ease;
 }
 .glass-btn-primary:hover {
   background: var(--brand-hover);
-  box-shadow:
-    0 1px 0 0 rgba(255, 255, 255, 0.18) inset,
-    0 6px 16px rgba(232, 48, 138, 0.3);
-  transform: translateY(-1px);
-}
-.glass-btn-primary:active {
-  transform: translateY(0);
-  box-shadow: 0 2px 6px rgba(232, 48, 138, 0.2);
 }
 
 /* Bottone secondario */
 .glass-btn-secondary {
   background: #ffffff;
   border: 1px solid var(--border);
-  box-shadow: 0 1px 2px rgba(17, 24, 39, 0.04);
   transition:
     background 0.15s ease,
     border-color 0.15s ease;
@@ -277,18 +277,22 @@ tbody.zebra > tr:nth-child(even) {
   width: var(--sb-w-collapsed);
 }
 .sb-head {
-  padding: 18px 12px 14px;
+  padding: 14px 12px 12px;
   border-bottom: 1px solid var(--border-light);
 }
 .sb-brand {
   display: flex;
-  justify-content: center;
+  justify-content: flex-start;
   width: 100%;
-  padding: 2px 4px;
+  padding: 2px 6px;
+}
+.sb-collapsed .sb-brand {
+  justify-content: center;
+  padding: 2px 0;
 }
 .sb-logo {
-  width: 118px;
-  height: 46px;
+  width: 84px;
+  height: 30px;
   display: grid;
   place-items: center;
   flex-shrink: 0;
@@ -300,8 +304,8 @@ tbody.zebra > tr:nth-child(even) {
   object-fit: contain;
 }
 .sb-collapsed .sb-logo {
-  width: 40px;
-  height: 40px;
+  width: 34px;
+  height: 34px;
 }
 
 /* Barra "Esporta" in fondo: parte dal bordo del contenuto, non sotto la sidebar */
@@ -357,7 +361,6 @@ tbody.zebra > tr:nth-child(even) {
   background: var(--brand);
   color: #ffffff;
   font-weight: 600;
-  box-shadow: 0 4px 14px rgba(232, 48, 138, 0.28);
 }
 .sb-item-link {
   display: flex;
@@ -651,6 +654,7 @@ tbody.zebra > tr:nth-child(even) {
   align-items: center;
   gap: 6px;
   padding: 7px 14px;
+  border: 1px solid transparent;
   border-radius: 10px;
   font-size: 12.5px;
   font-weight: 600;
@@ -667,7 +671,7 @@ tbody.zebra > tr:nth-child(even) {
 .domain-tab.active {
   background: #ffffff;
   color: var(--text-1);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  border-color: var(--border-light);
 }
 
 /* Corpo pagina */
@@ -700,23 +704,23 @@ tbody.zebra > tr:nth-child(even) {
   color: #ffffff;
 }
 .pill-ok {
-  background: #22c55e;
+  background: var(--color-ok);
 }
 .pill-wait {
   background: #fef3c7;
   color: #b45309;
 }
 .pill-partial {
-  background: #f97316;
+  background: var(--color-partial);
 }
 .pill-late {
-  background: #ef4444;
+  background: var(--color-bad);
 }
 .pill-info {
-  background: #3b82f6;
+  background: var(--color-info);
 }
 .pill-off {
-  background: #9ca3af;
+  background: var(--color-off);
 }
 button.pill-ok:hover,
 button.pill-partial:hover,

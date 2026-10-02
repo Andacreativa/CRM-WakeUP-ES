@@ -165,13 +165,13 @@ export default function BilancioPage() {
             onClick={handleExcel}
             className="flex items-center gap-1.5 border border-gray-200 text-gray-600 text-sm font-medium px-3 py-2 rounded-xl hover:bg-gray-50"
           >
-            <FileSpreadsheet className="w-4 h-4 text-emerald-600" /> Excel
+            <FileSpreadsheet className="w-4 h-4 text-ok" /> Excel
           </button>
           <button
             onClick={handlePDF}
             className="flex items-center gap-1.5 border border-gray-200 text-gray-600 text-sm font-medium px-3 py-2 rounded-xl hover:bg-gray-50"
           >
-            <Download className="w-4 h-4 text-red-500" /> PDF
+            <Download className="w-4 h-4 text-bad" /> PDF
           </button>
           <button
             onClick={() => setReportOpen(true)}
@@ -194,7 +194,7 @@ export default function BilancioPage() {
           <p className="text-xs text-gray-500 uppercase tracking-wide">
             Totale Entrate
           </p>
-          <p className="text-2xl font-bold text-emerald-600 mt-1">
+          <p className="text-2xl font-bold text-ok mt-1">
             {fmt(fattureTotale)}
           </p>
         </div>
@@ -202,16 +202,16 @@ export default function BilancioPage() {
           <p className="text-xs text-gray-500 uppercase tracking-wide">
             Totale Uscite
           </p>
-          <p className="text-2xl font-bold text-red-500 mt-1">
+          <p className="text-2xl font-bold text-bad mt-1">
             {fmt(speseTotale)}
           </p>
         </div>
         <div
           className={`glass-card rounded-2xl p-5 ${
             bilancioTotale > 0
-              ? "bg-emerald-50/60"
+              ? "bg-ok/10/60"
               : bilancioTotale < 0
-                ? "bg-red-50/60"
+                ? "bg-bad/10/60"
                 : ""
           }`}
         >
@@ -221,9 +221,9 @@ export default function BilancioPage() {
           <p
             className={`text-2xl font-bold mt-1 ${
               bilancioTotale > 0
-                ? "text-emerald-600"
+                ? "text-ok"
                 : bilancioTotale < 0
-                  ? "text-red-600"
+                  ? "text-bad"
                   : "text-gray-500"
             }`}
           >
@@ -240,22 +240,22 @@ export default function BilancioPage() {
           </h2>
           <ResponsiveContainer width="100%" height={250}>
             <BarChart data={chartData} barSize={16} barGap={3}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+              <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
               <XAxis
                 dataKey="name"
-                tick={{ fontSize: 11, fill: "#94a3b8" }}
+                tick={{ fontSize: 11, fill: "#9ca3af" }}
                 axisLine={false}
                 tickLine={false}
               />
               <YAxis
-                tick={{ fontSize: 11, fill: "#94a3b8" }}
+                tick={{ fontSize: 11, fill: "#9ca3af" }}
                 axisLine={false}
                 tickLine={false}
                 tickFormatter={(v) => `€${(v / 1000).toFixed(0)}k`}
               />
               <Tooltip formatter={(v) => fmt(Number(v))} />
               <Legend />
-              <Bar dataKey="Entrate" fill="#10b981" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="Entrate" fill="#22c55e" radius={[4, 4, 0, 0]} />
               <Bar dataKey="Uscite" fill="#ef4444" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
@@ -267,26 +267,26 @@ export default function BilancioPage() {
           </h2>
           <ResponsiveContainer width="100%" height={250}>
             <BarChart data={chartData} barSize={22}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+              <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
               <XAxis
                 dataKey="name"
-                tick={{ fontSize: 11, fill: "#94a3b8" }}
+                tick={{ fontSize: 11, fill: "#9ca3af" }}
                 axisLine={false}
                 tickLine={false}
               />
               <YAxis
-                tick={{ fontSize: 11, fill: "#94a3b8" }}
+                tick={{ fontSize: 11, fill: "#9ca3af" }}
                 axisLine={false}
                 tickLine={false}
                 tickFormatter={(v) => `€${(v / 1000).toFixed(0)}k`}
               />
               <Tooltip formatter={(v) => fmt(Number(v))} />
-              <ReferenceLine y={0} stroke="#e2e8f0" strokeWidth={2} />
+              <ReferenceLine y={0} stroke="#e5e7eb" strokeWidth={2} />
               <Bar dataKey="Bilancio" radius={[4, 4, 0, 0]}>
                 {chartData.map((entry, i) => (
                   <Cell
                     key={i}
-                    fill={entry.Bilancio >= 0 ? "#10b981" : "#ef4444"}
+                    fill={entry.Bilancio >= 0 ? "#22c55e" : "#ef4444"}
                   />
                 ))}
               </Bar>
@@ -316,35 +316,35 @@ export default function BilancioPage() {
                 key={d.mese}
                 className="border-b border-gray-50 hover:bg-gray-50 transition-colors"
               >
-                <td className="px-6 py-3 text-sm font-medium text-gray-800">
+                <td className="px-6 py-3 text-sm font-medium text-gray-700">
                   {MESI[d.mese - 1]}
                 </td>
                 <td
                   className="px-6 py-3 text-sm font-semibold text-right"
-                  style={{ color: d.entrate > 0 ? "#10b981" : "#94a3b8" }}
+                  style={{ color: d.entrate > 0 ? "#22c55e" : "#9ca3af" }}
                 >
                   {d.entrate > 0 ? fmt(d.entrate) : "—"}
                 </td>
-                <td className="px-6 py-3 text-sm font-semibold text-red-500 text-right">
+                <td className="px-6 py-3 text-sm font-semibold text-bad text-right">
                   {d.uscite > 0 ? fmt(d.uscite) : "—"}
                 </td>
                 <td
-                  className={`px-6 py-3 text-sm font-bold text-right ${d.bilancio >= 0 ? "text-emerald-600" : "text-red-600"}`}
+                  className={`px-6 py-3 text-sm font-semibold text-right ${d.bilancio >= 0 ? "text-ok" : "text-bad"}`}
                 >
                   {d.entrate === 0 && d.uscite === 0 ? "—" : fmt(d.bilancio)}
                 </td>
               </tr>
             ))}
             <tr className="bg-gray-50 font-bold border-t-2 border-gray-200">
-              <td className="px-6 py-3 text-sm text-gray-800">TOTALE ANNO</td>
-              <td className="px-6 py-3 text-sm text-right text-emerald-600">
+              <td className="px-6 py-3 text-sm text-gray-700">TOTALE ANNO</td>
+              <td className="px-6 py-3 text-sm text-right text-ok">
                 {fmt(fattureTotale)}
               </td>
-              <td className="px-6 py-3 text-sm text-red-500 text-right">
+              <td className="px-6 py-3 text-sm text-bad text-right">
                 {fmt(speseTotale)}
               </td>
               <td
-                className={`px-6 py-3 text-sm text-right ${bilancioTotale >= 0 ? "text-emerald-600" : "text-red-600"}`}
+                className={`px-6 py-3 text-sm text-right ${bilancioTotale >= 0 ? "text-ok" : "text-bad"}`}
               >
                 {fmt(bilancioTotale)}
               </td>

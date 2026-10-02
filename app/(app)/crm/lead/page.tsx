@@ -19,7 +19,7 @@ interface Lead extends LeadFormValues {
 }
 
 const selectCls =
-  "text-sm border border-gray-200 rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-pink-300";
+  "text-sm border border-gray-200 rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-brand/30";
 
 export default function LeadPage() {
   const [leads, setLeads] = useState<Lead[]>([]);
@@ -116,7 +116,7 @@ export default function LeadPage() {
             key={s.value}
             onClick={() => setStato(s.value)}
             className="text-sm px-3 py-1.5 rounded-lg font-medium transition-colors"
-            style={stato === s.value ? { background: "#e8308a", color: "#fff" } : { color: "#64748b" }}
+            style={stato === s.value ? { background: "#e8308a", color: "#fff" } : { color: "#6b7280" }}
           >
             {s.label}
             {s.value && counts[s.value] ? ` (${counts[s.value]})` : s.value === "" ? ` (${leads.length})` : ""}
@@ -179,12 +179,12 @@ export default function LeadPage() {
                       {new Date(l.createdAt).toLocaleDateString("it-IT")}
                     </td>
                     <td className="px-4 py-3">
-                      <Link href={`/crm/lead/${l.id}`} className="text-sm font-semibold text-gray-900 hover:text-pink-600">
+                      <Link href={`/crm/lead/${l.id}`} className="text-sm font-semibold text-gray-900 hover:text-brand">
                         {l.azienda ?? l.nome}
                       </Link>
                       <div className="text-[11px] text-gray-400">
                         {l.codice ?? ""}
-                        {l.cliente && <span className="ml-1 text-emerald-700">· cliente {l.cliente.nome}</span>}
+                        {l.cliente && <span className="ml-1 text-ok">· cliente {l.cliente.nome}</span>}
                       </div>
                     </td>
                     <td className="px-4 py-3 text-xs text-gray-600">
@@ -216,23 +216,23 @@ export default function LeadPage() {
                     <td className="px-4 py-3 text-xs">
                       {pa ? (
                         <>
-                          <div className="text-gray-800 truncate max-w-[180px]">{pa}</div>
+                          <div className="text-gray-700 truncate max-w-[180px]">{pa}</div>
                           {paData && (
-                            <div className={cn("text-[11px]", scaduta ? "text-red-600 font-semibold" : "text-gray-400")}>
+                            <div className={cn("text-[11px]", scaduta ? "text-bad font-semibold" : "text-gray-400")}>
                               {new Date(paData).toLocaleDateString("it-IT")}
                             </div>
                           )}
                         </>
                       ) : (
-                        <span className="text-gray-300">—</span>
+                        <span className="text-gray-400">—</span>
                       )}
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-1 justify-end">
-                        <Link href={`/crm/lead/${l.id}`} className="p-1.5 text-gray-400 hover:text-pink-600" title="Apri">
+                        <Link href={`/crm/lead/${l.id}`} className="p-1.5 text-gray-400 hover:text-brand" title="Apri">
                           <ExternalLink className="w-4 h-4" />
                         </Link>
-                        <button onClick={() => del(l)} className="p-1.5 text-gray-400 hover:text-red-500" title="Elimina">
+                        <button onClick={() => del(l)} className="p-1.5 text-gray-400 hover:text-bad" title="Elimina">
                           <Trash2 className="w-4 h-4" />
                         </button>
                       </div>

@@ -602,38 +602,38 @@ export default function ReportModal({ open, onClose, initialAnno }: Props) {
 
         {/* RIEPILOGO ANNUALE */}
         <div className="grid grid-cols-3 gap-3">
-          <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-3">
-            <p className="text-xs font-semibold text-emerald-700 uppercase tracking-wide">
+          <div className="bg-ok/10 border border-ok/30 rounded-xl p-3">
+            <p className="text-xs font-semibold text-ok uppercase tracking-wide">
               Totale Entrate
             </p>
-            <p className="text-lg font-bold text-emerald-700 mt-0.5">
+            <p className="text-lg font-bold text-ok mt-0.5">
               {fmt(totaleEntrate)}
             </p>
           </div>
-          <div className="bg-red-50 border border-red-200 rounded-xl p-3">
-            <p className="text-xs font-semibold text-red-700 uppercase tracking-wide">
+          <div className="bg-bad/10 border border-bad/30 rounded-xl p-3">
+            <p className="text-xs font-semibold text-bad uppercase tracking-wide">
               Totale Uscite
             </p>
-            <p className="text-lg font-bold text-red-700 mt-0.5">
+            <p className="text-lg font-bold text-bad mt-0.5">
               {fmt(totaleUscite)}
             </p>
           </div>
           <div
             className="rounded-xl p-3 border-2"
             style={{
-              background: bilancio >= 0 ? "#f0fdf4" : "#fef2f2",
-              borderColor: bilancio >= 0 ? "#86efac" : "#fca5a5",
+              background: bilancio >= 0 ? "#dcfce7" : "#fee2e2",
+              borderColor: bilancio >= 0 ? "#bbf7d0" : "#fecaca",
             }}
           >
             <p
               className="text-xs font-semibold uppercase tracking-wide"
-              style={{ color: bilancio >= 0 ? "#15803d" : "#dc2626" }}
+              style={{ color: bilancio >= 0 ? "#22c55e" : "#ef4444" }}
             >
               Bilancio Netto
             </p>
             <p
               className="text-lg font-bold mt-0.5"
-              style={{ color: bilancio >= 0 ? "#15803d" : "#dc2626" }}
+              style={{ color: bilancio >= 0 ? "#22c55e" : "#ef4444" }}
             >
               {fmt(bilancio)}
             </p>
@@ -643,7 +643,7 @@ export default function ReportModal({ open, onClose, initialAnno }: Props) {
         {/* BILANCIO MESE PER MESE */}
         <div className="border border-gray-200 rounded-xl overflow-hidden">
           <div className="bg-gray-50 px-4 py-2 border-b border-gray-200">
-            <h3 className="text-sm font-bold text-gray-700 uppercase tracking-wide">
+            <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">
               Bilancio mese per mese
             </h3>
           </div>
@@ -676,7 +676,7 @@ export default function ReportModal({ open, onClose, initialAnno }: Props) {
                             parseFloat(e.target.value) || 0,
                           )
                         }
-                        className="w-28 bg-transparent border-none focus:outline-none focus:ring-1 focus:ring-pink-300 rounded px-1 py-0.5 text-right tabular-nums"
+                        className="w-28 bg-transparent border-none focus:outline-none focus:ring-1 focus:ring-brand/30 rounded px-1 py-0.5 text-right tabular-nums"
                       />
                     </td>
                     <td className="px-3 py-1.5 text-right">
@@ -691,13 +691,13 @@ export default function ReportModal({ open, onClose, initialAnno }: Props) {
                             parseFloat(e.target.value) || 0,
                           )
                         }
-                        className="w-28 bg-transparent border-none focus:outline-none focus:ring-1 focus:ring-pink-300 rounded px-1 py-0.5 text-right tabular-nums"
+                        className="w-28 bg-transparent border-none focus:outline-none focus:ring-1 focus:ring-brand/30 rounded px-1 py-0.5 text-right tabular-nums"
                       />
                     </td>
                     <td
                       className="px-3 py-1.5 text-right font-semibold tabular-nums"
                       style={{
-                        color: bil >= 0 ? "#15803d" : "#dc2626",
+                        color: bil >= 0 ? "#22c55e" : "#ef4444",
                       }}
                     >
                       {fmt(bil)}
@@ -707,18 +707,18 @@ export default function ReportModal({ open, onClose, initialAnno }: Props) {
               })}
             </tbody>
             <tfoot>
-              <tr className="border-t-2 border-gray-200 bg-gray-50 font-bold text-sm">
+              <tr className="border-t-2 border-gray-200 bg-gray-50 font-semibold text-sm">
                 <td className="px-3 py-2 text-gray-700">TOTALE</td>
-                <td className="px-3 py-2 text-right tabular-nums text-emerald-700">
+                <td className="px-3 py-2 text-right tabular-nums text-ok">
                   {fmt(totEntrateMesi)}
                 </td>
-                <td className="px-3 py-2 text-right tabular-nums text-red-600">
+                <td className="px-3 py-2 text-right tabular-nums text-bad">
                   {fmt(totUsciteMesi)}
                 </td>
                 <td
                   className="px-3 py-2 text-right tabular-nums"
                   style={{
-                    color: bilancioMesi >= 0 ? "#15803d" : "#dc2626",
+                    color: bilancioMesi >= 0 ? "#22c55e" : "#ef4444",
                   }}
                 >
                   {fmt(bilancioMesi)}
@@ -733,7 +733,7 @@ export default function ReportModal({ open, onClose, initialAnno }: Props) {
           title="Dettaglio Entrate"
           rows={report.entrate}
           totale={totaleEntrateDett}
-          totaleColor="#10b981"
+          totaleColor="#22c55e"
           showFattureCols
           onUpdate={(id, patch) => updateRow("entrate", id, patch)}
           onRemove={(id) => removeRow("entrate", id)}
@@ -763,7 +763,7 @@ export default function ReportModal({ open, onClose, initialAnno }: Props) {
             onClick={handleExportExcel}
             className="flex items-center justify-center gap-2 flex-1 border border-gray-200 text-gray-700 text-sm font-medium py-2.5 rounded-xl hover:bg-gray-50"
           >
-            <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
+            <FileSpreadsheet className="w-4 h-4 text-ok" />
             Esporta Excel
           </button>
           <button
@@ -801,7 +801,7 @@ function DetailSection({
   return (
     <div className="border border-gray-200 rounded-xl overflow-hidden">
       <div className="bg-gray-50 px-4 py-2 border-b border-gray-200">
-        <h3 className="text-sm font-bold text-gray-700 uppercase tracking-wide">
+        <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">
           {title}
         </h3>
       </div>
@@ -827,7 +827,7 @@ function DetailSection({
                   type="text"
                   value={r.label}
                   onChange={(e) => onUpdate(r.id, { label: e.target.value })}
-                  className="w-full bg-transparent border-none focus:outline-none focus:ring-1 focus:ring-pink-300 rounded px-1 py-0.5 text-gray-800"
+                  className="w-full bg-transparent border-none focus:outline-none focus:ring-1 focus:ring-brand/30 rounded px-1 py-0.5 text-gray-700"
                 />
               </td>
               <td className="px-3 py-1.5 text-right">
@@ -838,7 +838,7 @@ function DetailSection({
                   onChange={(e) =>
                     onUpdate(r.id, { totale: parseFloat(e.target.value) || 0 })
                   }
-                  className="w-28 bg-transparent border-none focus:outline-none focus:ring-1 focus:ring-pink-300 rounded px-1 py-0.5 text-right tabular-nums font-medium text-gray-900"
+                  className="w-28 bg-transparent border-none focus:outline-none focus:ring-1 focus:ring-brand/30 rounded px-1 py-0.5 text-right tabular-nums font-medium text-gray-900"
                 />
               </td>
               {showFattureCols && (
@@ -854,7 +854,7 @@ function DetailSection({
                             pagate: parseFloat(e.target.value) || 0,
                           })
                         }
-                        className="w-24 bg-transparent border-none focus:outline-none focus:ring-1 focus:ring-pink-300 rounded px-1 py-0.5 text-right tabular-nums text-emerald-700"
+                        className="w-24 bg-transparent border-none focus:outline-none focus:ring-1 focus:ring-brand/30 rounded px-1 py-0.5 text-right tabular-nums text-ok"
                       />
                     )}
                   </td>
@@ -869,7 +869,7 @@ function DetailSection({
                             nonPagate: parseFloat(e.target.value) || 0,
                           })
                         }
-                        className="w-24 bg-transparent border-none focus:outline-none focus:ring-1 focus:ring-pink-300 rounded px-1 py-0.5 text-right tabular-nums text-amber-700"
+                        className="w-24 bg-transparent border-none focus:outline-none focus:ring-1 focus:ring-brand/30 rounded px-1 py-0.5 text-right tabular-nums text-warn"
                       />
                     )}
                   </td>
@@ -879,7 +879,7 @@ function DetailSection({
                 {r.removable && (
                   <button
                     onClick={() => onRemove(r.id)}
-                    className="text-gray-400 hover:text-red-600"
+                    className="text-gray-400 hover:text-bad"
                     aria-label="Rimuovi riga"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
@@ -892,7 +892,7 @@ function DetailSection({
             <td colSpan={showFattureCols ? 5 : 3} className="px-3 py-1.5">
               <button
                 onClick={onAdd}
-                className="text-xs text-pink-600 hover:text-pink-700 flex items-center gap-1"
+                className="text-xs text-brand hover:text-brand flex items-center gap-1"
               >
                 <Plus className="w-3 h-3" /> Aggiungi riga
               </button>
@@ -905,7 +905,7 @@ function DetailSection({
               TOTALE
             </td>
             <td
-              className="px-3 py-2 text-right text-sm font-bold tabular-nums"
+              className="px-3 py-2 text-right text-sm font-semibold tabular-nums"
               style={{ color: totaleColor }}
             >
               {fmt(totale)}

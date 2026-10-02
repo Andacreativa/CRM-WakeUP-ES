@@ -379,7 +379,7 @@ export default function PreventiviPage() {
             style={
               filtroStatus === o.value
                 ? { background: BRAND, color: "#fff" }
-                : { color: "#64748b" }
+                : { color: "#6b7280" }
             }
           >
             {o.label}
@@ -404,7 +404,7 @@ export default function PreventiviPage() {
                 .filter((p) => p?.status === "accettato")
                 .reduce((s, p) => s + (p?.totale ?? 0), 0),
             ),
-            color: "text-emerald-600",
+            color: "text-ok",
           },
           {
             label: "In Attesa",
@@ -413,7 +413,7 @@ export default function PreventiviPage() {
                 .filter((p) => p?.status === "attesa")
                 .reduce((s, p) => s + (p?.totale ?? 0), 0),
             ),
-            color: "text-amber-600",
+            color: "text-warn",
           },
         ].map((k) => (
           <div key={k.label} className="glass-card rounded-2xl p-4">
@@ -469,7 +469,7 @@ export default function PreventiviPage() {
               return (
                 <tr
                   key={p.id}
-                  className={`border-b border-gray-50 hover:bg-gray-50 transition-colors ${isScaduto ? "bg-red-50" : i % 2 === 1 ? "bg-[#F0F0F0]" : ""}`}
+                  className={`border-b border-gray-50 hover:bg-gray-50 transition-colors ${isScaduto ? "bg-bad/10" : i % 2 === 1 ? "bg-[#F0F0F0]" : ""}`}
                 >
                   <td className="px-4 py-3 text-sm font-mono font-medium text-gray-700">
                     {p.numero ?? "—"}
@@ -493,12 +493,12 @@ export default function PreventiviPage() {
                   <td className="px-4 py-3 text-sm">
                     {p.dataScadenza ? (
                       <span
-                        className={`text-xs font-medium ${isScaduto ? "text-red-600" : "text-gray-500"}`}
+                        className={`text-xs font-medium ${isScaduto ? "text-bad" : "text-gray-500"}`}
                       >
                         {new Date(p.dataScadenza).toLocaleDateString("it-IT")}
                       </span>
                     ) : (
-                      <span className="text-gray-300">—</span>
+                      <span className="text-gray-400">—</span>
                     )}
                   </td>
                   <td className="px-4 py-3 text-sm font-semibold text-gray-900 text-right">
@@ -535,7 +535,7 @@ export default function PreventiviPage() {
                         <button
                           onClick={() => setGenContratto(p)}
                           title="Genera Contratto"
-                          className="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                          className="p-1.5 rounded-lg text-gray-400 hover:text-bad hover:bg-bad/10 transition-colors"
                         >
                           <FileText className="w-4 h-4" />
                         </button>
@@ -548,19 +548,19 @@ export default function PreventiviPage() {
                             ? "Traduzione in corso..."
                             : "Scarica PDF"
                         }
-                        className="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors disabled:opacity-50 disabled:cursor-wait"
+                        className="p-1.5 rounded-lg text-gray-400 hover:text-bad hover:bg-bad/10 transition-colors disabled:opacity-50 disabled:cursor-wait"
                       >
                         <Download className="w-4 h-4" />
                       </button>
                       <button
                         onClick={() => openEdit(p)}
-                        className="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                        className="p-1.5 rounded-lg text-gray-400 hover:text-bad hover:bg-bad/10 transition-colors"
                       >
                         <Pencil className="w-4 h-4" />
                       </button>
                       <button
                         onClick={() => del(p.id)}
-                        className="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                        className="p-1.5 rounded-lg text-gray-400 hover:text-bad hover:bg-bad/10 transition-colors"
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
@@ -602,7 +602,7 @@ export default function PreventiviPage() {
                     setForm((f) => ({ ...f, oggetto: e.target.value }))
                   }
                   placeholder="Es. Servizi di Marketing Digitale & Social Media"
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-300"
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30"
                 />
               </div>
               <div>
@@ -628,8 +628,8 @@ export default function PreventiviPage() {
                               }
                             : {
                                 background: "#fff",
-                                borderColor: "#e2e8f0",
-                                color: "#94a3b8",
+                                borderColor: "#e5e7eb",
+                                color: "#9ca3af",
                               }
                         }
                       >
@@ -671,8 +671,8 @@ export default function PreventiviPage() {
                             }
                           : {
                               background: "#fff",
-                              borderColor: "#e2e8f0",
-                              color: "#94a3b8",
+                              borderColor: "#e5e7eb",
+                              color: "#9ca3af",
                             }
                       }
                     >
@@ -693,7 +693,7 @@ export default function PreventiviPage() {
                   <select
                     onChange={(e) => applyContatto(e.target.value)}
                     defaultValue=""
-                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-300 text-gray-500"
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30 text-gray-500"
                   >
                     <option value="">Seleziona da contatti...</option>
                     {(contatti ?? []).map((c) => (
@@ -711,7 +711,7 @@ export default function PreventiviPage() {
                       setForm((f) => ({ ...f, nomeCliente: e.target.value }))
                     }
                     placeholder="Nome cliente *"
-                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-300"
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30"
                   />
                 </div>
                 <div>
@@ -722,7 +722,7 @@ export default function PreventiviPage() {
                       setForm((f) => ({ ...f, aziendaCliente: e.target.value }))
                     }
                     placeholder="Ragione sociale"
-                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-300"
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30"
                   />
                 </div>
                 <div className="col-span-2">
@@ -733,7 +733,7 @@ export default function PreventiviPage() {
                       setForm((f) => ({ ...f, emailCliente: e.target.value }))
                     }
                     placeholder="Email cliente"
-                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-300"
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30"
                   />
                 </div>
                 <div>
@@ -743,7 +743,7 @@ export default function PreventiviPage() {
                     onChange={(e) =>
                       setForm((f) => ({ ...f, dataScadenza: e.target.value }))
                     }
-                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-300 text-gray-700"
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30 text-gray-700"
                   />
                 </div>
               </div>
@@ -798,7 +798,7 @@ export default function PreventiviPage() {
                               updateVoce(v.id, "servizio", e.target.value)
                             }
                             placeholder="Es. Social Media Management"
-                            className="w-full border border-gray-200 rounded-md px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-pink-300"
+                            className="w-full border border-gray-200 rounded-md px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-brand/30"
                           />
                         </td>
                         <td className="px-2 py-1.5">
@@ -809,7 +809,7 @@ export default function PreventiviPage() {
                               updateVoce(v.id, "descrizione", e.target.value)
                             }
                             placeholder="Dettaglio breve"
-                            className="w-full border border-gray-200 rounded-md px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-pink-300"
+                            className="w-full border border-gray-200 rounded-md px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-brand/30"
                           />
                         </td>
                         <td className="px-2 py-1.5">
@@ -822,7 +822,7 @@ export default function PreventiviPage() {
                                 e.target.value as TipoVoce,
                               )
                             }
-                            className="w-full border border-gray-200 rounded-md px-2 py-1.5 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-pink-300"
+                            className="w-full border border-gray-200 rounded-md px-2 py-1.5 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-brand/30"
                           >
                             <option value="mensile">Mensile</option>
                             <option value="una_tantum">Una Tantum</option>
@@ -840,7 +840,7 @@ export default function PreventiviPage() {
                                 parseFloat(e.target.value) || 1,
                               )
                             }
-                            className="w-full border border-gray-200 rounded-md px-2 py-1.5 text-xs text-center focus:outline-none focus:ring-1 focus:ring-pink-300"
+                            className="w-full border border-gray-200 rounded-md px-2 py-1.5 text-xs text-center focus:outline-none focus:ring-1 focus:ring-brand/30"
                           />
                         </td>
                         <td className="px-2 py-1.5">
@@ -856,7 +856,7 @@ export default function PreventiviPage() {
                                 parseFloat(e.target.value) || 0,
                               )
                             }
-                            className="w-full border border-gray-200 rounded-md px-2 py-1.5 text-xs text-right focus:outline-none focus:ring-1 focus:ring-pink-300"
+                            className="w-full border border-gray-200 rounded-md px-2 py-1.5 text-xs text-right focus:outline-none focus:ring-1 focus:ring-brand/30"
                           />
                         </td>
                         <td className="px-2 py-1.5 text-xs font-semibold text-gray-900 text-right whitespace-nowrap">
@@ -871,7 +871,7 @@ export default function PreventiviPage() {
                               onClick={() =>
                                 setVoci((vs) => vs.filter((x) => x.id !== v.id))
                               }
-                              className="p-1 rounded text-gray-300 hover:text-red-500 transition-colors"
+                              className="p-1 rounded text-gray-400 hover:text-bad transition-colors"
                             >
                               <X className="w-3.5 h-3.5" />
                             </button>
@@ -904,7 +904,7 @@ export default function PreventiviPage() {
                             iva: parseFloat(e.target.value) || 0,
                           }))
                         }
-                        className="w-14 border border-gray-200 rounded px-2 py-0.5 text-xs text-right focus:outline-none focus:ring-1 focus:ring-pink-300"
+                        className="w-14 border border-gray-200 rounded px-2 py-0.5 text-xs text-right focus:outline-none focus:ring-1 focus:ring-brand/30"
                       />
                       <span className="text-xs text-gray-400">%</span>
                       <span className="font-medium ml-1">{fmt(ivaAmt)}</span>
@@ -925,10 +925,10 @@ export default function PreventiviPage() {
                             feeCommerciale: parseFloat(e.target.value) || 0,
                           }))
                         }
-                        className="w-16 border border-gray-200 rounded px-2 py-0.5 text-xs text-right focus:outline-none focus:ring-1 focus:ring-pink-300"
+                        className="w-16 border border-gray-200 rounded px-2 py-0.5 text-xs text-right focus:outline-none focus:ring-1 focus:ring-brand/30"
                       />
                       <span className="text-xs text-gray-400">%</span>
-                      <span className="font-medium ml-1 text-orange-600">
+                      <span className="font-medium ml-1 text-partial">
                         {fmt((subtotale * (form.feeCommerciale || 0)) / 100)}
                       </span>
                     </div>
@@ -937,7 +937,7 @@ export default function PreventiviPage() {
                     <span>TOTALE</span>
                     <span>{fmt(totale)}</span>
                   </div>
-                  <div className="flex justify-between text-emerald-700 font-semibold">
+                  <div className="flex justify-between text-ok font-semibold">
                     <span>Guadagno netto</span>
                     <span>
                       {fmt(subtotale * (1 - (form.feeCommerciale || 0) / 100))}
@@ -959,7 +959,7 @@ export default function PreventiviPage() {
                     setForm((f) => ({ ...f, condizioni: e.target.value }))
                   }
                   rows={4}
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-pink-300 resize-none"
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-brand/30 resize-none"
                 />
               </div>
               <div>
@@ -973,7 +973,7 @@ export default function PreventiviPage() {
                   }
                   rows={4}
                   placeholder="Note non visibili nel PDF..."
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-pink-300 resize-none"
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-brand/30 resize-none"
                 />
               </div>
             </div>
@@ -1006,7 +1006,7 @@ export default function PreventiviPage() {
                   setShowForm(false);
                   setGenContratto(editing);
                 }}
-                className="w-full flex items-center justify-center gap-2 border border-red-200 text-red-600 text-sm font-medium py-2.5 rounded-xl hover:bg-red-50 transition-colors"
+                className="w-full flex items-center justify-center gap-2 border border-bad/30 text-bad text-sm font-medium py-2.5 rounded-xl hover:bg-bad/10 transition-colors"
               >
                 <FileText className="w-4 h-4" /> Genera Contratto
               </button>
@@ -1189,7 +1189,7 @@ function GeneraContrattoModal({
             <select
               value={clienteId ?? ""}
               onChange={(e) => setClienteId(parseInt(e.target.value) || null)}
-              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-300"
+              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30"
             >
               <option value="">Seleziona cliente...</option>
               {clienti.map((c) => (
@@ -1217,7 +1217,7 @@ function GeneraContrattoModal({
               value={rappresentante}
               onChange={(e) => setRappresentante(e.target.value)}
               placeholder="Es. Eugenio Zuppichin"
-              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-300"
+              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30"
             />
           </div>
 
@@ -1245,8 +1245,8 @@ function GeneraContrattoModal({
                         }
                       : {
                           background: "#fff",
-                          borderColor: "#e2e8f0",
-                          color: "#94a3b8",
+                          borderColor: "#e5e7eb",
+                          color: "#9ca3af",
                         }
                   }
                 >
@@ -1265,7 +1265,7 @@ function GeneraContrattoModal({
                 type="date"
                 value={dataDecorrenza}
                 onChange={(e) => setDataDecorrenza(e.target.value)}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-300"
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30"
               />
             </div>
             <div>
@@ -1281,7 +1281,7 @@ function GeneraContrattoModal({
                   setDurataMesi(v);
                   setNumeroRate(v);
                 }}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-300"
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30"
               />
             </div>
             <div>
@@ -1295,7 +1295,7 @@ function GeneraContrattoModal({
                 onChange={(e) =>
                   setImportoMensile(parseFloat(e.target.value) || 0)
                 }
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-300"
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30"
               />
             </div>
             <div>
@@ -1307,7 +1307,7 @@ function GeneraContrattoModal({
                 min={1}
                 value={numeroRate}
                 onChange={(e) => setNumeroRate(parseInt(e.target.value) || 1)}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-300"
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30"
               />
             </div>
           </div>
@@ -1345,7 +1345,7 @@ function GeneraContrattoModal({
           </div>
 
           {error && (
-            <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+            <div className="text-sm text-bad bg-bad/10 border border-bad/30 rounded-lg px-3 py-2">
               {error}
             </div>
           )}

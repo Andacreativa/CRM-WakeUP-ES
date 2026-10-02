@@ -41,7 +41,7 @@ interface Pagamento {
 }
 
 const inputCls =
-  "w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-300 bg-white";
+  "w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30 bg-white";
 
 export default function PagamentiPage() {
   const { anno: annoCtx } = useAnno();
@@ -136,7 +136,7 @@ export default function PagamentiPage() {
   return (
     <div className="space-y-6">
       {msg && (
-        <div className="text-sm rounded-lg px-3 py-2 border bg-emerald-50 border-emerald-200 text-emerald-700">
+        <div className="text-sm rounded-lg px-3 py-2 border bg-ok/10 border-ok/30 text-ok">
           {msg}
         </div>
       )}
@@ -183,7 +183,7 @@ export default function PagamentiPage() {
                   >
                     {VOCI[v].label}
                     {VOCI[v].auto && (
-                      <span className="ml-1 text-[9px] normal-case font-medium text-pink-600">auto</span>
+                      <span className="ml-1 text-[9px] normal-case font-medium text-brand">auto</span>
                     )}
                   </th>
                 ))}
@@ -239,7 +239,7 @@ export default function PagamentiPage() {
                     {colonne.map((v) => {
                       if (!voci.includes(v)) {
                         return (
-                          <td key={v} className="px-4 py-3 text-right text-gray-300 text-sm">
+                          <td key={v} className="px-4 py-3 text-right text-gray-400 text-sm">
                             —
                           </td>
                         );
@@ -278,7 +278,7 @@ export default function PagamentiPage() {
                                 <button
                                   key={r.id}
                                   onClick={() => setModal({ persona: p, voce: v, esistente: r })}
-                                  className="inline-flex items-center gap-1.5 text-xs text-gray-700 hover:text-pink-600"
+                                  className="inline-flex items-center gap-1.5 text-xs text-gray-700 hover:text-brand"
                                   title={r.note ?? "Modifica o elimina"}
                                 >
                                   <span className="text-[10px] text-gray-400 tabular-nums">
@@ -297,7 +297,7 @@ export default function PagamentiPage() {
                               )}
                               <button
                                 onClick={() => setModal({ persona: p, voce: v, esistente: null })}
-                                className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-1 rounded-md border border-dashed border-gray-300 text-gray-500 hover:border-pink-400 hover:text-pink-600 whitespace-nowrap"
+                                className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-1 rounded-md border border-dashed border-gray-300 text-gray-500 hover:border-brand/40 hover:text-brand whitespace-nowrap"
                               >
                                 <Plus className="w-3 h-3" />
                                 {righe.length ? "aggiungi" : "rimborso"}
@@ -317,7 +317,7 @@ export default function PagamentiPage() {
                               title="Modifica o elimina"
                             >
                               <span className="inline-flex items-center gap-1 text-sm font-semibold text-gray-900">
-                                <Check className="w-3.5 h-3.5 text-emerald-600" />
+                                <Check className="w-3.5 h-3.5 text-ok" />
                                 {fmt(esistente.importo)}
                               </span>
                               <span className="text-[10px] text-gray-400 group-hover:text-gray-600">
@@ -329,7 +329,7 @@ export default function PagamentiPage() {
                           ) : (
                             <button
                               onClick={() => setModal({ persona: p, voce: v, esistente: null })}
-                              className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-1 rounded-md border border-dashed border-gray-300 text-gray-500 hover:border-pink-400 hover:text-pink-600 whitespace-nowrap"
+                              className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-1 rounded-md border border-dashed border-gray-300 text-gray-500 hover:border-brand/40 hover:text-brand whitespace-nowrap"
                             >
                               <Plus className="w-3 h-3" />
                               {def > 0 ? fmt(def) : "registra"}
@@ -338,7 +338,7 @@ export default function PagamentiPage() {
                         </td>
                       );
                     })}
-                    <td className="px-4 py-3 text-right text-sm font-bold text-gray-900">
+                    <td className="px-4 py-3 text-right text-sm font-semibold text-gray-900">
                       {fmt(totRiga(p))}
                     </td>
                   </tr>
@@ -358,7 +358,7 @@ export default function PagamentiPage() {
                       {totCol(v) > 0 ? fmt(totCol(v)) : "—"}
                     </td>
                   ))}
-                  <td className="px-4 py-3 text-right text-sm font-bold" style={{ color: "#e8308a" }}>
+                  <td className="px-4 py-3 text-right text-sm font-semibold" style={{ color: "#e8308a" }}>
                     {fmt(totale)}
                   </td>
                 </tr>
@@ -491,12 +491,12 @@ function PagamentoModal({
             placeholder={VOCI[voce].multiplo ? "Es. rimborso carta, viaggio Milano…" : undefined}
           />
         </div>
-        {err && <div className="text-sm text-red-600">{err}</div>}
+        {err && <div className="text-sm text-bad">{err}</div>}
         <div className="flex items-center justify-between gap-2 pt-1">
           {esistente ? (
             <button
               onClick={elimina}
-              className="inline-flex items-center gap-1 text-sm text-red-600 hover:text-red-700"
+              className="inline-flex items-center gap-1 text-sm text-bad hover:text-bad"
             >
               <Trash2 className="w-4 h-4" /> Elimina
             </button>
@@ -504,7 +504,7 @@ function PagamentoModal({
             <span />
           )}
           <div className="flex gap-2">
-            <button onClick={onClose} className="text-sm text-gray-500 hover:text-gray-800 px-3 py-2">
+            <button onClick={onClose} className="text-sm text-gray-500 hover:text-gray-700 px-3 py-2">
               Annulla
             </button>
             <button

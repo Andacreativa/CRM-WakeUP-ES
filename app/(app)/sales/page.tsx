@@ -88,8 +88,8 @@ export default function PipelinePage() {
                 <div className="flex items-center justify-between px-1">
                   <div className="flex items-center gap-2">
                     <span className="w-2.5 h-2.5 rounded-full" style={{ background: st.color }} />
-                    <span className="text-xs font-bold text-gray-800 uppercase tracking-wide">{st.label}</span>
-                    <span className="text-[10px] font-bold text-white rounded-full px-1.5 py-0.5" style={{ background: st.color }}>{col.length}</span>
+                    <span className="text-xs font-semibold text-gray-700 uppercase tracking-wide">{st.label}</span>
+                    <span className="text-[10px] font-semibold text-white rounded-full px-1.5 py-0.5" style={{ background: st.color }}>{col.length}</span>
                   </div>
                   <button onClick={() => setNuovo(stato)} className="text-gray-400 hover:text-gray-700" title="Aggiungi qui">
                     <Plus className="w-4 h-4" />
@@ -100,17 +100,17 @@ export default function PipelinePage() {
                   {col.map((l) => {
                     const scaduta = l.prossimaAzioneData ? new Date(l.prossimaAzioneData).getTime() < Date.now() : false;
                     return (
-                      <div key={l.id} className="bg-white border border-gray-100 rounded-xl p-3 shadow-sm space-y-1.5">
-                        <Link href={`/crm/lead/${l.id}`} className="block text-sm font-semibold text-gray-900 hover:text-pink-600 leading-tight">
+                      <div key={l.id} className="bg-white border border-gray-100 rounded-xl p-3 space-y-1.5">
+                        <Link href={`/crm/lead/${l.id}`} className="block text-sm font-semibold text-gray-900 hover:text-brand leading-tight">
                           {l.azienda ?? l.nome}
                         </Link>
                         {l.azienda && l.nome !== l.azienda && <div className="text-[11px] text-gray-500">{l.nome}</div>}
                         <div className="flex items-center justify-between text-[11px]">
-                          <span className="font-semibold text-gray-800">{l.valore != null ? fmt(l.valore) : ""}</span>
+                          <span className="font-semibold text-gray-700">{l.valore != null ? fmt(l.valore) : ""}</span>
                           <span className="text-gray-400">{l.responsabile ?? ""}</span>
                         </div>
                         {l.prossimaAzione && (
-                          <div className={cn("text-[11px] truncate", scaduta ? "text-red-600 font-semibold" : "text-gray-500")} title={l.prossimaAzione}>
+                          <div className={cn("text-[11px] truncate", scaduta ? "text-bad font-semibold" : "text-gray-500")} title={l.prossimaAzione}>
                             → {l.prossimaAzione}
                             {l.prossimaAzioneData && ` · ${new Date(l.prossimaAzioneData).toLocaleDateString("it-IT")}`}
                           </div>
@@ -134,7 +134,7 @@ export default function PipelinePage() {
                     );
                   })}
                   {col.length === 0 && (
-                    <button onClick={() => setNuovo(stato)} className="w-full text-[11px] text-gray-400 border border-dashed border-gray-200 rounded-xl py-4 hover:border-pink-300 hover:text-pink-600">
+                    <button onClick={() => setNuovo(stato)} className="w-full text-[11px] text-gray-400 border border-dashed border-gray-200 rounded-xl py-4 hover:border-brand/40 hover:text-brand">
                       + aggiungi lead
                     </button>
                   )}
@@ -147,8 +147,8 @@ export default function PipelinePage() {
 
       <section className="glass-card rounded-2xl overflow-hidden">
         <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
-          <h2 className="text-sm font-bold text-gray-900">Ultimi preventivi</h2>
-          <Link href="/sales/preventivi" className="text-xs font-semibold text-pink-600 hover:text-pink-700 inline-flex items-center gap-1">
+          <h2 className="text-sm font-semibold text-gray-900">Ultimi preventivi</h2>
+          <Link href="/sales/preventivi" className="text-xs font-semibold text-brand hover:text-brand inline-flex items-center gap-1">
             Tutti <ExternalLink className="w-3 h-3" />
           </Link>
         </div>

@@ -6,7 +6,7 @@ import type { ImpostazioniFatture } from "@/lib/impostazioni";
 import { cn } from "@/lib/utils";
 
 const inputCls =
-  "w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-300 bg-white";
+  "w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30 bg-white";
 const labelCls = "text-xs font-medium text-gray-600 block mb-1";
 
 type Campo = keyof ImpostazioniFatture;
@@ -83,8 +83,8 @@ export default function ImpostazioniPage() {
           className={cn(
             "text-sm rounded-lg px-3 py-2 border",
             msg.ok
-              ? "bg-emerald-50 border-emerald-200 text-emerald-700"
-              : "bg-red-50 border-red-200 text-red-600",
+              ? "bg-ok/10 border-ok/30 text-ok"
+              : "bg-bad/10 border-bad/30 text-bad",
           )}
         >
           {msg.text}
@@ -149,7 +149,7 @@ export default function ImpostazioniPage() {
                     style={
                       active
                         ? { background: "#e8308a", color: "#fff", borderColor: "#e8308a" }
-                        : { background: "#fff", borderColor: "#e2e8f0", color: "#94a3b8" }
+                        : { background: "#fff", borderColor: "#e5e7eb", color: "#9ca3af" }
                     }
                   >
                     {o.label}

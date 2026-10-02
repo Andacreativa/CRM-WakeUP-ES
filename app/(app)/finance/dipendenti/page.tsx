@@ -279,7 +279,7 @@ export default function DipendentiPage() {
                     />
                     <button
                       onClick={() => setInfoDip(d)}
-                      className="text-left hover:text-pink-600 hover:underline transition-colors cursor-pointer"
+                      className="text-left hover:text-brand hover:underline transition-colors cursor-pointer"
                     >
                       {d.nome}
                       {d.cognome ? ` ${d.cognome}` : ""}
@@ -290,10 +290,10 @@ export default function DipendentiPage() {
                   <span
                     className={`text-[11px] font-semibold px-2 py-0.5 rounded-md ${
                       d.tipo === "commerciale"
-                        ? "bg-pink-50 text-pink-700"
+                        ? "bg-brand/10 text-brand"
                         : d.tipo === "socio_dipendente"
-                          ? "bg-violet-50 text-violet-700"
-                          : "bg-sky-50 text-sky-700"
+                          ? "bg-info/10 text-info"
+                          : "bg-info/10 text-info"
                     }`}
                   >
                     {TIPO_LABEL[d.tipo] ?? d.tipo}
@@ -336,13 +336,13 @@ export default function DipendentiPage() {
                   <div className="flex items-center gap-2 justify-end">
                     <button
                       onClick={() => openEdit(d)}
-                      className="p-1.5 rounded-lg text-gray-400 hover:text-pink-600 hover:bg-pink-50 transition-colors"
+                      className="p-1.5 rounded-lg text-gray-400 hover:text-brand hover:bg-brand/10 transition-colors"
                     >
                       <Pencil className="w-4 h-4" />
                     </button>
                     <button
                       onClick={() => del(d.id)}
-                      className="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                      className="p-1.5 rounded-lg text-gray-400 hover:text-bad hover:bg-bad/10 transition-colors"
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
@@ -398,7 +398,7 @@ export default function DipendentiPage() {
                     <button
                       type="button"
                       onClick={() => setForm((f) => ({ ...f, fotoPath: "" }))}
-                      className="text-xs font-medium px-3 py-1.5 rounded-lg border border-gray-200 text-red-600 hover:bg-red-50"
+                      className="text-xs font-medium px-3 py-1.5 rounded-lg border border-gray-200 text-bad hover:bg-bad/10"
                     >
                       Rimuovi
                     </button>
@@ -427,7 +427,7 @@ export default function DipendentiPage() {
                       style={
                         active
                           ? { background: "#e8308a", color: "#fff", borderColor: "#e8308a" }
-                          : { background: "#fff", borderColor: "#e2e8f0", color: "#94a3b8" }
+                          : { background: "#fff", borderColor: "#e5e7eb", color: "#9ca3af" }
                       }
                     >
                       {t.label}
@@ -462,7 +462,7 @@ export default function DipendentiPage() {
                       setForm((f) => ({ ...f, nome: e.target.value }))
                     }
                     placeholder="Es. Mario"
-                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-300"
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30"
                   />
                 </div>
                 <div>
@@ -476,7 +476,7 @@ export default function DipendentiPage() {
                       setForm((f) => ({ ...f, cognome: e.target.value }))
                     }
                     placeholder="Es. Rossi"
-                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-300"
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30"
                   />
                 </div>
                 <div>
@@ -490,7 +490,7 @@ export default function DipendentiPage() {
                       setForm((f) => ({ ...f, ruolo: e.target.value }))
                     }
                     placeholder="Es. Account Manager"
-                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-300"
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30"
                   />
                 </div>
                 <div>
@@ -503,7 +503,7 @@ export default function DipendentiPage() {
                     onChange={(e) =>
                       setForm((f) => ({ ...f, dataNascita: e.target.value }))
                     }
-                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-300"
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30"
                   />
                 </div>
                 <div>
@@ -517,7 +517,7 @@ export default function DipendentiPage() {
                       setForm((f) => ({ ...f, dni: e.target.value }))
                     }
                     placeholder="12345678X"
-                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-300"
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30"
                   />
                 </div>
                 <div>
@@ -531,7 +531,7 @@ export default function DipendentiPage() {
                       setForm((f) => ({ ...f, nie: e.target.value }))
                     }
                     placeholder="X1234567L"
-                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-300"
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30"
                   />
                 </div>
                 <div className="col-span-2">
@@ -545,7 +545,7 @@ export default function DipendentiPage() {
                       setForm((f) => ({ ...f, numSS: e.target.value }))
                     }
                     placeholder="Es. 281234567890"
-                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-300"
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30"
                   />
                 </div>
                 <div className="col-span-2">
@@ -583,7 +583,7 @@ export default function DipendentiPage() {
                       setForm((f) => ({ ...f, telefono: e.target.value }))
                     }
                     placeholder="+34..."
-                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-300"
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30"
                   />
                 </div>
                 <div>
@@ -597,7 +597,7 @@ export default function DipendentiPage() {
                       setForm((f) => ({ ...f, email: e.target.value }))
                     }
                     placeholder="mario@example.com"
-                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-300"
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30"
                   />
                 </div>
                 <div className="col-span-2">
@@ -611,7 +611,7 @@ export default function DipendentiPage() {
                       setForm((f) => ({ ...f, iban: e.target.value }))
                     }
                     placeholder="ES00 0000 0000 0000 0000 0000"
-                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-300"
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30"
                   />
                 </div>
               </div>
@@ -635,7 +635,7 @@ export default function DipendentiPage() {
                       setForm((f) => ({ ...f, nettoBustaPaga: e.target.value }))
                     }
                     placeholder="0.00"
-                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-300"
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30"
                   />
                 </div>
                 <div>
@@ -652,7 +652,7 @@ export default function DipendentiPage() {
                       setForm((f) => ({ ...f, irpf: e.target.value }))
                     }
                     placeholder="0"
-                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-300"
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30"
                   />
                 </div>
                 <div>
@@ -667,7 +667,7 @@ export default function DipendentiPage() {
                       setForm((f) => ({ ...f, irpfImporto: e.target.value }))
                     }
                     placeholder="0.00"
-                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-300"
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30"
                   />
                 </div>
                 <div>
@@ -685,7 +685,7 @@ export default function DipendentiPage() {
                       }))
                     }
                     placeholder="0.00"
-                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-300"
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30"
                   />
                 </div>
               </div>
@@ -710,7 +710,7 @@ export default function DipendentiPage() {
                           setForm((f) => ({ ...f, percentualeCommissione: e.target.value }))
                         }
                         placeholder="Es. 85"
-                        className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-300"
+                        className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30"
                       />
                     </div>
                   )}
@@ -726,7 +726,7 @@ export default function DipendentiPage() {
                         setForm((f) => ({ ...f, benefitMensili: e.target.value }))
                       }
                       placeholder="0.00"
-                      className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-300"
+                      className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30"
                     />
                   </div>
                 </div>

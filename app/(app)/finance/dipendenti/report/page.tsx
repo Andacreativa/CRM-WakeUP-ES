@@ -247,13 +247,13 @@ export default function ReportDipendentiPage() {
             onClick={esportaExcel}
             className="flex items-center gap-1.5 border border-gray-200 text-gray-600 text-sm font-medium px-3 py-2 rounded-xl hover:bg-gray-50"
           >
-            <FileSpreadsheet className="w-4 h-4 text-emerald-600" /> Excel
+            <FileSpreadsheet className="w-4 h-4 text-ok" /> Excel
           </button>
           <button
             onClick={esportaPDF}
             className="flex items-center gap-1.5 border border-gray-200 text-gray-600 text-sm font-medium px-3 py-2 rounded-xl hover:bg-gray-50"
           >
-            <Download className="w-4 h-4 text-red-500" /> PDF
+            <Download className="w-4 h-4 text-bad" /> PDF
           </button>
         </div>
       </div>
@@ -294,10 +294,10 @@ export default function ReportDipendentiPage() {
             <div key={d.id} className="glass-card rounded-2xl overflow-hidden">
               <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
                 <div>
-                  <div className="text-sm font-bold text-gray-900">{nomeCompleto(d)}</div>
+                  <div className="text-sm font-semibold text-gray-900">{nomeCompleto(d)}</div>
                   <div className="text-[11px] text-gray-400">{TIPO_LABEL[d.tipo] ?? d.tipo}</div>
                 </div>
-                <div className="text-sm font-bold text-gray-900">{fmt(somma(mie))}</div>
+                <div className="text-sm font-semibold text-gray-900">{fmt(somma(mie))}</div>
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full min-w-[720px]">
@@ -318,7 +318,7 @@ export default function ReportDipendentiPage() {
                       if (!del.length) return null;
                       return (
                         <tr key={m} className="border-b border-gray-50">
-                          <td className="px-4 py-2.5 text-sm font-medium text-gray-800">{m}</td>
+                          <td className="px-4 py-2.5 text-sm font-medium text-gray-700">{m}</td>
                           {cols.map((v) => {
                             const voce = del.filter((p) => p.voce === v);
                             const tot = somma(voce);
@@ -332,7 +332,7 @@ export default function ReportDipendentiPage() {
                                     : undefined
                                 }
                               >
-                                {tot > 0 ? fmt(tot) : <span className="text-gray-300">—</span>}
+                                {tot > 0 ? fmt(tot) : <span className="text-gray-400">—</span>}
                                 {v === "rimborsi" && voce.length > 1 && (
                                   <div className="text-[10px] text-gray-400">{voce.length} voci</div>
                                 )}
@@ -352,11 +352,11 @@ export default function ReportDipendentiPage() {
                         Totale
                       </td>
                       {cols.map((v) => (
-                        <td key={v} className="px-4 py-2.5 text-sm text-right font-semibold text-gray-800 tabular-nums">
+                        <td key={v} className="px-4 py-2.5 text-sm text-right font-semibold text-gray-700 tabular-nums">
                           {fmt(somma(mie.filter((p) => p.voce === v)))}
                         </td>
                       ))}
-                      <td className="px-4 py-2.5 text-sm text-right font-bold text-gray-900 tabular-nums">
+                      <td className="px-4 py-2.5 text-sm text-right font-semibold text-gray-900 tabular-nums">
                         {fmt(somma(mie))}
                       </td>
                     </tr>
@@ -432,7 +432,7 @@ function Tabella({
   const totRiga = (v: number[]) => v.reduce((s, x) => s + x, 0);
   return (
     <div className="glass-card rounded-2xl overflow-hidden">
-      <div className="px-4 py-3 border-b border-gray-100 text-sm font-bold text-gray-900">{titolo}</div>
+      <div className="px-4 py-3 border-b border-gray-100 text-sm font-semibold text-gray-900">{titolo}</div>
       <div className="overflow-x-auto">
         <table className="w-full min-w-[640px]">
           <thead>
@@ -452,15 +452,15 @@ function Tabella({
                 key={r.label}
                 onClick={onRiga ? () => onRiga(i) : undefined}
                 title={onRiga ? "Apri il dettaglio mensile" : undefined}
-                className={cn("border-b border-gray-50", onRiga && "cursor-pointer hover:bg-pink-50")}
+                className={cn("border-b border-gray-50", onRiga && "cursor-pointer hover:bg-brand/10")}
               >
                 <td className="px-4 py-2.5">
-                  <div className="text-sm font-medium text-gray-800">{r.label}</div>
+                  <div className="text-sm font-medium text-gray-700">{r.label}</div>
                   {r.sub && <div className="text-[11px] text-gray-400">{r.sub}</div>}
                 </td>
                 {r.valori.map((v, i) => (
                   <td key={i} className="px-4 py-2.5 text-sm text-right text-gray-700 tabular-nums">
-                    {v > 0 ? fmt(v) : <span className="text-gray-300">—</span>}
+                    {v > 0 ? fmt(v) : <span className="text-gray-400">—</span>}
                   </td>
                 ))}
                 <td className="px-4 py-2.5 text-sm text-right font-semibold text-gray-900 tabular-nums">
@@ -473,11 +473,11 @@ function Tabella({
             <tr className="bg-gray-50 border-t border-gray-100">
               <td className="px-4 py-2.5 text-xs font-semibold uppercase tracking-wide text-gray-500">Totale</td>
               {totali.map((t, i) => (
-                <td key={i} className="px-4 py-2.5 text-sm text-right font-semibold text-gray-800 tabular-nums">
+                <td key={i} className="px-4 py-2.5 text-sm text-right font-semibold text-gray-700 tabular-nums">
                   {t > 0 ? fmt(t) : "—"}
                 </td>
               ))}
-              <td className="px-4 py-2.5 text-sm text-right font-bold text-gray-900 tabular-nums">
+              <td className="px-4 py-2.5 text-sm text-right font-semibold text-gray-900 tabular-nums">
                 {fmt(totRiga(totali))}
               </td>
             </tr>

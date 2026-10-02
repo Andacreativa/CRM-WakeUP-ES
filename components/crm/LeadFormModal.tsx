@@ -35,7 +35,7 @@ export interface LeadFormValues {
 }
 
 const inputCls =
-  "w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-300 bg-white";
+  "w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30 bg-white";
 const labelCls = "text-xs font-medium text-gray-600 block mb-1";
 
 const vuoto = () => ({
@@ -242,9 +242,9 @@ export default function LeadFormModal({
           </div>
         </div>
 
-        {err && <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{err}</div>}
+        {err && <div className="text-sm text-bad bg-bad/10 border border-bad/30 rounded-lg px-3 py-2">{err}</div>}
         <div className="flex justify-end gap-2 pt-1">
-          <button onClick={onClose} className="text-sm text-gray-500 hover:text-gray-800 px-3 py-2">Annulla</button>
+          <button onClick={onClose} className="text-sm text-gray-500 hover:text-gray-700 px-3 py-2">Annulla</button>
           <button onClick={salva} disabled={busy} className="glass-btn-primary text-white text-sm font-medium px-5 py-2 rounded-xl disabled:opacity-60">
             {busy ? "Salvataggio…" : lead?.id ? "Salva" : "Crea lead"}
           </button>

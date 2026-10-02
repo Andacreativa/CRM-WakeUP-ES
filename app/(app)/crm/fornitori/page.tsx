@@ -237,7 +237,7 @@ export default function FornitoriPage() {
         value={search}
         onChange={(e) => setSearch(e.target.value)}
         placeholder="Cerca per nome, NIF, paese, email..."
-        className="w-full max-w-sm border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-pink-300 bg-white"
+        className="w-full max-w-sm border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30 bg-white"
       />
 
       {/* Tabella */}
@@ -279,7 +279,7 @@ export default function FornitoriPage() {
                   <td className="px-4 py-3">
                     <button
                       onClick={() => setDetail(c)}
-                      className="text-sm font-medium text-gray-900 hover:text-pink-600 hover:underline text-left"
+                      className="text-sm font-medium text-gray-900 hover:text-brand hover:underline text-left"
                     >
                       {c.nome}
                     </button>
@@ -291,7 +291,7 @@ export default function FornitoriPage() {
                   </td>
                   <td
                     className="px-4 py-3 text-sm font-semibold text-right"
-                    style={{ color: totale > 0 ? "#ef4444" : "#94a3b8" }}
+                    style={{ color: totale > 0 ? "#ef4444" : "#9ca3af" }}
                   >
                     {totale > 0 ? fmt(totale) : "—"}
                   </td>
@@ -299,13 +299,13 @@ export default function FornitoriPage() {
                     <div className="flex items-center gap-2 justify-end">
                       <button
                         onClick={() => openEdit(c)}
-                        className="p-1.5 rounded-lg text-gray-400 hover:text-pink-600 hover:bg-pink-50 transition-colors"
+                        className="p-1.5 rounded-lg text-gray-400 hover:text-brand hover:bg-brand/10 transition-colors"
                       >
                         <Pencil className="w-4 h-4" />
                       </button>
                       <button
                         onClick={() => del(c.id)}
-                        className="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                        className="p-1.5 rounded-lg text-gray-400 hover:text-bad hover:bg-bad/10 transition-colors"
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
@@ -363,7 +363,7 @@ export default function FornitoriPage() {
                       setForm((f) => ({ ...f, nome: e.target.value }))
                     }
                     placeholder="Es. Acme Srl"
-                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-300"
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30"
                   />
                 </div>
                 <div>
@@ -376,7 +376,7 @@ export default function FornitoriPage() {
                     onChange={(e) =>
                       setForm((f) => ({ ...f, partitaIva: e.target.value }))
                     }
-                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-300"
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30"
                   />
                 </div>
                 <div>
@@ -389,7 +389,7 @@ export default function FornitoriPage() {
                     onChange={(e) =>
                       setForm((f) => ({ ...f, email: e.target.value }))
                     }
-                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-300"
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30"
                   />
                 </div>
                 <div className="col-span-2">
@@ -402,7 +402,7 @@ export default function FornitoriPage() {
                     onChange={(e) =>
                       setForm((f) => ({ ...f, telefono: e.target.value }))
                     }
-                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-300"
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30"
                   />
                 </div>
                 <div className="col-span-2">
@@ -439,7 +439,7 @@ export default function FornitoriPage() {
                       setForm((f) => ({ ...f, note: e.target.value }))
                     }
                     rows={2}
-                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-300 resize-none"
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30 resize-none"
                   />
                 </div>
               </div>
@@ -502,10 +502,10 @@ function FornitoreDetailModal({
         {label}
       </span>
       <span
-        className="text-sm text-gray-800 break-words"
+        className="text-sm text-gray-700 break-words"
         style={{ textAlign: "left" }}
       >
-        {value || <span className="text-gray-300">—</span>}
+        {value || <span className="text-gray-400">—</span>}
       </span>
       {value ? (
         <button
@@ -514,7 +514,7 @@ function FornitoreDetailModal({
           title={`Copia ${label}`}
         >
           {copied === label ? (
-            <Check className="w-3.5 h-3.5 text-emerald-600" />
+            <Check className="w-3.5 h-3.5 text-ok" />
           ) : (
             <Copy className="w-3.5 h-3.5" />
           )}
@@ -560,7 +560,7 @@ function FornitoreDetailModal({
           </p>
           <p
             className="text-lg font-bold"
-            style={{ color: totale > 0 ? "#ef4444" : "#94a3b8" }}
+            style={{ color: totale > 0 ? "#ef4444" : "#9ca3af" }}
           >
             {totale > 0 ? fmt(totale) : "—"}
           </p>
@@ -649,7 +649,7 @@ function FattureFornitoriTab({
           <select
             value={filtroAnno}
             onChange={(e) => setFiltroAnno(parseInt(e.target.value))}
-            className="text-sm border border-gray-200 rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-pink-300"
+            className="text-sm border border-gray-200 rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-brand/30"
           >
             {[2024, 2025, 2026].map((a) => (
               <option key={a} value={a}>
@@ -660,7 +660,7 @@ function FattureFornitoriTab({
           <select
             value={filtroMese}
             onChange={(e) => setFiltroMese(parseInt(e.target.value))}
-            className="text-sm border border-gray-200 rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-pink-300"
+            className="text-sm border border-gray-200 rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-brand/30"
           >
             <option value={0}>Tutti i mesi</option>
             {MESI.map((m, i) => (
@@ -749,7 +749,7 @@ function FattureFornitoriTab({
             {fatture.map((f, i) => (
               <tr
                 key={f.id}
-                className={`border-b border-gray-50 hover:bg-gray-50 transition-colors ${i % 2 === 1 ? "bg-[#F9F9F9]" : "bg-white"}`}
+                className={`border-b border-gray-50 hover:bg-gray-50 transition-colors ${i % 2 === 1 ? "bg-[#f9fafb]" : "bg-white"}`}
               >
                 <td className="px-4 py-3 text-sm font-semibold text-gray-900">
                   {f.fornitore?.nome ?? "—"}
@@ -757,7 +757,7 @@ function FattureFornitoriTab({
                 <td className="px-4 py-3 text-sm text-gray-700">
                   <button
                     onClick={() => setPreview(f)}
-                    className="hover:text-pink-600 hover:underline text-left"
+                    className="hover:text-brand hover:underline text-left"
                   >
                     {f.fileName}
                   </button>
@@ -781,14 +781,14 @@ function FattureFornitoriTab({
                       target="_blank"
                       rel="noopener noreferrer"
                       title="Scarica"
-                      className="p-1.5 rounded-lg text-gray-400 hover:text-pink-600 hover:bg-pink-50 transition-colors inline-flex"
+                      className="p-1.5 rounded-lg text-gray-400 hover:text-brand hover:bg-brand/10 transition-colors inline-flex"
                     >
                       <Download className="w-4 h-4" />
                     </a>
                     <button
                       onClick={() => del(f.id)}
                       title="Elimina"
-                      className="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                      className="p-1.5 rounded-lg text-gray-400 hover:text-bad hover:bg-bad/10 transition-colors"
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
@@ -1043,8 +1043,8 @@ function UploadFatturaModal({
           onClick={() => document.getElementById("file-input-fornitore")?.click()}
           className={`border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-colors ${
             dragOver
-              ? "border-pink-400 bg-pink-50"
-              : "border-gray-300 hover:border-pink-300 hover:bg-gray-50"
+              ? "border-brand/40 bg-brand/10"
+              : "border-gray-300 hover:border-brand/40 hover:bg-gray-50"
           }`}
         >
           <Upload className="w-8 h-8 text-gray-400 mx-auto mb-2" />
@@ -1070,7 +1070,7 @@ function UploadFatturaModal({
           </p>
         )}
         {info && (
-          <div className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+          <div className="text-xs text-warn bg-warn/10 border border-warn/30 rounded-lg px-3 py-2">
             {info}
           </div>
         )}
@@ -1085,7 +1085,7 @@ function UploadFatturaModal({
               onChange={(e) =>
                 setFornitoreId(parseInt(e.target.value) || null)
               }
-              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-300"
+              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30"
             >
               <option value="">Seleziona fornitore...</option>
               {fornitori.map((f) => (
@@ -1095,8 +1095,8 @@ function UploadFatturaModal({
               ))}
             </select>
             {extractedNome && !matchFound && (
-              <div className="mt-2 flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
-                <span className="text-xs text-amber-800 flex-1">
+              <div className="mt-2 flex items-center gap-2 bg-warn/10 border border-warn/30 rounded-lg px-3 py-2">
+                <span className="text-xs text-warn flex-1">
                   Fornitore estratto:{" "}
                   <strong>{extractedNome}</strong>
                   {extractedPiva ? ` (P.IVA ${extractedPiva})` : ""} — non
@@ -1113,7 +1113,7 @@ function UploadFatturaModal({
               </div>
             )}
             {matchFound && extractedNome && (
-              <p className="text-[11px] text-emerald-600 mt-1">
+              <p className="text-[11px] text-ok mt-1">
                 ✓ Fornitore matchato in anagrafica
               </p>
             )}
@@ -1127,7 +1127,7 @@ function UploadFatturaModal({
               <select
                 value={mese}
                 onChange={(e) => setMese(parseInt(e.target.value))}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-300"
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30"
               >
                 {MESI.map((m, i) => (
                   <option key={i} value={i + 1}>
@@ -1143,7 +1143,7 @@ function UploadFatturaModal({
               <select
                 value={anno}
                 onChange={(e) => setAnno(parseInt(e.target.value))}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-300"
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30"
               >
                 {[2024, 2025, 2026].map((a) => (
                   <option key={a} value={a}>
@@ -1166,7 +1166,7 @@ function UploadFatturaModal({
                   )
                 }
                 placeholder="0.00"
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-300"
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30"
               />
             </div>
             <div>
@@ -1177,13 +1177,13 @@ function UploadFatturaModal({
                 type="date"
                 value={dataFattura}
                 onChange={(e) => setDataFattura(e.target.value)}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-300"
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30"
               />
             </div>
           </div>
 
           {error && (
-            <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+            <div className="text-sm text-bad bg-bad/10 border border-bad/30 rounded-lg px-3 py-2">
               {error}
             </div>
           )}

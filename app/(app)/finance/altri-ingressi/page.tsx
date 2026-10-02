@@ -43,10 +43,10 @@ const emptyForm = () => ({
 });
 
 const inputCls =
-  "w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-300 bg-white";
+  "w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30 bg-white";
 const labelCls = "text-xs font-medium text-gray-600 block mb-1";
 const selectCls =
-  "text-sm border border-gray-200 rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-pink-300";
+  "text-sm border border-gray-200 rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-brand/30";
 
 // Categoria effettiva: le ritenute create in automatico dalla ripartizione
 // commerciale sono "ritenuta_commerciale" anche se nate senza categoria.
@@ -170,8 +170,8 @@ export default function AltriIngressiPage() {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {[
           { label: "Totale", value: fmt(totale), color: "#e8308a" },
-          { label: "Incassati", value: fmt(incassati), color: "#059669" },
-          { label: "In attesa", value: fmt(totale - incassati), color: "#d97706" },
+          { label: "Incassati", value: fmt(incassati), color: "#22c55e" },
+          { label: "In attesa", value: fmt(totale - incassati), color: "#f59e0b" },
           { label: "Solo contabili", value: fmt(contabili), color: "#9ca3af" },
         ].map((k) => (
           <div key={k.label} className="glass-card rounded-2xl p-4">
@@ -227,7 +227,7 @@ export default function AltriIngressiPage() {
             {paged.map((r) => {
               const contabile = soloContabile(r);
               return (
-                <tr key={r.id} className={cn("border-b border-gray-50", contabile && "opacity-70")}>
+                <tr key={r.id} className="border-b border-gray-50">
                   <td className="px-4 py-3">
                     <div className="text-sm font-semibold text-gray-900">{r.fonte}</div>
                     {r.descrizione && <div className="text-xs text-gray-500">{r.descrizione}</div>}
@@ -245,7 +245,7 @@ export default function AltriIngressiPage() {
                   <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">
                     {MESI[r.mese - 1]} {r.anno}
                   </td>
-                  <td className={cn("px-4 py-3 text-sm font-semibold text-right", contabile ? "text-gray-400" : "text-gray-900")}>
+                  <td className={cn("px-4 py-3 text-sm font-semibold text-right text-gray-900")}>
                     {fmt(r.importo)}
                   </td>
                   <td className="px-4 py-3 text-center">
@@ -267,7 +267,7 @@ export default function AltriIngressiPage() {
                       <button onClick={() => openEdit(r)} className="p-1.5 text-gray-400 hover:text-gray-700" title="Modifica">
                         <Pencil className="w-4 h-4" />
                       </button>
-                      <button onClick={() => del(r)} className="p-1.5 text-gray-400 hover:text-red-500" title="Elimina">
+                      <button onClick={() => del(r)} className="p-1.5 text-gray-400 hover:text-bad" title="Elimina">
                         <Trash2 className="w-4 h-4" />
                       </button>
                     </div>
@@ -338,7 +338,7 @@ export default function AltriIngressiPage() {
               </div>
             </div>
             <div className="flex justify-end gap-2 pt-1">
-              <button onClick={() => setShowForm(false)} className="text-sm text-gray-500 hover:text-gray-800 px-3 py-2">Annulla</button>
+              <button onClick={() => setShowForm(false)} className="text-sm text-gray-500 hover:text-gray-700 px-3 py-2">Annulla</button>
               <button onClick={save} className="glass-btn-primary text-white text-sm font-medium px-5 py-2 rounded-xl">
                 {editing ? "Salva" : "Aggiungi"}
               </button>

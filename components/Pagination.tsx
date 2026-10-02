@@ -88,7 +88,7 @@ export function PageNav({
       key={key}
       onClick={() => !disabled && onPage(target)}
       disabled={disabled}
-      className={`inline-flex items-center justify-center w-8 h-8 rounded-lg border ${disabled ? "border-gray-100 text-gray-300 cursor-not-allowed" : "border-gray-200 text-gray-700 hover:bg-gray-50"}`}
+      className={`inline-flex items-center justify-center w-8 h-8 rounded-lg border ${disabled ? "border-gray-100 text-gray-400 cursor-not-allowed" : "border-gray-200 text-gray-700 hover:bg-gray-50"}`}
     >
       {icon}
     </button>

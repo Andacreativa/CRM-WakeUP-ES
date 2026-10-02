@@ -244,8 +244,8 @@ export default function ImportFattureModal({
               onClick={() => inputRef.current?.click()}
               className={`border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-colors ${
                 dragOver
-                  ? "border-pink-400 bg-pink-50"
-                  : "border-gray-300 hover:border-pink-300 hover:bg-gray-50"
+                  ? "border-brand/40 bg-brand/10"
+                  : "border-gray-300 hover:border-brand/40 hover:bg-gray-50"
               }`}
             >
               <Upload className="w-10 h-10 text-gray-400 mx-auto mb-3" />
@@ -264,7 +264,7 @@ export default function ImportFattureModal({
               />
             </div>
             {error && (
-              <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+              <div className="text-sm text-bad bg-bad/10 border border-bad/30 rounded-lg px-3 py-2">
                 {error}
               </div>
             )}
@@ -274,7 +274,7 @@ export default function ImportFattureModal({
         {loading && (
           <div className="py-8 text-center">
             <div className="inline-flex items-center gap-2 text-sm text-gray-600">
-              <FileSpreadsheet className="w-5 h-5 text-emerald-600 animate-pulse" />
+              <FileSpreadsheet className="w-5 h-5 text-ok animate-pulse" />
               Importazione in corso...
             </div>
             {fileName && (
@@ -286,27 +286,27 @@ export default function ImportFattureModal({
         {result && (
           <div className="space-y-3">
             <div className="grid grid-cols-3 gap-2">
-              <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3 text-center">
-                <p className="text-xs text-emerald-700 uppercase tracking-wide">
+              <div className="bg-ok/10 border border-ok/30 rounded-lg p-3 text-center">
+                <p className="text-xs text-ok uppercase tracking-wide">
                   Importate
                 </p>
-                <p className="text-2xl font-bold text-emerald-700">
+                <p className="text-2xl font-bold text-ok">
                   {result.importedCount}
                 </p>
               </div>
-              <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-center">
-                <p className="text-xs text-amber-700 uppercase tracking-wide">
+              <div className="bg-warn/10 border border-warn/30 rounded-lg p-3 text-center">
+                <p className="text-xs text-warn uppercase tracking-wide">
                   Saltate
                 </p>
-                <p className="text-2xl font-bold text-amber-700">
+                <p className="text-2xl font-bold text-warn">
                   {result.skippedCount}
                 </p>
               </div>
-              <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-center">
-                <p className="text-xs text-red-700 uppercase tracking-wide">
+              <div className="bg-bad/10 border border-bad/30 rounded-lg p-3 text-center">
+                <p className="text-xs text-bad uppercase tracking-wide">
                   Errori
                 </p>
-                <p className="text-2xl font-bold text-red-700">
+                <p className="text-2xl font-bold text-bad">
                   {result.errorCount}
                 </p>
               </div>
@@ -314,21 +314,21 @@ export default function ImportFattureModal({
 
             {result.createdClienti > 0 && (
               <div className="text-xs text-gray-600 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2">
-                <CheckCircle2 className="w-3.5 h-3.5 inline text-emerald-600 mr-1" />
+                <CheckCircle2 className="w-3.5 h-3.5 inline text-ok mr-1" />
                 Creati {result.createdClienti} clienti nuovi
               </div>
             )}
 
             {result.skipped.length > 0 && (
-              <div className="border border-amber-200 rounded-lg overflow-hidden">
-                <div className="bg-amber-50 px-3 py-1.5 text-xs font-semibold text-amber-800">
+              <div className="border border-warn/30 rounded-lg overflow-hidden">
+                <div className="bg-warn/10 px-3 py-1.5 text-xs font-semibold text-warn">
                   Fatture saltate
                 </div>
                 <div className="max-h-32 overflow-y-auto text-xs">
                   {result.skipped.map((s, i) => (
                     <div
                       key={i}
-                      className="flex justify-between px-3 py-1 border-t border-amber-100"
+                      className="flex justify-between px-3 py-1 border-t border-warn/30"
                     >
                       <span className="font-mono text-gray-700">
                         {s.numero}
@@ -374,8 +374,8 @@ export default function ImportFattureModal({
             )}
 
             {result.errors.length > 0 && (
-              <div className="border border-red-200 rounded-lg overflow-hidden">
-                <div className="bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-800">
+              <div className="border border-bad/30 rounded-lg overflow-hidden">
+                <div className="bg-bad/10 px-3 py-1.5 text-xs font-semibold text-bad">
                   <AlertCircle className="w-3.5 h-3.5 inline mr-1" />
                   Errori
                 </div>
@@ -383,12 +383,12 @@ export default function ImportFattureModal({
                   {result.errors.map((e, i) => (
                     <div
                       key={i}
-                      className="flex justify-between gap-2 px-3 py-1 border-t border-red-100"
+                      className="flex justify-between gap-2 px-3 py-1 border-t border-bad/30"
                     >
                       <span className="font-mono text-gray-700 shrink-0">
                         {e.numero}
                       </span>
-                      <span className="text-red-600 text-right">{e.error}</span>
+                      <span className="text-bad text-right">{e.error}</span>
                     </div>
                   ))}
                 </div>

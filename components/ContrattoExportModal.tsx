@@ -227,8 +227,8 @@ export default function ContrattoExportModal({
                             }
                           : {
                               background: "#fff",
-                              borderColor: "#e2e8f0",
-                              color: "#94a3b8",
+                              borderColor: "#e5e7eb",
+                              color: "#9ca3af",
                             }
                       }
                     >
@@ -245,7 +245,7 @@ export default function ContrattoExportModal({
                   type="text"
                   value={rappresentante}
                   onChange={(e) => setRappresentante(e.target.value)}
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-300"
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30"
                 />
               </div>
             </div>
@@ -259,7 +259,7 @@ export default function ContrattoExportModal({
                   type="date"
                   value={dataDecorrenza}
                   onChange={(e) => setDataDecorrenza(e.target.value)}
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-300"
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30"
                 />
               </div>
               <div>
@@ -286,7 +286,7 @@ export default function ContrattoExportModal({
                     setDurataMesi(v);
                     setNumeroRate(v);
                   }}
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-300"
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30"
                 />
               </div>
               <div>
@@ -300,7 +300,7 @@ export default function ContrattoExportModal({
                   onChange={(e) =>
                     setImportoMensile(parseFloat(e.target.value) || 0)
                   }
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-300"
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30"
                 />
               </div>
               <div>
@@ -312,7 +312,7 @@ export default function ContrattoExportModal({
                   min={1}
                   value={numeroRate}
                   onChange={(e) => setNumeroRate(parseInt(e.target.value) || 1)}
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-300"
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30"
                 />
               </div>
               <div className="flex items-end">
@@ -327,7 +327,7 @@ export default function ContrattoExportModal({
 
             <div className="border border-gray-200 rounded-lg overflow-hidden">
               <div className="bg-gray-50 px-4 py-2 border-b border-gray-200">
-                <h3 className="text-xs font-bold text-gray-700 uppercase">
+                <h3 className="text-xs font-semibold text-gray-700 uppercase">
                   Servizi
                 </h3>
               </div>
@@ -386,7 +386,7 @@ export default function ContrattoExportModal({
               </p>
               <button
                 onClick={resetText}
-                className="text-xs text-red-600 hover:text-red-700 flex items-center gap-1"
+                className="text-xs text-bad hover:text-bad flex items-center gap-1"
                 title="Rigenera dal template"
               >
                 <RotateCcw className="w-3 h-3" /> Rigenera
@@ -399,7 +399,7 @@ export default function ContrattoExportModal({
                 setManuallyEdited(true);
               }}
               rows={28}
-              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-xs font-mono leading-relaxed focus:outline-none focus:ring-2 focus:ring-pink-300 resize-none"
+              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-xs font-mono leading-relaxed focus:outline-none focus:ring-2 focus:ring-brand/30 resize-none"
               spellCheck={false}
             />
             <p className="text-[10px] text-gray-400">

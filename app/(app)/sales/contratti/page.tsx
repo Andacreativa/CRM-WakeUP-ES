@@ -132,8 +132,8 @@ export default function ContrattiPage() {
         <div
           className={`text-sm rounded-lg px-3 py-2 border flex items-center justify-between gap-3 ${
             richiesteMsg.ok
-              ? "bg-emerald-50 border-emerald-200 text-emerald-700"
-              : "bg-red-50 border-red-200 text-red-600"
+              ? "bg-ok/10 border-ok/30 text-ok"
+              : "bg-bad/10 border-bad/30 text-bad"
           }`}
         >
           <span>{richiesteMsg.text}</span>
@@ -166,7 +166,7 @@ export default function ContrattiPage() {
                 style={
                   filtroStatus === s
                     ? { background: "#e8308a", color: "#fff" }
-                    : { color: "#64748b" }
+                    : { color: "#6b7280" }
                 }
               >
                 {s}
@@ -224,12 +224,12 @@ export default function ContrattiPage() {
               return (
                 <tr
                   key={c.id}
-                  className={`border-b border-gray-50 hover:bg-gray-50 transition-colors ${i % 2 === 1 ? "bg-[#F9F9F9]" : "bg-white"}`}
+                  className={`border-b border-gray-50 hover:bg-gray-50 transition-colors ${i % 2 === 1 ? "bg-[#f9fafb]" : "bg-white"}`}
                 >
-                  <td className="px-4 py-3 text-sm font-mono font-semibold text-gray-800">
+                  <td className="px-4 py-3 text-sm font-mono font-semibold text-gray-700">
                     <button
                       onClick={() => setEditing(c)}
-                      className="hover:text-pink-600 hover:underline"
+                      className="hover:text-brand hover:underline"
                     >
                       {c.numero}
                     </button>
@@ -256,7 +256,7 @@ export default function ContrattiPage() {
                   <td className="px-4 py-3 text-sm text-gray-900 text-right tabular-nums">
                     {fmt(c.importoMensile)}
                   </td>
-                  <td className="px-4 py-3 text-sm font-bold text-gray-900 text-right tabular-nums">
+                  <td className="px-4 py-3 text-sm font-semibold text-gray-900 text-right tabular-nums">
                     {fmt(c.totaleContratto)}
                   </td>
                   <td className="px-4 py-3 text-xs uppercase text-gray-500">
@@ -281,20 +281,20 @@ export default function ContrattiPage() {
                       <button
                         onClick={() => generaRichieste(c)}
                         title="Genera richieste di fattura (una per rata)"
-                        className="p-1.5 rounded-lg text-gray-400 hover:text-pink-600 hover:bg-pink-50 transition-colors"
+                        className="p-1.5 rounded-lg text-gray-400 hover:text-brand hover:bg-brand/10 transition-colors"
                       >
                         <Receipt className="w-4 h-4" />
                       </button>
                       <button
                         onClick={() => openExport(c)}
                         title="Esporta PDF"
-                        className="p-1.5 rounded-lg text-gray-400 hover:text-pink-600 hover:bg-pink-50 transition-colors"
+                        className="p-1.5 rounded-lg text-gray-400 hover:text-brand hover:bg-brand/10 transition-colors"
                       >
                         <Download className="w-4 h-4" />
                       </button>
                       <button
                         onClick={() => del(c.id)}
-                        className="p-1.5 rounded-lg text-gray-400 hover:text-pink-600 hover:bg-pink-50 transition-colors"
+                        className="p-1.5 rounded-lg text-gray-400 hover:text-brand hover:bg-brand/10 transition-colors"
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
@@ -309,7 +309,7 @@ export default function ContrattiPage() {
 
       {filtered.length === 0 && contratti.length === 0 && (
         <div className="glass-card rounded-2xl p-8 text-center text-gray-500">
-          <FileText className="w-10 h-10 mx-auto mb-2 text-gray-300" />
+          <FileText className="w-10 h-10 mx-auto mb-2 text-gray-400" />
           <p className="text-sm">
             Nessun contratto. Crea il primo o accetta un preventivo per
             generarne uno automaticamente.
@@ -506,8 +506,8 @@ function ContrattoFormModal({
                           }
                         : {
                             background: "#fff",
-                            borderColor: "#e2e8f0",
-                            color: "#94a3b8",
+                            borderColor: "#e5e7eb",
+                            color: "#9ca3af",
                           }
                     }
                   >
@@ -523,7 +523,7 @@ function ContrattoFormModal({
               <select
                 value={status}
                 onChange={(e) => setStatus(e.target.value)}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-300 capitalize"
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30 capitalize"
               >
                 {STATI.map((s) => (
                   <option key={s} value={s}>
@@ -541,7 +541,7 @@ function ContrattoFormModal({
             <select
               value={clienteId ?? ""}
               onChange={(e) => setClienteId(parseInt(e.target.value) || null)}
-              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-300"
+              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30"
             >
               <option value="">— manuale (nome libero sotto) —</option>
               {clienti.map((c) => (
@@ -564,7 +564,7 @@ function ContrattoFormModal({
                 value={nomeFallback}
                 onChange={(e) => setNomeFallback(e.target.value)}
                 placeholder="Nome cliente (free text)"
-                className="mt-2 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-300"
+                className="mt-2 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30"
               />
             )}
           </div>
@@ -578,7 +578,7 @@ function ContrattoFormModal({
               value={rappresentante}
               onChange={(e) => setRappresentante(e.target.value)}
               placeholder="Es. Eugenio Zuppichin"
-              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-300"
+              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30"
             />
           </div>
 
@@ -591,7 +591,7 @@ function ContrattoFormModal({
               value={oggetto}
               onChange={(e) => setOggetto(e.target.value)}
               placeholder="Descrizione attività"
-              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-300"
+              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30"
             />
           </div>
 
@@ -604,7 +604,7 @@ function ContrattoFormModal({
                 type="date"
                 value={dataDecorrenza}
                 onChange={(e) => setDataDecorrenza(e.target.value)}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-300"
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30"
               />
             </div>
             <div>
@@ -620,7 +620,7 @@ function ContrattoFormModal({
                   setDurataMesi(v);
                   setNumeroRate(v);
                 }}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-300"
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30"
               />
             </div>
             <div>
@@ -634,7 +634,7 @@ function ContrattoFormModal({
                 onChange={(e) =>
                   setImportoMensile(parseFloat(e.target.value) || 0)
                 }
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-300"
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30"
               />
             </div>
             <div>
@@ -646,7 +646,7 @@ function ContrattoFormModal({
                 min={1}
                 value={numeroRate}
                 onChange={(e) => setNumeroRate(parseInt(e.target.value) || 1)}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-300"
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30"
               />
             </div>
           </div>
@@ -666,7 +666,7 @@ function ContrattoFormModal({
               </p>
               <button
                 onClick={addVoce}
-                className="text-xs text-red-600 hover:text-red-700 flex items-center gap-1"
+                className="text-xs text-bad hover:text-bad flex items-center gap-1"
               >
                 <Plus className="w-3 h-3" /> Aggiungi
               </button>
@@ -679,7 +679,7 @@ function ContrattoFormModal({
                     value={v.servizio}
                     onChange={(e) => updateVoce(v.id, { servizio: e.target.value })}
                     placeholder="Servizio"
-                    className="flex-1 border border-gray-200 rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-pink-300"
+                    className="flex-1 border border-gray-200 rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-brand/30"
                   />
                   <input
                     type="text"
@@ -688,12 +688,12 @@ function ContrattoFormModal({
                       updateVoce(v.id, { descrizione: e.target.value })
                     }
                     placeholder="Descrizione (opzionale)"
-                    className="flex-1 border border-gray-200 rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-pink-300"
+                    className="flex-1 border border-gray-200 rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-brand/30"
                   />
                   {voci.length > 1 && (
                     <button
                       onClick={() => removeVoce(v.id)}
-                      className="p-1.5 text-gray-400 hover:text-pink-600"
+                      className="p-1.5 text-gray-400 hover:text-brand"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>
@@ -704,7 +704,7 @@ function ContrattoFormModal({
           </div>
 
           {error && (
-            <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+            <div className="text-sm text-bad bg-bad/10 border border-bad/30 rounded-lg px-3 py-2">
               {error}
             </div>
           )}

@@ -7,7 +7,7 @@ import { ESCLUDI, type RegolaBanca, type VoceMemoria } from "@/lib/banca-shared"
 import { cn } from "@/lib/utils";
 
 const inputCls =
-  "w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-pink-300";
+  "w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-brand/30";
 
 const regexValida = (p: string) => {
   try {
@@ -172,7 +172,7 @@ export default function RegoleBanca({ onNotify }: { onNotify: (kind: "ok" | "err
                         value={r.pattern}
                         onChange={(e) => aggiorna(i, { pattern: e.target.value })}
                         placeholder="es. METROPOLITAN|ALQUILER"
-                        className={cn(inputCls, "font-mono", !ok && "border-red-300 bg-red-50")}
+                        className={cn(inputCls, "font-mono", !ok && "border-bad/30 bg-bad/10")}
                       />
                     </td>
                     <td className="px-3 py-2 w-48">
@@ -204,7 +204,7 @@ export default function RegoleBanca({ onNotify }: { onNotify: (kind: "ok" | "err
                       <button onClick={() => sposta(i, 1)} className="p-1 text-gray-400 hover:text-gray-700" title="Giù">
                         <ArrowDown className="w-4 h-4" />
                       </button>
-                      <button onClick={() => rimuovi(i)} className="p-1 text-gray-400 hover:text-red-500" title="Elimina">
+                      <button onClick={() => rimuovi(i)} className="p-1 text-gray-400 hover:text-bad" title="Elimina">
                         <Trash2 className="w-4 h-4" />
                       </button>
                     </td>
@@ -242,11 +242,11 @@ export default function RegoleBanca({ onNotify }: { onNotify: (kind: "ok" | "err
               <tbody>
                 {voci.map(([k, v]) => (
                   <tr key={k} className="border-b border-gray-50">
-                    <td className="px-3 py-2 text-sm text-gray-800 font-mono">{k}</td>
+                    <td className="px-3 py-2 text-sm text-gray-700 font-mono">{k}</td>
                     <td className="px-3 py-2 text-sm text-gray-700">{v.categoria}</td>
                     <td className="px-3 py-2 text-sm text-gray-700">{v.fornitore || "—"}</td>
                     <td className="px-3 py-2 text-right">
-                      <button onClick={() => dimentica(k)} className="p-1 text-gray-400 hover:text-red-500" title="Dimentica">
+                      <button onClick={() => dimentica(k)} className="p-1 text-gray-400 hover:text-bad" title="Dimentica">
                         <Trash2 className="w-4 h-4" />
                       </button>
                     </td>

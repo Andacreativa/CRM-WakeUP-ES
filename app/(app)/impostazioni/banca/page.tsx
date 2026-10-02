@@ -19,8 +19,8 @@ export default function ImpostazioniBancaPage() {
           className={cn(
             "text-sm rounded-lg px-3 py-2 border",
             msg.kind === "ok"
-              ? "bg-emerald-50 border-emerald-200 text-emerald-700"
-              : "bg-red-50 border-red-200 text-red-600",
+              ? "bg-ok/10 border-ok/30 text-ok"
+              : "bg-bad/10 border-bad/30 text-bad",
           )}
         >
           {msg.text}

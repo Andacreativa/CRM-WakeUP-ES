@@ -127,7 +127,7 @@ export default function Dashboard() {
 
   const bilancio = data.bilancio ?? 0;
   const bilancioColor =
-    bilancio > 0 ? "#22c55e" : bilancio < 0 ? "#ef4444" : "#64748b";
+    bilancio > 0 ? "#22c55e" : bilancio < 0 ? "#ef4444" : "#6b7280";
   const kpis = [
     {
       label: "Totale Ingressi",
@@ -146,7 +146,7 @@ export default function Dashboard() {
       valueColor: "#ef4444",
       icon: TrendingDown,
       iconColor: "#ef4444",
-      iconBg: "#fef2f2",
+      iconBg: "#fee2e2",
       sub: "uscite anno",
     },
     {
@@ -155,7 +155,7 @@ export default function Dashboard() {
       valueColor: bilancioColor,
       icon: Wallet,
       iconColor: bilancioColor,
-      iconBg: bilancio > 0 ? "#f0fdf4" : bilancio < 0 ? "#fef2f2" : "#f1f5f9",
+      iconBg: bilancio > 0 ? "#dcfce7" : bilancio < 0 ? "#fee2e2" : "#f3f4f6",
       sub: "entrate - uscite",
     },
     {
@@ -172,15 +172,15 @@ export default function Dashboard() {
       valueColor: "#f59e0b",
       icon: Clock,
       iconColor: "#f59e0b",
-      iconBg: "#fffbeb",
+      iconBg: "#fef3c7",
       sub: "fatture non pagate",
     },
     {
       label: "Incassato",
       value: fmt(data.totaleFatturePagate ?? 0),
       icon: CheckCircle,
-      iconColor: "#10b981",
-      iconBg: "#f0fdf4",
+      iconColor: "#22c55e",
+      iconBg: "#dcfce7",
       sub: "fatture pagate",
     },
   ];
@@ -210,10 +210,10 @@ export default function Dashboard() {
       {scadenzeUrgenti.length > 0 && (
         <Link
           href="/finance/scadenze"
-          className="flex items-center gap-3 bg-amber-50 border border-amber-200 rounded-2xl px-5 py-3 hover:bg-amber-100 transition-colors"
+          className="flex items-center gap-3 bg-warn/10 border border-warn/30 rounded-2xl px-5 py-3 hover:bg-warn/10 transition-colors"
         >
-          <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0" />
-          <p className="text-sm font-medium text-amber-800">
+          <AlertTriangle className="w-5 h-5 text-warn shrink-0" />
+          <p className="text-sm font-medium text-warn">
             {scadenzeUrgenti.length}{" "}
             {scadenzeUrgenti.length === 1
               ? "fattura in scadenza o scaduta"
@@ -262,23 +262,23 @@ export default function Dashboard() {
             <AreaChart data={chartMesi}>
               <defs>
                 <linearGradient id="gEnt" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#10b981" stopOpacity={0.15} />
-                  <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
+                  <stop offset="5%" stopColor="#22c55e" stopOpacity={0.15} />
+                  <stop offset="95%" stopColor="#22c55e" stopOpacity={0} />
                 </linearGradient>
                 <linearGradient id="gUsc" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="5%" stopColor="#ef4444" stopOpacity={0.15} />
                   <stop offset="95%" stopColor="#ef4444" stopOpacity={0} />
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+              <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
               <XAxis
                 dataKey="name"
-                tick={{ fontSize: 11, fill: "#94a3b8" }}
+                tick={{ fontSize: 11, fill: "#9ca3af" }}
                 axisLine={false}
                 tickLine={false}
               />
               <YAxis
-                tick={{ fontSize: 11, fill: "#94a3b8" }}
+                tick={{ fontSize: 11, fill: "#9ca3af" }}
                 axisLine={false}
                 tickLine={false}
                 tickFormatter={(v) => `€${(v / 1000).toFixed(0)}k`}
@@ -288,7 +288,7 @@ export default function Dashboard() {
               <Area
                 type="monotone"
                 dataKey="Entrate"
-                stroke="#10b981"
+                stroke="#22c55e"
                 strokeWidth={2}
                 fill="url(#gEnt)"
               />
@@ -302,7 +302,7 @@ export default function Dashboard() {
               <Area
                 type="monotone"
                 dataKey={`Entrate ${anno - 1}`}
-                stroke="#94a3b8"
+                stroke="#9ca3af"
                 strokeWidth={1}
                 strokeDasharray="4 4"
                 fill="none"
@@ -337,7 +337,7 @@ export default function Dashboard() {
                     <Cell
                       key={i}
                       fill={
-                        CATEGORIE_COLORI_CHART[entry?.name ?? ""] || "#94a3b8"
+                        CATEGORIE_COLORI_CHART[entry?.name ?? ""] || "#9ca3af"
                       }
                     />
                   ))}
@@ -367,22 +367,22 @@ export default function Dashboard() {
           </h2>
           <ResponsiveContainer width="100%" height={200}>
             <BarChart data={chartMesi} barSize={18}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+              <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
               <XAxis
                 dataKey="name"
-                tick={{ fontSize: 11, fill: "#94a3b8" }}
+                tick={{ fontSize: 11, fill: "#9ca3af" }}
                 axisLine={false}
                 tickLine={false}
               />
               <YAxis
-                tick={{ fontSize: 11, fill: "#94a3b8" }}
+                tick={{ fontSize: 11, fill: "#9ca3af" }}
                 axisLine={false}
                 tickLine={false}
                 tickFormatter={(v) => `€${(v / 1000).toFixed(0)}k`}
               />
               <Tooltip formatter={(v) => fmt(Number(v))} />
               <Legend />
-              <Bar dataKey="Entrate" fill="#10b981" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="Entrate" fill="#22c55e" radius={[4, 4, 0, 0]} />
               <Bar dataKey="Uscite" fill="#ef4444" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
@@ -404,7 +404,7 @@ export default function Dashboard() {
                   className="flex items-center justify-between py-2 border-b border-gray-50 last:border-0"
                 >
                   <div>
-                    <p className="text-sm font-medium text-gray-800">
+                    <p className="text-sm font-medium text-gray-700">
                       {f.cliente?.nome ?? "—"}
                     </p>
                     <p className="text-xs text-gray-400">

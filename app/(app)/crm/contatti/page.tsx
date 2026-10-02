@@ -22,10 +22,10 @@ interface Contatto {
 }
 
 const inputCls =
-  "w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-300 bg-white";
+  "w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30 bg-white";
 const labelCls = "text-xs font-medium text-gray-600 block mb-1";
 const selectCls =
-  "text-sm border border-gray-200 rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-pink-300";
+  "text-sm border border-gray-200 rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-brand/30";
 
 const vuoto = () => ({
   nome: "",
@@ -166,7 +166,7 @@ export default function ContattiPage() {
               key={o.v}
               onClick={() => setTipo(o.v)}
               className="text-sm px-3 py-1.5 rounded-lg font-medium"
-              style={tipo === o.v ? { background: "#e8308a", color: "#fff" } : { color: "#64748b" }}
+              style={tipo === o.v ? { background: "#e8308a", color: "#fff" } : { color: "#6b7280" }}
             >
               {o.l}
             </button>
@@ -200,17 +200,17 @@ export default function ContattiPage() {
                 </td>
                 <td className="px-4 py-3 text-sm">
                   {c.cliente ? (
-                    <Link href={`/crm/clienti/${c.cliente.id}`} className="inline-flex items-center gap-1.5 hover:text-pink-600">
+                    <Link href={`/crm/clienti/${c.cliente.id}`} className="inline-flex items-center gap-1.5 hover:text-brand">
                       <span className="pill-ok text-[10px] font-semibold px-1.5 py-0.5 rounded">cliente</span>
                       {c.cliente.nome}
                     </Link>
                   ) : c.lead ? (
-                    <Link href={`/crm/lead/${c.lead.id}`} className="inline-flex items-center gap-1.5 hover:text-pink-600">
-                      <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-700">lead</span>
+                    <Link href={`/crm/lead/${c.lead.id}`} className="inline-flex items-center gap-1.5 hover:text-brand">
+                      <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-info/10 text-info">lead</span>
                       {c.lead.azienda ?? c.lead.nome}
                     </Link>
                   ) : (
-                    <span className="text-gray-300">—</span>
+                    <span className="text-gray-400">—</span>
                   )}
                 </td>
                 <td className="px-4 py-3 text-sm text-gray-600">{c.email ?? "—"}</td>
@@ -219,7 +219,7 @@ export default function ContattiPage() {
                   {c.clienteId && (
                     <button
                       onClick={() => !c.principale && setPrincipale(c)}
-                      className={cn("inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-md", c.principale ? "pill-wait" : "text-gray-300 hover:text-amber-600")}
+                      className={cn("inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-md", c.principale ? "pill-wait" : "text-gray-400 hover:text-warn")}
                       title={c.principale ? "Referente principale" : "Imposta come principale"}
                     >
                       <Star className="w-3 h-3" /> {c.principale ? "principale" : ""}
@@ -229,7 +229,7 @@ export default function ContattiPage() {
                 <td className="px-4 py-3">
                   <div className="flex items-center gap-1 justify-end">
                     <button onClick={() => openEdit(c)} className="p-1.5 text-gray-400 hover:text-gray-700" title="Modifica"><Pencil className="w-4 h-4" /></button>
-                    <button onClick={() => del(c)} className="p-1.5 text-gray-400 hover:text-red-500" title="Elimina"><Trash2 className="w-4 h-4" /></button>
+                    <button onClick={() => del(c)} className="p-1.5 text-gray-400 hover:text-bad" title="Elimina"><Trash2 className="w-4 h-4" /></button>
                   </div>
                 </td>
               </tr>
@@ -278,7 +278,7 @@ export default function ContattiPage() {
                       type="button"
                       onClick={() => setForm((f) => ({ ...f, tipo: t }))}
                       className="flex-1 text-sm py-2 rounded-lg border font-semibold"
-                      style={form.tipo === t ? { background: "#e8308a", color: "#fff", borderColor: "#e8308a" } : { background: "#fff", borderColor: "#e2e8f0", color: "#94a3b8" }}
+                      style={form.tipo === t ? { background: "#e8308a", color: "#fff", borderColor: "#e8308a" } : { background: "#fff", borderColor: "#e5e7eb", color: "#9ca3af" }}
                     >
                       {t === "cliente" ? "Cliente" : "Lead"}
                     </button>
@@ -312,7 +312,7 @@ export default function ContattiPage() {
               </div>
             </div>
             <div className="flex justify-end gap-2">
-              <button onClick={() => setShowForm(false)} className="text-sm text-gray-500 hover:text-gray-800 px-3 py-2">Annulla</button>
+              <button onClick={() => setShowForm(false)} className="text-sm text-gray-500 hover:text-gray-700 px-3 py-2">Annulla</button>
               <button onClick={save} className="glass-btn-primary text-white text-sm font-medium px-5 py-2 rounded-xl">{editing ? "Salva" : "Aggiungi"}</button>
             </div>
           </div>

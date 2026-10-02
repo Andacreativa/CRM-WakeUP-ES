@@ -93,9 +93,9 @@ type Tipo = "uscite" | "entrate";
 type FiltroStato = "da_abbinare" | "collegati" | "escluso" | "";
 
 const selectCls =
-  "text-sm border border-gray-200 rounded-lg px-2.5 py-1.5 bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-pink-300";
+  "text-sm border border-gray-200 rounded-lg px-2.5 py-1.5 bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-brand/30";
 const inputCls =
-  "w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-pink-300 disabled:bg-gray-50 disabled:text-gray-400";
+  "w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-brand/30 disabled:bg-gray-50 disabled:text-gray-400";
 const thCls = "text-left text-[11px] font-semibold uppercase tracking-wide text-gray-500 px-3 py-3";
 
 const data = (iso: string | null | undefined) =>
@@ -140,7 +140,7 @@ function Pills<T extends string>({
             type="button"
             onClick={() => onChange(o.val)}
             className="text-sm px-3 py-1.5 rounded-lg font-medium transition-colors whitespace-nowrap"
-            style={active ? { background: BRAND, color: "#fff" } : { color: "#64748b" }}
+            style={active ? { background: BRAND, color: "#fff" } : { color: "#6b7280" }}
           >
             {o.label}
           </button>
@@ -153,7 +153,7 @@ function Pills<T extends string>({
 function CategoriaBadge({ categoria }: { categoria: string }) {
   return (
     <span
-      className="text-[11px] font-semibold px-2 py-0.5 rounded-md text-gray-800"
+      className="text-[11px] font-semibold px-2 py-0.5 rounded-md text-gray-700"
       style={{ background: CATEGORIE_COLORI[categoria] || "#EDEDED" }}
     >
       {categoria}
@@ -393,8 +393,8 @@ export default function BancaView() {
           className={cn(
             "text-sm rounded-lg px-3 py-2 border",
             msg.kind === "ok"
-              ? "bg-emerald-50 border-emerald-200 text-emerald-700"
-              : "bg-red-50 border-red-200 text-red-600",
+              ? "bg-ok/10 border-ok/30 text-ok"
+              : "bg-bad/10 border-bad/30 text-bad",
           )}
         >
           {msg.text}
@@ -447,9 +447,9 @@ export default function BancaView() {
             label: "Uscite collegate",
             value: String(kpi.collegate),
             sub: fmt(kpi.collegateTot),
-            color: "#047857",
+            color: "#22c55e",
           },
-          { label: "Entrate", value: String(kpi.entrate), sub: fmt(kpi.entrateTot), color: "#1d4ed8" },
+          { label: "Entrate", value: String(kpi.entrate), sub: fmt(kpi.entrateTot), color: "#3b82f6" },
           {
             label: "Ultimo import",
             value: kpi.ultimo ? data(kpi.ultimo.createdAt) : "—",
@@ -488,7 +488,7 @@ export default function BancaView() {
                 {importazioni.length === 0 && (
                   <tr>
                     <td colSpan={8} className="px-4 py-12 text-center text-sm text-gray-400">
-                      <Landmark className="w-10 h-10 mx-auto mb-2 text-gray-300" />
+                      <Landmark className="w-10 h-10 mx-auto mb-2 text-gray-400" />
                       Nessun estratto caricato
                     </td>
                   </tr>
@@ -523,7 +523,7 @@ export default function BancaView() {
                       <button
                         onClick={() => eliminaImport(imp)}
                         disabled={imp.collegati > 0}
-                        className="p-1 text-gray-400 hover:text-red-500 disabled:opacity-30 disabled:hover:text-gray-400"
+                        className="p-1 text-gray-400 hover:text-bad disabled:opacity-30 disabled:hover:text-gray-400"
                         title={
                           imp.collegati > 0
                             ? "Ha movimenti collegati a spese: scollegali prima"
@@ -592,7 +592,7 @@ export default function BancaView() {
           </div>
 
           {tipo === "entrate" && (
-            <div className="flex items-start gap-2 text-sm text-blue-800 bg-blue-50 border border-blue-200 rounded-lg px-3 py-2">
+            <div className="flex items-start gap-2 text-sm text-info bg-info/10 border border-info/30 rounded-lg px-3 py-2">
               <Info className="w-4 h-4 mt-0.5 shrink-0" />
               Le entrate sono salvate e pronte: l&apos;abbinamento alle fatture e agli altri ingressi arriva
               con la riconciliazione (prossima fase). Intanto puoi escludere i movimenti che non sono incassi.
@@ -673,7 +673,7 @@ export default function BancaView() {
                   {!loading && visibili.length === 0 && (
                     <tr>
                       <td colSpan={8} className="px-4 py-12 text-center text-sm text-gray-400">
-                        <Landmark className="w-10 h-10 mx-auto mb-2 text-gray-300" />
+                        <Landmark className="w-10 h-10 mx-auto mb-2 text-gray-400" />
                         {rows.length === 0
                           ? "Nessun movimento: importa un estratto BBVA."
                           : "Nessun movimento per i filtri scelti."}
@@ -719,8 +719,8 @@ export default function BancaView() {
                           </td>
                           <td
                             className={cn(
-                              "px-3 py-3 text-right text-sm font-bold whitespace-nowrap",
-                              r.importo < 0 ? "text-red-500" : "text-emerald-600",
+                              "px-3 py-3 text-right text-sm font-semibold whitespace-nowrap",
+                              r.importo < 0 ? "text-bad" : "text-ok",
                             )}
                           >
                             {fmt(r.importo)}
@@ -732,7 +732,7 @@ export default function BancaView() {
                                 {candidato ? (
                                   <div className="space-y-1">
                                     <CategoriaBadge categoria={candidato.categoria} />
-                                    <div className="text-sm text-gray-800">{candidato.fornitore}</div>
+                                    <div className="text-sm text-gray-700">{candidato.fornitore}</div>
                                   </div>
                                 ) : (
                                   <div className="space-y-1.5 min-w-[190px]">
@@ -760,7 +760,7 @@ export default function BancaView() {
                                         onChange={(ev) =>
                                           setEdit(r.id, { dipendenteId: parseInt(ev.target.value) || null })
                                         }
-                                        className={cn(inputCls, e.dipendenteId && "border-emerald-300 bg-emerald-50")}
+                                        className={cn(inputCls, e.dipendenteId && "border-ok/30 bg-ok/10")}
                                         title="Persona del registro pagamenti"
                                       >
                                         <option value={0}>Registro: nessuna persona</option>
@@ -789,7 +789,7 @@ export default function BancaView() {
                                     <select
                                       value={e?.candidatoId ?? 0}
                                       onChange={(ev) => setEdit(r.id, { candidatoId: parseInt(ev.target.value) })}
-                                      className={cn(inputCls, e?.candidatoId && "border-emerald-300 bg-emerald-50")}
+                                      className={cn(inputCls, e?.candidatoId && "border-ok/30 bg-ok/10")}
                                     >
                                       <option value={0}>Crea nuova spesa</option>
                                       {s.candidati.map((c) => (
@@ -800,7 +800,7 @@ export default function BancaView() {
                                       ))}
                                     </select>
                                     {candidato && (
-                                      <div className="text-[10px] text-emerald-700 mt-0.5 truncate" title={candidato.descrizione ?? undefined}>
+                                      <div className="text-[10px] text-ok mt-0.5 truncate" title={candidato.descrizione ?? undefined}>
                                         {candidato.registro ? "Già nel registro pagamenti" : "Già registrata in Spese"}
                                         {candidato.descrizione ? ` · ${candidato.descrizione}` : ""}
                                         {!candidato.registro && e && CON_REGISTRO.has(e.categoria) && e.dipendenteId
@@ -856,14 +856,14 @@ export default function BancaView() {
                                   </div>
                                 ))}
                                 {r.nota && <div className="text-xs text-gray-500">{r.nota}</div>}
-                                {!r.abbinamenti.length && !r.nota && <span className="text-xs text-gray-300">—</span>}
+                                {!r.abbinamenti.length && !r.nota && <span className="text-xs text-gray-400">—</span>}
                               </td>
                             </>
                           )}
 
                           <td className="px-3 py-3 whitespace-nowrap text-right">
                             {occupato ? (
-                              <Loader2 className="w-4 h-4 animate-spin text-pink-500 inline" />
+                              <Loader2 className="w-4 h-4 animate-spin text-brand inline" />
                             ) : editing ? (
                               <div className="flex items-center justify-end gap-1">
                                 <button
