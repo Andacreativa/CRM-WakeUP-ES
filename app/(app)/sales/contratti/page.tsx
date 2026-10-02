@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Download, Trash2, Plus, FileText, X } from "lucide-react";
+import { Download, Trash2, Plus, FileText, X, Receipt } from "lucide-react";
+import Link from "next/link";
 import { fmt } from "@/lib/constants";
 import ContrattoExportModal from "@/components/ContrattoExportModal";
 
@@ -84,6 +85,35 @@ export default function ContrattiPage() {
     load();
   };
 
+  // Genera le richieste di fattura (una per rata): niente fatture dirette.
+  const [richiesteMsg, setRichiesteMsg] = useState<{
+    text: string;
+    ok: boolean;
+  } | null>(null);
+  const generaRichieste = async (c: Contratto) => {
+    const nome = c.cliente?.nome ?? c.nomeClienteFallback ?? c.numero;
+    if (
+      !confirm(
+        `Generare ${c.numeroRate} richieste di fattura per ${nome} (${c.numero})?`,
+      )
+    )
+      return;
+    const res = await fetch("/api/richieste-fattura/da-contratto", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ contrattoId: c.id }),
+    });
+    const j = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      setRichiesteMsg({ text: j.error ?? "Generazione non riuscita", ok: false });
+      return;
+    }
+    setRichiesteMsg({
+      text: `${Array.isArray(j) ? j.length : 0} richieste create per ${c.numero}.`,
+      ok: true,
+    });
+  };
+
   const openExport = (c: Contratto) => {
     if (!c.cliente && !c.nomeClienteFallback) {
       alert("Imposta un cliente prima di esportare il PDF");
@@ -98,6 +128,27 @@ export default function ContrattiPage() {
 
   return (
     <div className="space-y-6">
+      {richiesteMsg && (
+        <div
+          className={`text-sm rounded-lg px-3 py-2 border flex items-center justify-between gap-3 ${
+            richiesteMsg.ok
+              ? "bg-emerald-50 border-emerald-200 text-emerald-700"
+              : "bg-red-50 border-red-200 text-red-600"
+          }`}
+        >
+          <span>{richiesteMsg.text}</span>
+          <span className="flex items-center gap-3">
+            {richiesteMsg.ok && (
+              <Link href="/sales/richieste" className="font-semibold underline">
+                Vai alle richieste
+              </Link>
+            )}
+            <button onClick={() => setRichiesteMsg(null)} aria-label="Chiudi">
+              <X className="w-4 h-4" />
+            </button>
+          </span>
+        </div>
+      )}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Contratti</h1>
@@ -178,7 +229,7 @@ export default function ContrattiPage() {
                   <td className="px-4 py-3 text-sm font-mono font-semibold text-gray-800">
                     <button
                       onClick={() => setEditing(c)}
-                      className="hover:text-red-600 hover:underline"
+                      className="hover:text-pink-600 hover:underline"
                     >
                       {c.numero}
                     </button>
@@ -228,15 +279,22 @@ export default function ContrattiPage() {
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-1 justify-end">
                       <button
+                        onClick={() => generaRichieste(c)}
+                        title="Genera richieste di fattura (una per rata)"
+                        className="p-1.5 rounded-lg text-gray-400 hover:text-pink-600 hover:bg-pink-50 transition-colors"
+                      >
+                        <Receipt className="w-4 h-4" />
+                      </button>
+                      <button
                         onClick={() => openExport(c)}
                         title="Esporta PDF"
-                        className="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                        className="p-1.5 rounded-lg text-gray-400 hover:text-pink-600 hover:bg-pink-50 transition-colors"
                       >
                         <Download className="w-4 h-4" />
                       </button>
                       <button
                         onClick={() => del(c.id)}
-                        className="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                        className="p-1.5 rounded-lg text-gray-400 hover:text-pink-600 hover:bg-pink-50 transition-colors"
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
@@ -635,7 +693,7 @@ function ContrattoFormModal({
                   {voci.length > 1 && (
                     <button
                       onClick={() => removeVoce(v.id)}
-                      className="p-1.5 text-gray-400 hover:text-red-600"
+                      className="p-1.5 text-gray-400 hover:text-pink-600"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>

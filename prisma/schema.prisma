@@ -23,6 +23,7 @@ model Cliente {
   createdAt    DateTime    @default(now())
   fatture      Fattura[]
   contratti    Contratto[]
+  richiesteFattura RichiestaFattura[]
 }
 
 model Fattura {
@@ -52,6 +53,7 @@ model Fattura {
   altriIngressi AltroIngresso[]
   spese         Spesa[]
   acconti       Acconto[]
+  richiesta     RichiestaFattura?
 
   @@index([contrattoId])
 }
@@ -281,4 +283,53 @@ model Contratto {
   createdAt            DateTime    @default(now())
   updatedAt            DateTime    @updatedAt
   fatture              Fattura[]
+  richiesteFattura     RichiestaFattura[]
+}
+
+// Richiesta di fattura ("fattura da emettere", come le planned invoices di
+// Northstar). Nasce a mano o da un contratto, viene validata, poi convertita
+// in una Fattura vera (fatturaId). Da quel momento emessa/incassata si leggono
+// dalla fattura collegata; prima valgono i flag manuali.
+model RichiestaFattura {
+  id              Int        @id @default(autoincrement())
+  codice          String     @unique // RF-2026-0001
+  clienteId       Int?
+  cliente         Cliente?   @relation(fields: [clienteId], references: [id], onDelete: SetNull)
+  nomeCliente     String? // fallback se il cliente non è in anagrafica
+  contrattoId     Int?
+  contratto       Contratto? @relation(fields: [contrattoId], references: [id], onDelete: SetNull)
+  azienda         String     @default("Spagna") // Spagna | Italia | Altro (come Fattura)
+  aziendaNota     String?
+  descrizione     String
+  voci            String     @default("[]") // JSON [{ descrizione, importo }]
+  imponibile      Float      @default(0)
+  tipoIva         String     @default("igic_exenta") // igic_exenta | igic7 | iva
+  iva             Float      @default(0) // percentuale
+  totale          Float      @default(0)
+  mese            Int
+  anno            Int
+  dataInvio       DateTime? // data prevista di emissione
+  serieCodice     String? // codice della serie (ricorrenza o numero contratto)
+  serieIndice     Int?
+  serieTotale     Int?
+  ricorrenza      String     @default("una_tantum") // una_tantum | mensile | trimestrale | annuale
+  responsabile    String? // commerciale di riferimento
+  validazione     String     @default("in_attesa") // in_attesa | ok
+  validataIl      DateTime?
+  emessa          Boolean    @default(false) // flag manuale finché non c'è fatturaId
+  emessaIl        DateTime?
+  incassata       Boolean    @default(false) // flag manuale finché non c'è fatturaId
+  fatturaId       Int?       @unique
+  fattura         Fattura?   @relation(fields: [fatturaId], references: [id], onDelete: SetNull)
+  origine         String     @default("manuale") // manuale | contratto | legacy_sales
+  legacyFatturaId Int?       @unique // vecchia Fattura origine=sales da cui è stata convertita
+  note            String?
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+  deletedAt       DateTime?
+
+  @@index([anno, mese])
+  @@index([clienteId])
+  @@index([contrattoId])
+  @@index([serieCodice])
 }
