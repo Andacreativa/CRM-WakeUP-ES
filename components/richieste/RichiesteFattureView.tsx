@@ -573,7 +573,7 @@ export default function RichiesteFattureView({
                       <button
                         onClick={() => toggle(r, "validazione")}
                         className={cn(
-                          "inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-1 rounded-md border transition-colors",
+                          "inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-1 rounded-md border transition-colors whitespace-nowrap",
                           validata
                             ? "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100"
                             : "bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100",
@@ -636,7 +636,7 @@ export default function RichiesteFattureView({
                           onClick={() => !r.fatturaId && toggle(r, "incassata")}
                           disabled={!!r.fatturaId}
                           className={cn(
-                            "inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-1 rounded-md border",
+                            "inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-1 rounded-md border whitespace-nowrap",
                             r.incassataEff
                               ? "bg-emerald-50 text-emerald-700 border-emerald-200"
                               : "bg-amber-50 text-amber-700 border-amber-200",
