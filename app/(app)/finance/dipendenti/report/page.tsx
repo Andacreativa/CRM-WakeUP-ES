@@ -1,18 +1,16 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Download, FileSpreadsheet } from "lucide-react";
+import { ArrowLeft, Download, FileSpreadsheet } from "lucide-react";
 import { fmt, MESI, BRAND } from "@/lib/constants";
 import { useAnno } from "@/lib/anno-context";
-import { VOCI, VOCI_ORDINE, type Voce, nomeCompleto, vociDiTipo } from "@/lib/dipendenti";
+import { VOCI, VOCI_ORDINE, type Voce, nomeCompleto, vociDiTipo, ordinaPerTipo } from "@/lib/dipendenti";
 import { exportPDF } from "@/lib/export";
 import { cn } from "@/lib/utils";
 
-// Report dipendenti: due letture degli stessi dati.
-// - Dettaglio mensile: per ogni persona, mese per mese, una colonna per
-//   voce (stipendio, seguridad, IRPF, rimborsi, benefit, commissioni) e in
-//   fondo l'elenco dei rimborsi con data e descrizione.
-// - Riepilogo: bilancio generale dell'anno, persona × voce e mese × voce.
+// Report dipendenti. Prima schermata: il riepilogo dell'anno (persone ×
+// voci, mesi × voci). Cliccando una persona si apre il suo dettaglio
+// mensile, voce per voce, con l'elenco dei rimborsi in fondo.
 
 interface Persona {
   id: number;
@@ -32,7 +30,6 @@ interface Pagamento {
   note: string | null;
   fattura: { id: number; numero: string | null; cliente: { nome: string } | null } | null;
 }
-type Vista = "dettaglio" | "riepilogo";
 
 const MESI_BREVI = MESI.map((m) => m.slice(0, 3));
 const TIPO_LABEL: Record<string, string> = {
@@ -50,8 +47,8 @@ export default function ReportDipendentiPage() {
   const anno = annoCtx > 0 ? annoCtx : new Date().getFullYear();
   const [persone, setPersone] = useState<Persona[]>([]);
   const [pagamenti, setPagamenti] = useState<Pagamento[]>([]);
-  const [vista, setVista] = useState<Vista>("dettaglio");
-  const [personaId, setPersonaId] = useState(0);
+  const [personaId, setPersonaId] = useState(0); // 0 = riepilogo
+  const vista = personaId ? "dettaglio" : "riepilogo";
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -73,7 +70,7 @@ export default function ReportDipendentiPage() {
   // Persone con dati nell'anno (o la sola scelta), nell'ordine dell'anagrafica
   const personeConDati = useMemo(
     () =>
-      persone.filter(
+      ordinaPerTipo(persone).filter(
         (d) => (!personaId || d.id === personaId) && pagamenti.some((p) => p.dipendenteId === d.id),
       ),
     [persone, pagamenti, personaId],
@@ -222,44 +219,30 @@ export default function ReportDipendentiPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Report {anno}</h1>
+          <h1 className="text-2xl font-bold text-gray-900">
+            Report {anno}
+            {personaId > 0 && (
+              <span className="text-gray-400 font-medium">
+                {" "}
+                · {nomeCompleto(persone.find((d) => d.id === personaId) ?? { nome: "" })}
+              </span>
+            )}
+          </h1>
           <p className="text-gray-500 text-sm mt-1">
             {vista === "dettaglio"
-              ? "Per persona, mese per mese, voce per voce"
-              : "Bilancio generale dell'anno: persone e voci"}
+              ? "Mese per mese, voce per voce"
+              : "Bilancio generale dell'anno. Clicca una persona per il dettaglio mensile."}
           </p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
-          <div className="flex gap-1 bg-gray-100 rounded-xl p-1">
-            {(
-              [
-                { val: "dettaglio", label: "Dettaglio mensile" },
-                { val: "riepilogo", label: "Riepilogo" },
-              ] as { val: Vista; label: string }[]
-            ).map((o) => (
-              <button
-                key={o.val}
-                type="button"
-                onClick={() => setVista(o.val)}
-                className="text-sm px-3 py-1.5 rounded-lg font-medium transition-colors"
-                style={vista === o.val ? { background: BRAND, color: "#fff" } : { color: "#64748b" }}
-              >
-                {o.label}
-              </button>
-            ))}
-          </div>
-          <select
-            value={personaId}
-            onChange={(e) => setPersonaId(parseInt(e.target.value))}
-            className="text-sm border border-gray-200 rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-pink-300"
-          >
-            <option value={0}>Tutte le persone</option>
-            {persone.map((d) => (
-              <option key={d.id} value={d.id}>
-                {nomeCompleto(d)}
-              </option>
-            ))}
-          </select>
+          {personaId > 0 && (
+            <button
+              onClick={() => setPersonaId(0)}
+              className="glass-btn-secondary flex items-center gap-1.5 text-gray-700 text-sm font-medium px-3 py-2 rounded-xl"
+            >
+              <ArrowLeft className="w-4 h-4" /> Riepilogo
+            </button>
+          )}
           <button
             onClick={esportaExcel}
             className="flex items-center gap-1.5 border border-gray-200 text-gray-600 text-sm font-medium px-3 py-2 rounded-xl hover:bg-gray-50"
@@ -416,6 +399,7 @@ export default function ReportDipendentiPage() {
               valori: vociUsate.map((v) => somma(di((p) => p.dipendenteId === d.id && p.voce === v))),
             }))}
             totali={vociUsate.map((v) => somma(di((p) => p.voce === v)))}
+            onRiga={(i) => setPersonaId(personeConDati[i].id)}
           />
           <Tabella
             titolo="Per mese"
@@ -437,11 +421,13 @@ function Tabella({
   colonne,
   righe,
   totali,
+  onRiga,
 }: {
   titolo: string;
   colonne: string[];
   righe: { label: string; sub?: string; valori: number[] }[];
   totali: number[];
+  onRiga?: (i: number) => void;
 }) {
   const totRiga = (v: number[]) => v.reduce((s, x) => s + x, 0);
   return (
@@ -461,8 +447,13 @@ function Tabella({
             </tr>
           </thead>
           <tbody className="zebra">
-            {righe.map((r) => (
-              <tr key={r.label} className="border-b border-gray-50">
+            {righe.map((r, i) => (
+              <tr
+                key={r.label}
+                onClick={onRiga ? () => onRiga(i) : undefined}
+                title={onRiga ? "Apri il dettaglio mensile" : undefined}
+                className={cn("border-b border-gray-50", onRiga && "cursor-pointer hover:bg-pink-50")}
+              >
                 <td className="px-4 py-2.5">
                   <div className="text-sm font-medium text-gray-800">{r.label}</div>
                   {r.sub && <div className="text-[11px] text-gray-400">{r.sub}</div>}

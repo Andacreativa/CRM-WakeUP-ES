@@ -104,3 +104,19 @@ export const COOKIE_OPTIONS = {
   maxAge: SESSION_TTL_SECONDS,
   secure: process.env.NODE_ENV === "production",
 };
+
+// Ruolo mostrato sotto il nome nella sidebar: USERn_RUOLO in .env, altrimenti
+// la mappa dei soci.
+const RUOLI_DEFAULT: Record<string, string> = {
+  leonardomestre: "CFO",
+  lorenzovanghetti: "CEO",
+};
+export function ruoloUtente(username: string | null | undefined): string {
+  if (!username) return "";
+  for (const n of [1, 2, 3, 4]) {
+    if (process.env[`USER${n}_USERNAME`] === username && process.env[`USER${n}_RUOLO`]) {
+      return String(process.env[`USER${n}_RUOLO`]);
+    }
+  }
+  return RUOLI_DEFAULT[username.toLowerCase()] ?? "";
+}

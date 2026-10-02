@@ -15,7 +15,7 @@ import {
   Clock,
   Receipt,
 } from "lucide-react";
-import { fmt, MESI, CANALI, AZIENDA_COLORI, ANNI, canaleLabel } from "@/lib/constants";
+import { fmt, MESI, CANALI, ANNI, canaleLabel } from "@/lib/constants";
 import { useAnno } from "@/lib/anno-context";
 import { PageSizeSelect, PageNav } from "@/components/Pagination";
 import { cn } from "@/lib/utils";
@@ -150,8 +150,10 @@ const selectCls =
 
 export default function RichiesteFattureView({
   mode,
+  embedded = false,
 }: {
   mode: "finance" | "sales";
+  embedded?: boolean; // dentro la pagina Fatture: senza titolo proprio
 }) {
   const { anno } = useAnno();
   const [rows, setRows] = useState<Richiesta[]>([]);
@@ -385,10 +387,14 @@ export default function RichiesteFattureView({
 
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-3">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">{titolo}</h1>
-          <p className="text-gray-500 text-sm mt-0.5">{sottotitolo}</p>
-        </div>
+        {embedded ? (
+          <p className="text-sm text-gray-500">{sottotitolo}</p>
+        ) : (
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">{titolo}</h1>
+            <p className="text-gray-500 text-sm mt-0.5">{sottotitolo}</p>
+          </div>
+        )}
         <div className="flex items-center gap-2 flex-wrap">
           <button
             onClick={() => setDaContratto(true)}
@@ -482,7 +488,7 @@ export default function RichiesteFattureView({
                 {[
                   "Codice",
                   "Cliente",
-                  "Azienda",
+                  "Canale",
                   "Periodo",
                   "Importo",
                   "Validazione",
@@ -519,7 +525,6 @@ export default function RichiesteFattureView({
                 </tr>
               )}
               {paged.map((r) => {
-                const col = AZIENDA_COLORI[r.azienda] ?? AZIENDA_COLORI.Altro;
                 const validata = r.validazione === "ok";
                 return (
                   <tr key={r.id} className="border-b border-gray-50 align-top">
@@ -547,11 +552,7 @@ export default function RichiesteFattureView({
                       )}
                     </td>
                     <td className="px-4 py-3">
-                      <span
-                        className="text-[11px] font-semibold px-2 py-0.5 rounded-md"
-                        style={{ background: col.bg, color: col.text }}
-                        title={r.aziendaNota ?? undefined}
-                      >
+                      <span className="text-xs font-medium text-gray-500 whitespace-nowrap">
                         {canaleLabel(r.azienda, r.aziendaNota)}
                       </span>
                     </td>
@@ -761,7 +762,6 @@ export default function RichiesteFattureView({
                 <div className="flex gap-2">
                   {CANALI.map((a) => {
                     const active = form.azienda === a;
-                    const col = AZIENDA_COLORI[a];
                     return (
                       <button
                         key={a}
@@ -770,7 +770,7 @@ export default function RichiesteFattureView({
                         className="flex-1 text-sm py-2 rounded-lg border font-semibold transition-all"
                         style={
                           active
-                            ? { background: col.bg, color: col.text, borderColor: col.border }
+                            ? { background: "#e8308a", color: "#fff", borderColor: "#e8308a" }
                             : { background: "#fff", borderColor: "#e2e8f0", color: "#94a3b8" }
                         }
                       >

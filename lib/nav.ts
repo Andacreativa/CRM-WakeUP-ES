@@ -5,6 +5,7 @@ import {
   FolderOpen,
   Briefcase,
   Users,
+  Settings,
 } from "lucide-react";
 
 // Struttura di navigazione (stile Northstar): sezione → voce → tab.
@@ -28,6 +29,7 @@ export interface NavItem {
 export interface NavSection {
   label: string;
   items: NavItem[];
+  footer?: boolean; // in fondo alla sidebar, sopra l'utente (Configurazione)
 }
 
 export const NAV: NavSection[] = [
@@ -43,12 +45,10 @@ export const NAV: NavSection[] = [
           { label: "Dashboard", href: "/finance" },
           { label: "Bilancio", href: "/finance/bilancio" },
           { label: "Fatture", href: "/finance/fatture" },
-          { label: "Da emettere", href: "/finance/da-emettere" },
           { label: "Altri ingressi", href: "/finance/altri-ingressi" },
           { label: "Spese", href: "/finance/spese" },
           { label: "Banca", href: "/finance/banca" },
           { label: "Scadenze", href: "/finance/scadenze" },
-          { label: "Impostazioni", href: "/finance/impostazioni" },
         ],
       },
       {
@@ -100,6 +100,22 @@ export const NAV: NavSection[] = [
           { label: "Lead", href: "/crm/lead" },
           { label: "Contatti", href: "/crm/contatti" },
           { label: "Fornitori", href: "/crm/fornitori" },
+        ],
+      },
+    ],
+  },
+  {
+    label: "Sistema",
+    footer: true,
+    items: [
+      {
+        code: "impostazioni",
+        label: "Configurazione",
+        icon: Settings,
+        href: "/impostazioni",
+        tabs: [
+          { label: "Fatturazione", href: "/impostazioni" },
+          { label: "Banca", href: "/impostazioni/banca" },
         ],
       },
     ],

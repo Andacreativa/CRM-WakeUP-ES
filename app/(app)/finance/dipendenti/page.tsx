@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 import { Plus, Pencil, Trash2, Upload } from "lucide-react";
 import { fmt } from "@/lib/constants";
-import { TIPI_DIPENDENTE, TIPO_LABEL } from "@/lib/dipendenti";
+import { TIPI_DIPENDENTE, TIPO_LABEL, gruppiPerTipo } from "@/lib/dipendenti";
 import CopyFieldsModal, { CopyField } from "@/components/CopyFieldsModal";
 import AddressFields, { formatAddress } from "@/components/AddressFields";
 import Avatar from "@/components/Avatar";
@@ -254,7 +254,17 @@ export default function DipendentiPage() {
                 </td>
               </tr>
             )}
-            {dipendenti.map((d) => (
+            {gruppiPerTipo(dipendenti).map((g) => (
+              <Fragment key={g.tipo}>
+                <tr>
+                  <td
+                    colSpan={8}
+                    className="px-4 pt-4 pb-1 text-[11px] font-semibold uppercase tracking-wide text-gray-400 bg-white"
+                  >
+                    {g.label}
+                  </td>
+                </tr>
+                {g.persone.map((d) => (
               <tr
                 key={d.id}
                 className="border-b border-gray-50 hover:bg-gray-50 transition-colors"
@@ -339,6 +349,8 @@ export default function DipendentiPage() {
                   </div>
                 </td>
               </tr>
+                ))}
+              </Fragment>
             ))}
           </tbody>
         </table>

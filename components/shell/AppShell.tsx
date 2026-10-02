@@ -9,15 +9,17 @@ import DomainTabs from "./DomainTabs";
 
 function Frame({
   username,
+  ruolo,
   children,
 }: {
   username: string;
+  ruolo: string;
   children: React.ReactNode;
 }) {
   const { collapsed, infoOpen, setInfoOpen } = useShell();
   return (
     <div className={cn("shell", collapsed && "shell-collapsed")}>
-      <Sidebar username={username} />
+      <Sidebar username={username} ruolo={ruolo} />
       <div className="shell-main">
         <Topbar />
         <DomainTabs />
@@ -32,14 +34,18 @@ function Frame({
 
 export default function AppShell({
   username,
+  ruolo,
   children,
 }: {
   username: string;
+  ruolo: string;
   children: React.ReactNode;
 }) {
   return (
     <ShellProvider>
-      <Frame username={username}>{children}</Frame>
+      <Frame username={username} ruolo={ruolo}>
+        {children}
+      </Frame>
     </ShellProvider>
   );
 }

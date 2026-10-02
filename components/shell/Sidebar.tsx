@@ -22,7 +22,7 @@ function parseOpenMap(raw: string | null): Record<string, boolean> {
   }
 }
 
-export default function Sidebar({ username }: { username: string }) {
+export default function Sidebar({ username, ruolo }: { username: string; ruolo: string }) {
   const pathname = usePathname();
   const router = useRouter();
   const { collapsed, setCollapsed, mobileOpen, setMobileOpen } = useShell();
@@ -45,24 +45,8 @@ export default function Sidebar({ username }: { username: string }) {
 
   const initial = (username || "A").trim().charAt(0).toUpperCase();
 
-  return (
+  const voci = (section: (typeof NAV)[number]) => (
     <>
-      <aside
-        className={cn("sb", collapsed && "sb-collapsed", mobileOpen && "sb-open")}
-        aria-label="Menu principale"
-      >
-        <div className="sb-head">
-          <div className="sb-brand">
-            <span className="sb-logo">
-              <img src="/logo-anda-wide.png" alt="Anda Agencia de Publicidad SL" />
-            </span>
-          </div>
-        </div>
-
-        <nav className="sb-nav">
-          {NAV.map((section) => (
-            <div key={section.label} className="sb-group">
-              {!collapsed && <div className="sb-section">{section.label}</div>}
               {section.items.map((item) => {
                 const Icon = item.icon;
                 const active = match.item?.code === item.code;
@@ -118,17 +102,45 @@ export default function Sidebar({ username }: { username: string }) {
                   </div>
                 );
               })}
+    </>
+  );
+
+
+  return (
+    <>
+      <aside
+        className={cn("sb", collapsed && "sb-collapsed", mobileOpen && "sb-open")}
+        aria-label="Menu principale"
+      >
+        <div className="sb-head">
+          <div className="sb-brand">
+            <span className="sb-logo">
+              <img src="/logo-anda-wide.png" alt="Anda Agencia de Publicidad SL" />
+            </span>
+          </div>
+        </div>
+
+        <nav className="sb-nav">
+          {NAV.filter((sec) => !sec.footer).map((section) => (
+            <div key={section.label} className="sb-group">
+              {!collapsed && <div className="sb-section">{section.label}</div>}
+              {voci(section)}
             </div>
           ))}
         </nav>
 
         <div className="sb-foot">
+          {NAV.filter((sec) => sec.footer).map((section) => (
+            <div key={section.label} className="sb-group">
+              {voci(section)}
+            </div>
+          ))}
           <div className="sb-user" title={username}>
             <span className="sb-avatar">{initial}</span>
             {!collapsed && (
               <span className="sb-user-text">
                 <strong>{username || "Utente"}</strong>
-                <small>Anda</small>
+                <small>{ruolo || "Anda"}</small>
               </span>
             )}
           </div>

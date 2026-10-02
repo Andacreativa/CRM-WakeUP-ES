@@ -10,11 +10,15 @@ import {
   Download,
   FileSpreadsheet,
   FileText,
+  Receipt,
+  PencilLine,
+  ClipboardList,
   Upload,
   Wallet,
 } from "lucide-react";
-import { fmt, MESI, CANALI, AZIENDA_COLORI, canaleLabel } from "@/lib/constants";
-import FiltriBar from "@/components/FiltriBar";
+import { fmt, MESI, CANALI, canaleLabel } from "@/lib/constants";
+import RichiesteFattureView from "@/components/richieste/RichiesteFattureView";
+import { cn } from "@/lib/utils";
 import { useAnno } from "@/lib/anno-context";
 import {
   exportExcel,
@@ -114,6 +118,11 @@ const emptyForm = {
   scadenza: "",
 };
 
+// Sotto-tab della pagina (come "Fatture emesse" di Northstar). Bozze e
+// proforma arrivano con la creazione fatture: per ora sono segnaposto.
+type TabFatture = "emesse" | "bozze" | "da-emettere" | "proforma";
+const TAB_VALIDE: TabFatture[] = ["emesse", "bozze", "da-emettere", "proforma"];
+
 export default function FatturePage() {
   const [fatture, setFatture] = useState<Fattura[]>([]);
   const [clienti, setClienti] = useState<Cliente[]>([]);
@@ -128,7 +137,7 @@ export default function FatturePage() {
   const [filtroPagato, setFiltroPagato] = useState<
     "tutti" | "pagato" | "attesa"
   >("tutti");
-  const { anno, setAnno } = useAnno();
+  const { anno } = useAnno();
   const [azienda, setAzienda] = useState("");
   const [pageSize, setPageSize] = useState(10);
   const [page, setPage] = useState(1);
@@ -139,6 +148,26 @@ export default function FatturePage() {
   const [lastClickedId, setLastClickedId] = useState<number | null>(null);
   // Modalità Esporta (come Northstar): le caselle compaiono solo quando serve
   const [exportMode, setExportMode] = useState(false);
+  const [tab, setTab] = useState<TabFatture>("emesse");
+  const [daEmettere, setDaEmettere] = useState(0);
+  // La tab vive nell'indirizzo (?tab=), senza useSearchParams per non
+  // richiedere un confine Suspense alla pagina.
+  useEffect(() => {
+    const t = new URLSearchParams(window.location.search).get("tab");
+    if (t && (TAB_VALIDE as string[]).includes(t)) setTab(t as TabFatture);
+  }, []);
+  const vaiTab = (t: TabFatture) => {
+    setTab(t);
+    window.history.replaceState(null, "", t === "emesse" ? "/finance/fatture" : `/finance/fatture?tab=${t}`);
+  };
+  useEffect(() => {
+    fetch(`/api/richieste-fattura?anno=${anno}`)
+      .then((r) => (r.ok ? r.json() : []))
+      .then((rows) =>
+        setDaEmettere(Array.isArray(rows) ? rows.filter((r) => !r.emessaEff).length : 0),
+      )
+      .catch(() => {});
+  }, [anno, tab]);
   const [tutte, setTutte] = useState(false); // tutte quelle del filtro
   const [smhCfg, setSmhCfg] = useState({
     nome: "SocialMediaHouse S.R.L.",
@@ -500,55 +529,87 @@ export default function FatturePage() {
 
   return (
     <div className={`space-y-6 ${exportMode ? "pb-24" : ""}`}>
-      <div className="flex items-center justify-between flex-wrap gap-3">
+      <div className="flex items-start justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Fatture</h1>
-          <p className="text-gray-500 text-sm mt-0.5">
-            {filtered.length} fatture
-            {selected.length > 0 && (
-              <span className="text-pink-600 font-medium">
-                {" "}
-                · {selected.length} selezionate
-              </span>
-            )}
+          <h1 className="text-3xl font-extrabold tracking-tight text-gray-900">Fatture emesse</h1>
+          <p className="text-gray-500 text-sm mt-1">
+            Fatture attive create a mano o dalle richieste. Bozze e proforma arrivano con la
+            creazione fatture.
           </p>
         </div>
-        <div className="flex items-center gap-3 flex-wrap">
-          <FiltriBar
-            anno={anno}
-            azienda={azienda}
-            onAnno={setAnno}
-            onAzienda={setAzienda}
-            hideOptions={["Altro"]}
-            includeAllYears
-          />
-          <PageSizeSelect pageSize={pageSize} onChange={setPageSize} />
-          <button
-            onClick={() => (exportMode ? esciExport() : setExportMode(true))}
-            title="Scegli le fatture e scaricale in Excel o PDF"
-            className={
-              exportMode
-                ? "glass-btn-primary flex items-center gap-1.5 text-white text-sm font-medium px-3 py-2 rounded-xl"
-                : "flex items-center gap-1.5 border border-gray-200 text-gray-600 text-sm font-medium px-3 py-2 rounded-xl hover:bg-gray-50 transition-colors"
-            }
-          >
-            <Download className="w-4 h-4" /> Esporta
-          </button>
-          <button
-            onClick={() => setShowImport(true)}
-            className="flex items-center gap-1.5 border border-gray-200 text-gray-600 text-sm font-medium px-3 py-2 rounded-xl hover:bg-gray-50 transition-colors"
-          >
-            <Upload className="w-4 h-4 text-pink-600" /> Importa Fatture
-          </button>
-          <button
-            onClick={openNew}
-            className="glass-btn-primary flex items-center gap-2 text-white text-sm font-medium px-4 py-2 rounded-xl transition-all"
-          >
-            <Plus className="w-4 h-4" /> Nuova Fattura
-          </button>
-        </div>
+        {tab === "emesse" && (
+          <div className="flex items-center gap-3 flex-wrap">
+            <PageSizeSelect pageSize={pageSize} onChange={setPageSize} />
+            <button
+              onClick={() => (exportMode ? esciExport() : setExportMode(true))}
+              title="Scegli le fatture e scaricale in Excel o PDF"
+              className={
+                exportMode
+                  ? "glass-btn-primary flex items-center gap-1.5 text-white text-sm font-medium px-3 py-2 rounded-xl"
+                  : "flex items-center gap-1.5 border border-gray-200 text-gray-600 text-sm font-medium px-3 py-2 rounded-xl hover:bg-gray-50 transition-colors"
+              }
+            >
+              <Download className="w-4 h-4" /> Esporta
+            </button>
+            <button
+              onClick={() => setShowImport(true)}
+              className="flex items-center gap-1.5 border border-gray-200 text-gray-600 text-sm font-medium px-3 py-2 rounded-xl hover:bg-gray-50 transition-colors"
+            >
+              <Upload className="w-4 h-4 text-pink-600" /> Importa Fatture
+            </button>
+            <button
+              onClick={openNew}
+              className="glass-btn-primary flex items-center gap-2 text-white text-sm font-medium px-4 py-2 rounded-xl transition-all"
+            >
+              <Plus className="w-4 h-4" /> Nuova Fattura
+            </button>
+          </div>
+        )}
       </div>
 
+      {/* Sotto-tab (come Northstar) */}
+      <div className="flex items-center gap-7 border-b border-gray-200 overflow-x-auto">
+        {(
+          [
+            { val: "emesse", label: "Emesse", icon: Receipt, count: fatture.length },
+            { val: "bozze", label: "Bozze", icon: PencilLine },
+            { val: "da-emettere", label: "Da emettere", icon: ClipboardList, count: daEmettere },
+            { val: "proforma", label: "Proforma", icon: FileText },
+          ] as { val: TabFatture; label: string; icon: typeof Receipt; count?: number }[]
+        ).map((t) => {
+          const Icon = t.icon;
+          const attiva = tab === t.val;
+          return (
+            <button
+              key={t.val}
+              type="button"
+              onClick={() => vaiTab(t.val)}
+              className={cn(
+                "flex items-center gap-2 pb-3 -mb-px text-[15px] font-semibold border-b-2 whitespace-nowrap transition-colors",
+                attiva
+                  ? "border-pink-600 text-pink-600"
+                  : "border-transparent text-gray-500 hover:text-gray-800",
+              )}
+            >
+              <Icon className="w-4 h-4" />
+              {t.label}
+              {t.count !== undefined && (
+                <span
+                  className={cn(
+                    "text-xs font-bold px-2 py-0.5 rounded-full",
+                    attiva ? "bg-pink-50 text-pink-600" : "bg-gray-100 text-gray-500",
+                  )}
+                >
+                  {t.count}
+                </span>
+              )}
+            </button>
+          );
+        })}
+      </div>
+
+      {tab === "emesse" && (
+        <>
       {/* KPI */}
       <div className="grid grid-cols-3 gap-4">
         {[
@@ -608,6 +669,18 @@ export default function FatturePage() {
             </button>
           )}
         </div>
+        <select
+          value={azienda}
+          onChange={(e) => setAzienda(e.target.value)}
+          className="text-sm border border-gray-200 rounded-lg px-3 py-2 bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-pink-300"
+        >
+          <option value="">Tutti i canali</option>
+          {CANALI.map((a) => (
+            <option key={a} value={a}>
+              {canaleLabel(a)}
+            </option>
+          ))}
+        </select>
         <div className="flex gap-1 bg-gray-100 rounded-lg p-1">
           {(["tutti", "pagato", "attesa"] as const).map((v) => (
             <button
@@ -628,6 +701,10 @@ export default function FatturePage() {
             </button>
           ))}
         </div>
+        <span className="ml-auto text-xs text-gray-400 whitespace-nowrap">
+          {filtered.length} fatture
+          {selected.length > 0 ? ` · ${selected.length} selezionate` : ""}
+        </span>
       </div>
 
       {/* Tabella fatture */}
@@ -725,13 +802,7 @@ export default function FatturePage() {
                   </span>
                 </td>
                 <td className="px-4 py-3">
-                  <span
-                    className="text-xs font-semibold px-2.5 py-0.5 rounded-full whitespace-nowrap"
-                    style={{
-                      background: (AZIENDA_COLORI[f.azienda] ?? AZIENDA_COLORI.Altro).bg,
-                      color: (AZIENDA_COLORI[f.azienda] ?? AZIENDA_COLORI.Altro).text,
-                    }}
-                  >
+                  <span className="text-xs font-medium text-gray-500 whitespace-nowrap">
                     {canaleLabel(f.azienda, f.aziendaNota)}
                   </span>
                 </td>
@@ -918,6 +989,23 @@ export default function FatturePage() {
 
       {/* Tabella Altri Ingressi — stesso formato delle fatture */}
 
+        </>
+      )}
+
+      {tab === "da-emettere" && <RichiesteFattureView mode="finance" embedded />}
+      {(tab === "bozze" || tab === "proforma") && (
+        <div className="glass-card rounded-2xl p-12 text-center text-sm text-gray-400">
+          {tab === "bozze" ? (
+            <PencilLine className="w-10 h-10 mx-auto mb-2 text-gray-300" />
+          ) : (
+            <FileText className="w-10 h-10 mx-auto mb-2 text-gray-300" />
+          )}
+          {tab === "bozze"
+            ? "Le bozze di fattura arrivano con la creazione fatture (prossimo piano)."
+            : "Le proforma arrivano con la creazione fatture (prossimo piano)."}
+        </div>
+      )}
+
       {/* Modal */}
       {showForm && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
@@ -946,7 +1034,6 @@ export default function FatturePage() {
                 </label>
                 <div className="flex gap-2">
                   {CANALI.map((a) => {
-                    const col = AZIENDA_COLORI[a];
                     const active = form.azienda === a;
                     return (
                       <button
@@ -962,9 +1049,9 @@ export default function FatturePage() {
                         style={
                           active
                             ? {
-                                background: col.bg,
-                                color: col.text,
-                                borderColor: col.border,
+                                background: "#e8308a",
+                                color: "#fff",
+                                borderColor: "#e8308a",
                               }
                             : {
                                 background: "#fff",

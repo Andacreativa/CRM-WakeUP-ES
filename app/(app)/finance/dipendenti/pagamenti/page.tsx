@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
 import { Check, ChevronLeft, ChevronRight, Plus, Trash2, X, Zap } from "lucide-react";
 import { fmt, MESI } from "@/lib/constants";
 import { useAnno } from "@/lib/anno-context";
@@ -11,6 +11,7 @@ import {
   importoDefault,
   nomeCompleto,
   vociDiTipo,
+  gruppiPerTipo,
 } from "@/lib/dipendenti";
 import Avatar from "@/components/Avatar";
 
@@ -206,7 +207,17 @@ export default function PagamentiPage() {
                   </td>
                 </tr>
               )}
-              {persone.map((p) => {
+              {gruppiPerTipo(persone).map((g) => (
+                <Fragment key={g.tipo}>
+                  <tr>
+                    <td
+                      colSpan={colonne.length + 2}
+                      className="px-4 pt-4 pb-1 text-[11px] font-semibold uppercase tracking-wide text-gray-400 bg-white"
+                    >
+                      {g.label}
+                    </td>
+                  </tr>
+                  {g.persone.map((p) => {
                 const voci = vociDiTipo(p.tipo);
                 return (
                   <tr key={p.id} className="border-b border-gray-50 align-middle">
@@ -332,7 +343,9 @@ export default function PagamentiPage() {
                     </td>
                   </tr>
                 );
-              })}
+                  })}
+                </Fragment>
+              ))}
             </tbody>
             {persone.length > 0 && (
               <tfoot>

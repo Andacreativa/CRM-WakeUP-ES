@@ -287,8 +287,8 @@ tbody.zebra > tr:nth-child(even) {
   padding: 2px 4px;
 }
 .sb-logo {
-  width: 176px;
-  height: 72px;
+  width: 118px;
+  height: 46px;
   display: grid;
   place-items: center;
   flex-shrink: 0;
@@ -300,8 +300,8 @@ tbody.zebra > tr:nth-child(even) {
   object-fit: contain;
 }
 .sb-collapsed .sb-logo {
-  width: 48px;
-  height: 48px;
+  width: 40px;
+  height: 40px;
 }
 
 /* Barra "Esporta" in fondo: parte dal bordo del contenuto, non sotto la sidebar */
@@ -688,22 +688,23 @@ tbody.zebra > tr:nth-child(even) {
 }
 
 
-/* ─── Pill di stato piene (stessi colori, intensità piena) ──────────── */
+/* ─── Pill di stato (colori pieni; "in attesa" resta giallo tenue) ──── */
 .pill-ok,
 .pill-wait,
 .pill-partial,
 .pill-late,
 .pill-info,
 .pill-off {
-  color: #ffffff;
   border-color: transparent;
   white-space: nowrap;
+  color: #ffffff;
 }
 .pill-ok {
   background: #22c55e;
 }
 .pill-wait {
-  background: #f59e0b;
+  background: #fef3c7;
+  color: #b45309;
 }
 .pill-partial {
   background: #f97316;
@@ -718,12 +719,13 @@ tbody.zebra > tr:nth-child(even) {
   background: #9ca3af;
 }
 button.pill-ok:hover,
-button.pill-wait:hover,
 button.pill-partial:hover,
 button.pill-late:hover,
 button.pill-info:hover,
-a.pill-ok:hover,
-a.pill-wait:hover {
+a.pill-ok:hover {
   filter: brightness(0.93);
-  color: #ffffff;
+}
+button.pill-wait:hover,
+a.pill-wait:hover {
+  background: #fde68a;
 }

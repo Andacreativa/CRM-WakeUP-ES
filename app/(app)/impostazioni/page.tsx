@@ -92,7 +92,7 @@ export default function ImpostazioniPage() {
       )}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Impostazioni fatture</h1>
+          <h1 className="text-2xl font-bold text-gray-900">Fatturazione</h1>
           <p className="text-gray-500 text-sm mt-1">
             Dati emittente, numerazione, valori di default e testi dei solleciti
           </p>

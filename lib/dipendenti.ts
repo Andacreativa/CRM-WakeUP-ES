@@ -96,3 +96,25 @@ export const nomeCompleto = (d: { nome: string; cognome?: string | null }) =>
 
 export const isVoce = (v: unknown): v is Voce =>
   typeof v === "string" && v in VOCI;
+
+// Ordine di presentazione: prima i soci dipendenti, poi i dipendenti, poi i
+// commerciali (Persone, Pagamenti, Report).
+export const ORDINE_TIPI = ["socio_dipendente", "dipendente", "commerciale"] as const;
+export const TIPO_LABEL_PLURALE: Record<string, string> = {
+  socio_dipendente: "Soci dipendenti",
+  dipendente: "Dipendenti",
+  commerciale: "Commerciali",
+};
+export function gruppiPerTipo<T extends { tipo: string }>(
+  persone: T[],
+): { tipo: string; label: string; persone: T[] }[] {
+  const tipi = [...ORDINE_TIPI, ...persone.map((p) => p.tipo).filter((t) => !(ORDINE_TIPI as readonly string[]).includes(t))];
+  const out: { tipo: string; label: string; persone: T[] }[] = [];
+  for (const t of Array.from(new Set(tipi))) {
+    const lista = persone.filter((p) => p.tipo === t);
+    if (lista.length) out.push({ tipo: t, label: TIPO_LABEL_PLURALE[t] ?? t, persone: lista });
+  }
+  return out;
+}
+export const ordinaPerTipo = <T extends { tipo: string }>(persone: T[]): T[] =>
+  gruppiPerTipo(persone).flatMap((g) => g.persone);

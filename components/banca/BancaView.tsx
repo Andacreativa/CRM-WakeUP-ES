@@ -1,9 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import {
   Ban,
   Check,
+  Settings2,
   Info,
   Landmark,
   Loader2,
@@ -22,7 +24,6 @@ import {
   type Suggerimento,
 } from "@/lib/banca-shared";
 import ImportEstrattoModal from "./ImportEstrattoModal";
-import RegoleBanca from "./RegoleBanca";
 
 // Vista "Banca": estratto conto BBVA importato, uscite da trasformare in
 // Spese (o da abbinare a spese già registrate, stipendi compresi),
@@ -87,7 +88,7 @@ interface Edit {
   dipendenteId: number | null; // rimborsi/benefit: persona del registro
 }
 
-type Vista = "movimenti" | "importazioni" | "regole";
+type Vista = "movimenti" | "importazioni";
 type Tipo = "uscite" | "entrate";
 type FiltroStato = "da_abbinare" | "collegati" | "escluso" | "";
 
@@ -415,9 +416,15 @@ export default function BancaView() {
             options={[
               { val: "movimenti", label: "Movimenti" },
               { val: "importazioni", label: "Importazioni" },
-              { val: "regole", label: "Regole" },
             ]}
           />
+          <Link
+            href="/impostazioni/banca"
+            className="glass-btn-secondary flex items-center gap-1.5 text-gray-700 text-sm font-medium px-3 py-2 rounded-xl"
+            title="Regole di categoria e memoria beneficiari"
+          >
+            <Settings2 className="w-4 h-4" /> Regole
+          </Link>
           <button
             onClick={() => setShowImport(true)}
             className="glass-btn-primary flex items-center gap-1.5 text-white text-sm font-medium px-4 py-2 rounded-xl"
@@ -461,8 +468,6 @@ export default function BancaView() {
           </div>
         ))}
       </div>
-
-      {vista === "regole" && <RegoleBanca onNotify={notify} />}
 
       {vista === "importazioni" && (
         <div className="glass-card rounded-2xl overflow-hidden">

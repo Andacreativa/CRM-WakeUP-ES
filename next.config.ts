@@ -12,6 +12,9 @@ const nextConfig: NextConfig = {
       { source: "/sales/contatti", destination: "/crm/contatti", permanent: false },
       // La vecchia pagina "fatture da contratto" è sostituita dalle richieste
       { source: "/sales/contratti/fatture", destination: "/sales/richieste", permanent: false },
+      // Impostazioni ora in Configurazione; "da emettere" è una tab di Fatture
+      { source: "/finance/impostazioni", destination: "/impostazioni", permanent: false },
+      { source: "/finance/da-emettere", destination: "/finance/fatture?tab=da-emettere", permanent: false },
     ];
   },
 };

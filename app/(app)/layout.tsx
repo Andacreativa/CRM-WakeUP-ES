@@ -1,5 +1,5 @@
 import { cookies } from "next/headers";
-import { verifySession, SESSION_COOKIE } from "@/lib/auth";
+import { verifySession, SESSION_COOKIE, ruoloUtente } from "@/lib/auth";
 import Providers from "@/components/Providers";
 import AppShell from "@/components/shell/AppShell";
 
@@ -14,7 +14,9 @@ export default async function AppLayout({
   const session = await verifySession(cookieStore.get(SESSION_COOKIE)?.value);
   return (
     <Providers>
-      <AppShell username={session?.username ?? ""}>{children}</AppShell>
+      <AppShell username={session?.username ?? ""} ruolo={ruoloUtente(session?.username)}>
+        {children}
+      </AppShell>
     </Providers>
   );
 }
