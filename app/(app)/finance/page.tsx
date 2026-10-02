@@ -400,7 +400,7 @@ export default function Dashboard() {
                     <span
                       className={`tag ${f.pagato ?"pill-ok" : "pill-wait"}`}
                     >
-                      {f.pagato ? "Pagato" : "In attesa"}
+                      {f.pagato ? "Incassato" : "In attesa"}
                     </span>
                   </div>
                 </div>

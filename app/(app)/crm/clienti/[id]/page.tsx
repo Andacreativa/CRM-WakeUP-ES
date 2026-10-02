@@ -196,7 +196,7 @@ export default function ClienteDettaglioPage() {
                         <td>{MESI[f.mese - 1]} {f.anno}</td>
                         <td className="text-gray-500">{f.scadenza ? new Date(f.scadenza).toLocaleDateString("it-IT") : "—"}</td>
                         <td>
-                          <span className={cn("tag", stato === "pagata" ? "pill-ok" : stato === "acconto" ? "pill-partial" : "pill-wait")}>{stato}</span>
+                          <span className={cn("tag", stato === "pagata" ? "pill-ok" : stato === "acconto" ? "pill-partial" : "pill-wait")}>{stato === "pagata" ? "incassata" : stato}</span>
                         </td>
                         <td className="font-semibold text-gray-900 text-right">{fmt(f.importo)}</td>
                       </tr>

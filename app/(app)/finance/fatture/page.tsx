@@ -566,46 +566,17 @@ export default function FatturePage() {
         )}
       </div>
 
-      {/* Sotto-tab (come Northstar) */}
-      <div className="flex items-center gap-7 border-b border-gray-200 overflow-x-auto">
-        {(
-          [
-            { val: "emesse", label: "Emesse", icon: Receipt, count: fatture.length },
-            { val: "bozze", label: "Bozze", icon: PencilLine },
-            { val: "da-emettere", label: "Da emettere", icon: ClipboardList, count: daEmettere },
-            { val: "proforma", label: "Proforma", icon: FileText },
-          ] as { val: TabFatture; label: string; icon: typeof Receipt; count?: number }[]
-        ).map((t) => {
-          const Icon = t.icon;
-          const attiva = tab === t.val;
-          return (
-            <button
-              key={t.val}
-              type="button"
-              onClick={() => vaiTab(t.val)}
-              className={cn(
-                "flex items-center gap-2 pb-3 -mb-px text-[15px] font-semibold border-b-2 whitespace-nowrap transition-colors",
-                attiva
-                  ? "border-brand text-brand"
-                  : "border-transparent text-gray-500 hover:text-gray-700",
-              )}
-            >
-              <Icon className="w-4 h-4" />
-              {t.label}
-              {t.count !== undefined && (
-                <span
-                  className={cn(
-                    "text-xs font-semibold px-2 py-0.5 rounded-full",
-                    attiva ? "bg-brand/10 text-brand" : "bg-gray-100 text-gray-500",
-                  )}
-                >
-                  {t.count}
-                </span>
-              )}
-            </button>
-          );
-        })}
-      </div>
+      {/* Sotto-tab: stesse pill dei filtri delle altre pagine */}
+      <Pills
+        value={tab}
+        onChange={(v) => vaiTab(v)}
+        options={[
+          { val: "emesse", label: `Emesse (${fatture.length})` },
+          { val: "bozze", label: "Bozze" },
+          { val: "da-emettere", label: `Da emettere (${daEmettere})` },
+          { val: "proforma", label: "Proforma" },
+        ]}
+      />
 
       {tab === "emesse" && (
         <>
@@ -681,7 +652,7 @@ export default function FatturePage() {
           onChange={setFiltroPagato}
           options={[
             { val: "tutti", label: "Tutti" },
-            { val: "pagato", label: "Pagati" },
+            { val: "pagato", label: "Incassate" },
             { val: "attesa", label: "In attesa" },
           ]}
         />
@@ -822,9 +793,10 @@ export default function FatturePage() {
                             }
                           }}
                           disabled={togglingId === f.id}
-                          className="pill-ok inline-flex items-center gap-1 text-xs font-semibold px-3 py-1 rounded-full whitespace-nowrap transition-colors disabled:opacity-60 disabled:cursor-wait"
+                          className="pill-ok disabled:opacity-60 disabled:cursor-wait"
+                          title="Incassata: clicca per cambiare"
                         >
-                          <Check className="w-3 h-3" /> Pagato
+                          <Check /> Incassato
                         </button>
                       );
                     }
@@ -834,7 +806,7 @@ export default function FatturePage() {
                           title={`${fmt(totalePagato(f))} ricevuti / ${fmt(residuo(f))} residuo`}
                           className="pill-partial"
                         >
-                          <Wallet className="w-3 h-3" /> Acconto
+                          <Wallet /> Acconto
                         </span>
                       );
                     }
@@ -846,8 +818,9 @@ export default function FatturePage() {
                         }}
                         disabled={togglingId === f.id}
                         className="pill-wait disabled:opacity-60 disabled:cursor-wait"
+                        title="In attesa: clicca per segnarla incassata"
                       >
-                        <X className="w-3 h-3" /> In Attesa
+                        <X /> In attesa
                       </button>
                     );
                   })()}
