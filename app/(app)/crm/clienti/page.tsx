@@ -315,7 +315,7 @@ export default function ClientiPage() {
       ) : (
         <div className="glass-card rounded-2xl overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[900px]">
+            <table className="w-full min-w-[860px]">
               <thead>
                 <tr className="border-b border-gray-100 bg-gray-50">
                   <th className={cn(thCls, "text-left th-sort", ordine === "data" && "active")} onClick={() => ordina("data")}>
@@ -325,7 +325,6 @@ export default function ClientiPage() {
                     Cliente {freccia("nome")}
                   </th>
                   <th className={cn(thCls, "text-left")}>Paese · Città</th>
-                  <th className={cn(thCls, "text-left")}>Imposta</th>
                   <th className={cn(thCls, "text-left")}>Stato</th>
                   <th className={cn(thCls, "text-right th-sort", ordine === "fatturato" && "active")} onClick={() => ordina("fatturato")}>
                     Fatturato {freccia("fatturato")}
@@ -351,6 +350,7 @@ export default function ClientiPage() {
                       <div className="text-sm font-semibold text-gray-900">{c.nome}</div>
                       <div className="text-[11px] text-gray-400 truncate max-w-[260px]">
                         {c.partitaIva ?? "P.IVA mancante"}
+                        {c.tipoImposta ? ` · ${c.tipoImposta}` : ""}
                         {c.email ? ` · ${c.email}` : ""}
                         {s.n > 0 && ` · ${s.n} fattur${s.n === 1 ? "a" : "e"}`}
                       </div>
@@ -358,11 +358,6 @@ export default function ClientiPage() {
                     <td className="px-3 py-3 text-sm text-gray-600 whitespace-nowrap max-w-[200px] truncate">
                       {c.paese}
                       {c.citta && <span className="text-gray-400"> · {c.citta}</span>}
-                    </td>
-                    <td className="px-3 py-3">
-                      <span className="text-[11px] font-semibold px-2 py-0.5 rounded-md bg-gray-100 text-gray-600 whitespace-nowrap">
-                        {c.tipoImposta ?? "—"}
-                      </span>
                     </td>
                     <td className="px-3 py-3">
                       <span
