@@ -1,10 +1,15 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { syncClienteToContatto } from "@/lib/cliente-contatto-sync";
 
 export async function GET() {
   const clienti = await prisma.cliente.findMany({
-    include: { fatture: true },
+    include: {
+      fatture: {
+        where: { origine: { not: "sales" } },
+        select: { importo: true, pagato: true, acconti: { select: { importo: true } } },
+      },
+      _count: { select: { contatti: true, contratti: true } },
+    },
     orderBy: { nome: "asc" },
   });
   return NextResponse.json(clienti);
@@ -12,9 +17,12 @@ export async function GET() {
 
 export async function POST(request: Request) {
   const body = await request.json();
+  if (!body.nome?.trim()) {
+    return NextResponse.json({ error: "Nome obbligatorio" }, { status: 400 });
+  }
   const cliente = await prisma.cliente.create({
     data: {
-      nome: body.nome,
+      nome: body.nome.trim(),
       paese: body.paese || "Italia",
       email: body.email || null,
       telefono: body.telefono || null,
@@ -28,10 +36,5 @@ export async function POST(request: Request) {
       note: body.note || null,
     },
   });
-  try {
-    await syncClienteToContatto(prisma, cliente);
-  } catch (e) {
-    console.error("[POST /api/clienti] sync contatto:", e);
-  }
   return NextResponse.json(cliente);
 }

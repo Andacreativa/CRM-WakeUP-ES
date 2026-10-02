@@ -61,6 +61,18 @@ export async function PATCH(
       },
     });
 
+    // Stato del lead collegato: accettato → vinta, rifiutato → persa
+    if (body.status !== undefined && preventivo.leadId && before?.status !== preventivo.status) {
+      const nuovoStato =
+        preventivo.status === "accettato" ? "vinta" : preventivo.status === "rifiutato" ? "persa" : null;
+      if (nuovoStato) {
+        await prisma.lead.update({
+          where: { id: preventivo.leadId },
+          data: { stato: nuovoStato, stage: nuovoStato === "vinta" ? "vinto" : "perso" },
+        });
+      }
+    }
+
     // Auto-generate bozza contratto quando preventivo passa a "accettato"
     const wasAccepted = before?.status === "accettato";
     const isAccepted = preventivo.status === "accettato";

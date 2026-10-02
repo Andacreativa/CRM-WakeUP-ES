@@ -96,6 +96,7 @@ export const NAV: NavSection[] = [
         href: "/crm/clienti",
         tabs: [
           { label: "Clienti", href: "/crm/clienti" },
+          { label: "Lead", href: "/crm/lead" },
           { label: "Contatti", href: "/crm/contatti" },
           { label: "Fornitori", href: "/crm/fornitori" },
         ],

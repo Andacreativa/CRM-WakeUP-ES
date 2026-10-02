@@ -1,740 +1,184 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { Plus, Pencil, Trash2, X, Copy, Check } from "lucide-react";
-import { fmt, TIPO_IMPOSTA_OPTIONS } from "@/lib/constants";
-import AddressFields, { formatAddress } from "@/components/AddressFields";
-import FiltriBar from "@/components/FiltriBar";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { Plus, Pencil, Trash2, Search, ExternalLink } from "lucide-react";
+import { fmt } from "@/lib/constants";
 import { PageSizeSelect, PageNav } from "@/components/Pagination";
+import ClienteFormModal, { type ClienteBase } from "@/components/crm/ClienteFormModal";
+import { cn } from "@/lib/utils";
 
-interface Fattura {
-  importo: number;
-  pagato: boolean;
-}
-interface Cliente {
+interface Cliente extends ClienteBase {
   id: number;
-  nome: string;
-  paese: string;
-  email: string | null;
-  telefono: string | null;
-  partitaIva: string | null;
-  via: string | null;
-  cap: string | null;
-  citta: string | null;
-  provincia: string | null;
-  iban: string | null;
-  tipoImposta: string | null;
-  note: string | null;
-  fatture: Fattura[];
+  fatture: { importo: number; pagato: boolean; acconti: { importo: number }[] }[];
+  _count: { contatti: number; contratti: number };
 }
 
-const emptyForm = {
-  nome: "",
-  paese: "Italia",
-  email: "",
-  telefono: "",
-  partitaIva: "",
-  via: "",
-  cap: "",
-  citta: "",
-  provincia: "",
-  iban: "",
-  tipoImposta: "IGIC Exenta",
-  note: "",
+const stats = (c: Cliente) => {
+  let fatturato = 0;
+  let incassato = 0;
+  for (const f of c.fatture) {
+    fatturato += f.importo;
+    const acc = f.acconti.reduce((s, a) => s + a.importo, 0);
+    incassato += f.pagato ? f.importo : Math.min(f.importo, acc);
+  }
+  return { fatturato, incassato, daIncassare: Math.max(0, fatturato - incassato), n: c.fatture.length };
 };
 
-const PAESE_FLAG: Record<string, string> = {
-  Italia: "🇮🇹",
-  Spagna: "🇪🇸",
-  Francia: "🇫🇷",
-  Germania: "🇩🇪",
-  Portogallo: "🇵🇹",
-  "Regno Unito": "🇬🇧",
-};
+const selectCls =
+  "text-sm border border-gray-200 rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-pink-300";
 
 export default function ClientiPage() {
+  const router = useRouter();
   const [clienti, setClienti] = useState<Cliente[]>([]);
-  const [showForm, setShowForm] = useState(false);
-  const [editing, setEditing] = useState<Cliente | null>(null);
-  const [form, setForm] = useState({ ...emptyForm });
-  const [search, setSearch] = useState("");
-  const [paeseFiltro, setPaeseFiltro] = useState("");
-  const [detail, setDetail] = useState<Cliente | null>(null);
-  const [pageSize, setPageSize] = useState(10);
+  const [q, setQ] = useState("");
+  const [paese, setPaese] = useState("");
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
+  const [form, setForm] = useState<{ open: boolean; cliente: Cliente | null }>({ open: false, cliente: null });
 
-  const load = async () => {
-    const data = (await (await fetch("/api/clienti")).json()) as any;
+  const load = useCallback(async () => {
+    const data = await (await fetch("/api/clienti")).json();
     setClienti(Array.isArray(data) ? data : []);
-  };
+  }, []);
   useEffect(() => {
     load();
-  }, []);
-
-  const openNew = () => {
-    setEditing(null);
-    setForm({ ...emptyForm });
-    setShowForm(true);
-  };
-  const openEdit = (c: Cliente) => {
-    setEditing(c);
-    setForm({
-      nome: c.nome,
-      paese: c.paese,
-      email: c.email || "",
-      telefono: c.telefono || "",
-      partitaIva: c.partitaIva || "",
-      via: c.via || "",
-      cap: c.cap || "",
-      citta: c.citta || "",
-      provincia: c.provincia || "",
-      iban: c.iban || "",
-      tipoImposta: c.tipoImposta || "IGIC Exenta",
-      note: c.note || "",
-    });
-    setShowForm(true);
-  };
-
-  const save = async () => {
-    if (!form.nome) return;
-    if (editing) {
-      await fetch(`/api/clienti/${editing.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
-      });
-    } else {
-      await fetch("/api/clienti", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
-      });
-    }
-    setShowForm(false);
-    load();
-  };
-
-  const del = async (id: number) => {
-    if (
-      !confirm(
-        "Eliminare questo cliente? Verranno scollegate le sue fatture (non eliminate).",
-      )
-    )
-      return;
-    await fetch(`/api/clienti/${id}`, { method: "DELETE" });
-    if (detail?.id === id) setDetail(null);
-    load();
-  };
-
-  const q = (search ?? "").toLowerCase();
-  const filtered = (clienti ?? []).filter((c) => {
-    if (paeseFiltro === "Spagna" && c.paese !== "Spagna") return false;
-    if (paeseFiltro === "Italia" && c.paese !== "Italia") return false;
-    if (
-      paeseFiltro === "Altro" &&
-      (c.paese === "Spagna" || c.paese === "Italia")
-    )
-      return false;
-    return (
-      (c.nome ?? "").toLowerCase().includes(q) ||
-      (c.paese ?? "").toLowerCase().includes(q) ||
-      (c.email ?? "").toLowerCase().includes(q)
-    );
-  });
-
+  }, [load]);
   useEffect(() => {
     setPage(1);
-  }, [search, paeseFiltro, pageSize]);
+  }, [q, paese, pageSize]);
+
+  const filtered = useMemo(() => {
+    const s = q.trim().toLowerCase();
+    return clienti.filter(
+      (c) =>
+        (!paese || (paese === "Altri" ? !["Italia", "Spagna"].includes(c.paese) : c.paese === paese)) &&
+        (!s || [c.nome, c.email, c.partitaIva, c.citta].some((v) => (v ?? "").toLowerCase().includes(s))),
+    );
+  }, [clienti, q, paese]);
   const paged = filtered.slice((page - 1) * pageSize, page * pageSize);
 
-  const stats = (c: Cliente) => {
-    const fatture = c.fatture ?? [];
-    const totale = fatture.reduce((s, f) => s + (f?.importo ?? 0), 0);
-    const incassato = fatture
-      .filter((f) => f?.pagato)
-      .reduce((s, f) => s + (f?.importo ?? 0), 0);
-    return { totale, incassato, daIncassare: totale - incassato };
+  const tot = useMemo(() => {
+    let fatturato = 0;
+    let daIncassare = 0;
+    for (const c of clienti) {
+      const s = stats(c);
+      fatturato += s.fatturato;
+      daIncassare += s.daIncassare;
+    }
+    return { fatturato, daIncassare };
+  }, [clienti]);
+
+  const del = async (c: Cliente) => {
+    if (!confirm(`Eliminare ${c.nome}? Le fatture restano ma perdono il collegamento.`)) return;
+    await fetch(`/api/clienti/${c.id}`, { method: "DELETE" });
+    load();
   };
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Clienti</h1>
-          <p className="text-gray-500 text-sm mt-1">
-            {filtered.length} clienti in anagrafica
-          </p>
+          <p className="text-gray-500 text-sm mt-1">{clienti.length} in anagrafica</p>
         </div>
-        <div className="flex items-center gap-3 flex-wrap">
-          <FiltriBar
-            anno={0}
-            azienda={paeseFiltro}
-            onAnno={() => {}}
-            onAzienda={setPaeseFiltro}
-            showAnno={false}
-            hideOptions={["Altro"]}
-          />
-          <PageSizeSelect pageSize={pageSize} onChange={setPageSize} />
-          <button
-            onClick={openNew}
-            className="glass-btn-primary flex items-center gap-2 text-white text-sm font-medium px-4 py-2.5 rounded-xl"
-          >
-            <Plus className="w-4 h-4" /> Nuovo Cliente
-          </button>
-        </div>
+        <button onClick={() => setForm({ open: true, cliente: null })} className="glass-btn-primary flex items-center gap-2 text-white text-sm font-medium px-4 py-2 rounded-xl">
+          <Plus className="w-4 h-4" /> Nuovo cliente
+        </button>
       </div>
 
-      {/* Ricerca */}
-      <input
-        type="text"
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-        placeholder="Cerca per nome, paese, email..."
-        className="w-full max-w-sm border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 bg-white"
-      />
-
-      {/* Tabella */}
-      <div className="glass-card rounded-2xl overflow-hidden">
-        <table className="w-full">
-          <thead>
-            <tr className="border-b border-gray-100 bg-gray-50">
-              {[
-                "Paese",
-                "Cliente",
-                "Fatturato",
-                "Incassato",
-                "Da incassare",
-                "",
-              ].map((h) => (
-                <th
-                  key={h}
-                  className={`text-xs font-semibold text-gray-500 uppercase tracking-wide px-4 py-3 ${["Fatturato", "Incassato", "Da incassare"].includes(h) ? "text-right" : "text-left"}`}
-                >
-                  {h}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody className="zebra">
-            {filtered.length === 0 && (
-              <tr>
-                <td
-                  colSpan={6}
-                  className="text-center text-gray-400 py-12 text-sm"
-                >
-                  Nessun cliente trovato
-                </td>
-              </tr>
-            )}
-            {paged.map((c) => {
-              const s = stats(c);
-              return (
-                <tr
-                  key={c.id}
-                  className="border-b border-gray-50 hover:bg-gray-50 transition-colors"
-                >
-                  <td className="px-4 py-3 text-xl">
-                    {PAESE_FLAG[c.paese] || "🌍"}
-                  </td>
-                  <td className="px-4 py-3">
-                    <button
-                      onClick={() => setDetail(c)}
-                      className="text-sm font-medium text-gray-900 hover:text-pink-600 hover:underline text-left"
-                    >
-                      {c.nome}
-                    </button>
-                    <p className="text-xs text-gray-400">
-                      {(c.fatture ?? []).length} fatture
-                    </p>
-                  </td>
-                  <td className="px-4 py-3 text-sm font-semibold text-gray-900 text-right">
-                    {fmt(s.totale)}
-                  </td>
-                  <td
-                    className="px-4 py-3 text-sm font-semibold text-right"
-                    style={{ color: "#22c55e" }}
-                  >
-                    {fmt(s.incassato)}
-                  </td>
-                  <td
-                    className="px-4 py-3 text-sm font-semibold text-right"
-                    style={{ color: "#f59e0b" }}
-                  >
-                    {fmt(s.daIncassare)}
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-2 justify-end">
-                      <button
-                        onClick={() => openEdit(c)}
-                        className="p-1.5 rounded-lg text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors"
-                      >
-                        <Pencil className="w-4 h-4" />
-                      </button>
-                      <button
-                        onClick={() => del(c.id)}
-                        className="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
-      {filtered.length > 0 && (
-        <PageNav
-          total={filtered.length}
-          page={page}
-          pageSize={pageSize}
-          onPage={setPage}
-          labelSuffix="clienti"
-        />
-      )}
-
-      {/* Top 5 Clienti per Fatturato */}
-      {(() => {
-        const top5 = [...(clienti ?? [])]
-          .map((c) => ({ c, totale: stats(c).totale }))
-          .filter((x) => x.totale > 0)
-          .sort((a, b) => b.totale - a.totale)
-          .slice(0, 5);
-        if (top5.length === 0) return null;
-        return (
-          <div className="glass-card rounded-2xl overflow-hidden">
-            <div className="px-5 py-3 border-b border-gray-100 bg-gray-50">
-              <h2 className="text-sm font-bold text-gray-700 uppercase tracking-wide">
-                Top 5 Clienti per Fatturato
-              </h2>
-            </div>
-            <ul>
-              {top5.map((x, i) => (
-                <li
-                  key={x.c.id}
-                  className="flex items-center justify-between px-5 py-3 border-b border-gray-50 last:border-0 hover:bg-gray-50 transition-colors"
-                >
-                  <div className="flex items-center gap-3">
-                    <span
-                      className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold text-white shrink-0"
-                      style={{
-                        background:
-                          i === 0
-                            ? "#e8308a"
-                            : i === 1
-                              ? "#a855f7"
-                              : i === 2
-                                ? "#6366f1"
-                                : "#94a3b8",
-                      }}
-                    >
-                      {i + 1}
-                    </span>
-                    <button
-                      onClick={() => setDetail(x.c)}
-                      className="text-sm font-medium text-gray-900 hover:text-pink-600 hover:underline text-left"
-                    >
-                      {x.c.nome}
-                    </button>
-                    <span className="text-lg">
-                      {PAESE_FLAG[x.c.paese] || "🌍"}
-                    </span>
-                  </div>
-                  <span className="text-sm font-bold tabular-nums text-gray-900">
-                    {fmt(x.totale)}
-                  </span>
-                </li>
-              ))}
-            </ul>
+      <div className="grid grid-cols-3 gap-4">
+        {[
+          { label: "Clienti", value: String(clienti.length), color: "#111827" },
+          { label: "Fatturato totale", value: fmt(tot.fatturato), color: "#059669" },
+          { label: "Da incassare", value: fmt(tot.daIncassare), color: "#d97706" },
+        ].map((k) => (
+          <div key={k.label} className="glass-card rounded-2xl p-4">
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">{k.label}</p>
+            <p className="text-2xl font-bold mt-1" style={{ color: k.color }}>{k.value}</p>
           </div>
-        );
-      })()}
+        ))}
+      </div>
 
-      {/* Detail modal */}
-      {detail && (
-        <ClienteDetailModal
-          cliente={detail}
-          stats={stats(detail)}
-          onClose={() => setDetail(null)}
-          onEdit={() => {
-            const c = detail;
-            setDetail(null);
-            openEdit(c);
+      <div className="flex items-center gap-2 flex-wrap">
+        <div className="relative">
+          <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
+          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Cerca nome, P.IVA, email, città…" className={cn(selectCls, "pl-9 w-72")} />
+        </div>
+        <div className="flex gap-1 bg-gray-100 rounded-xl p-1">
+          {["", "Italia", "Spagna", "Altri"].map((p) => (
+            <button key={p} onClick={() => setPaese(p)} className="text-sm px-3 py-1.5 rounded-lg font-medium" style={paese === p ? { background: "#e8308a", color: "#fff" } : { color: "#64748b" }}>
+              {p || "Tutti"}
+            </button>
+          ))}
+        </div>
+        <PageSizeSelect pageSize={pageSize} onChange={setPageSize} />
+      </div>
+
+      <div className="glass-card rounded-2xl overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[900px]">
+            <thead>
+              <tr className="border-b border-gray-100 bg-gray-50">
+                {["Cliente", "Paese", "Città", "Imposta", "Fatturato", "Incassato", "Da incassare", ""].map((h) => (
+                  <th key={h} className={cn("text-[11px] font-semibold uppercase tracking-wide text-gray-500 px-4 py-3", ["Fatturato", "Incassato", "Da incassare"].includes(h) ? "text-right" : "text-left")}>
+                    {h}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody className="zebra">
+              {paged.length === 0 && (
+                <tr><td colSpan={8} className="text-center text-gray-400 py-12 text-sm">Nessun cliente</td></tr>
+              )}
+              {paged.map((c) => {
+                const s = stats(c);
+                return (
+                  <tr key={c.id} className="border-b border-gray-50 hover:bg-gray-50/60 cursor-pointer" onClick={() => router.push(`/crm/clienti/${c.id}`)}>
+                    <td className="px-4 py-3">
+                      <div className="text-sm font-semibold text-gray-900">{c.nome}</div>
+                      <div className="text-[11px] text-gray-400">
+                        {c.partitaIva ?? "P.IVA mancante"}
+                        {c.email ? ` · ${c.email}` : ""}
+                        {s.n > 0 && ` · ${s.n} fattur${s.n === 1 ? "a" : "e"}`}
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 text-sm text-gray-600">{c.paese}</td>
+                    <td className="px-4 py-3 text-sm text-gray-600">{c.citta ?? "—"}</td>
+                    <td className="px-4 py-3">
+                      <span className="text-[11px] font-semibold px-2 py-0.5 rounded-md bg-gray-100 text-gray-600 whitespace-nowrap">{c.tipoImposta ?? "—"}</span>
+                    </td>
+                    <td className="px-4 py-3 text-sm font-semibold text-gray-900 text-right tabular-nums">{fmt(s.fatturato)}</td>
+                    <td className="px-4 py-3 text-sm text-emerald-700 text-right tabular-nums">{fmt(s.incassato)}</td>
+                    <td className={cn("px-4 py-3 text-sm text-right tabular-nums", s.daIncassare > 0 ? "text-amber-700 font-semibold" : "text-gray-400")}>{fmt(s.daIncassare)}</td>
+                    <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                      <div className="flex items-center gap-1 justify-end">
+                        <Link href={`/crm/clienti/${c.id}`} className="p-1.5 text-gray-400 hover:text-pink-600" title="Apri scheda"><ExternalLink className="w-4 h-4" /></Link>
+                        <button onClick={() => setForm({ open: true, cliente: c })} className="p-1.5 text-gray-400 hover:text-gray-700" title="Modifica"><Pencil className="w-4 h-4" /></button>
+                        <button onClick={() => del(c)} className="p-1.5 text-gray-400 hover:text-red-500" title="Elimina"><Trash2 className="w-4 h-4" /></button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      {filtered.length > 0 && <PageNav total={filtered.length} page={page} pageSize={pageSize} onPage={setPage} labelSuffix="clienti" />}
+
+      {form.open && (
+        <ClienteFormModal
+          cliente={form.cliente}
+          onClose={() => setForm({ open: false, cliente: null })}
+          onSaved={(c) => {
+            setForm({ open: false, cliente: null });
+            if (!form.cliente) router.push(`/crm/clienti/${c.id}`);
+            else load();
           }}
         />
       )}
-
-      {/* Edit/Create form modal */}
-      {showForm && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-          <div className="glass-modal rounded-2xl w-full max-w-lg p-6 space-y-4 max-h-[90vh] overflow-y-auto">
-            <h2 className="text-lg font-bold text-gray-900">
-              {editing ? "Modifica Cliente" : "Nuovo Cliente"}
-            </h2>
-            <div className="space-y-3">
-              <div>
-                <label className="text-xs font-medium text-gray-600 block mb-1">
-                  Paese
-                </label>
-                <div className="flex gap-2">
-                  {(["Spagna", "Italia"] as const).map((p) => {
-                    const active = form.paese === p;
-                    return (
-                      <button
-                        key={p}
-                        type="button"
-                        onClick={() =>
-                          setForm((f) => {
-                            const stripped = (f.partitaIva ?? "")
-                              .replace(/^IT/i, "")
-                              .trim();
-                            return {
-                              ...f,
-                              paese: p,
-                              partitaIva:
-                                p === "Italia" ? `IT${stripped}` : stripped,
-                            };
-                          })
-                        }
-                        className="flex-1 text-sm py-2 rounded-lg border font-semibold transition-all"
-                        style={
-                          active
-                            ? {
-                                background: "#e8308a",
-                                color: "#fff",
-                                borderColor: "#e8308a",
-                              }
-                            : {
-                                background: "#fff",
-                                borderColor: "#e2e8f0",
-                                color: "#94a3b8",
-                              }
-                        }
-                      >
-                        {p}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="col-span-2">
-                  <label className="text-xs font-medium text-gray-600 block mb-1">
-                    Nome / Ragione Sociale *
-                  </label>
-                  <input
-                    type="text"
-                    value={form.nome}
-                    onChange={(e) =>
-                      setForm((f) => ({ ...f, nome: e.target.value }))
-                    }
-                    placeholder="Es. Acme Srl"
-                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
-                  />
-                </div>
-                <div>
-                  <label className="text-xs font-medium text-gray-600 block mb-1">
-                    P.IVA / NIF
-                  </label>
-                  <input
-                    type="text"
-                    value={form.partitaIva}
-                    onChange={(e) =>
-                      setForm((f) => ({ ...f, partitaIva: e.target.value }))
-                    }
-                    placeholder={
-                      form.paese === "Italia"
-                        ? "IT12345678901"
-                        : "B12345678"
-                    }
-                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
-                  />
-                </div>
-                <div>
-                  <label className="text-xs font-medium text-gray-600 block mb-1">
-                    Email
-                  </label>
-                  <input
-                    type="email"
-                    value={form.email}
-                    onChange={(e) =>
-                      setForm((f) => ({ ...f, email: e.target.value }))
-                    }
-                    placeholder="info@azienda.com"
-                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
-                  />
-                </div>
-                <div>
-                  <label className="text-xs font-medium text-gray-600 block mb-1">
-                    Telefono
-                  </label>
-                  <input
-                    type="tel"
-                    value={form.telefono}
-                    onChange={(e) =>
-                      setForm((f) => ({ ...f, telefono: e.target.value }))
-                    }
-                    placeholder="+39 02..."
-                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
-                  />
-                </div>
-                <div>
-                  <label className="text-xs font-medium text-gray-600 block mb-1">
-                    IBAN
-                  </label>
-                  <input
-                    type="text"
-                    value={form.iban}
-                    onChange={(e) =>
-                      setForm((f) => ({ ...f, iban: e.target.value }))
-                    }
-                    placeholder="ES91 ..."
-                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 font-mono"
-                  />
-                </div>
-                <div className="col-span-2">
-                  <label className="text-xs font-medium text-gray-600 block mb-1">
-                    Tipo Imposta
-                  </label>
-                  <div className="flex gap-2 flex-wrap">
-                    {TIPO_IMPOSTA_OPTIONS.map((opt) => {
-                      const active = form.tipoImposta === opt;
-                      return (
-                        <button
-                          key={opt}
-                          type="button"
-                          onClick={() =>
-                            setForm((f) => ({ ...f, tipoImposta: opt }))
-                          }
-                          className="text-sm py-2 px-3 rounded-lg border font-semibold transition-all"
-                          style={
-                            active
-                              ? {
-                                  background: "#fce7f3",
-                                  color: "#be185d",
-                                  borderColor: "#f9a8d4",
-                                }
-                              : {
-                                  background: "#fff",
-                                  borderColor: "#e2e8f0",
-                                  color: "#94a3b8",
-                                }
-                          }
-                        >
-                          {opt}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-                <div className="col-span-2">
-                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
-                    Indirizzo
-                  </p>
-                  <AddressFields
-                    value={{
-                      via: form.via,
-                      cap: form.cap,
-                      citta: form.citta,
-                      provincia: form.provincia,
-                      paese: form.paese,
-                    }}
-                    onChange={(a) =>
-                      setForm((f) => ({
-                        ...f,
-                        via: a.via,
-                        cap: a.cap,
-                        citta: a.citta,
-                        provincia: a.provincia,
-                        paese: a.paese,
-                      }))
-                    }
-                  />
-                </div>
-                <div className="col-span-2">
-                  <label className="text-xs font-medium text-gray-600 block mb-1">
-                    Note
-                  </label>
-                  <textarea
-                    value={form.note}
-                    onChange={(e) =>
-                      setForm((f) => ({ ...f, note: e.target.value }))
-                    }
-                    rows={2}
-                    placeholder="Note interne..."
-                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 resize-none"
-                  />
-                </div>
-              </div>
-            </div>
-            <div className="flex gap-3 pt-2">
-              <button
-                onClick={() => setShowForm(false)}
-                className="flex-1 border border-gray-200 text-gray-600 text-sm font-medium py-2.5 rounded-xl hover:bg-gray-50 transition-colors"
-              >
-                Annulla
-              </button>
-              <button
-                onClick={save}
-                className="glass-btn-primary flex-1 text-white text-sm font-medium py-2.5 rounded-xl"
-              >
-                {editing ? "Salva Modifiche" : "Aggiungi"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ─── Detail Modal ───────────────────────────────────────────────────────────
-function ClienteDetailModal({
-  cliente,
-  stats,
-  onClose,
-  onEdit,
-}: {
-  cliente: Cliente;
-  stats: { totale: number; incassato: number; daIncassare: number };
-  onClose: () => void;
-  onEdit: () => void;
-}) {
-  const [copied, setCopied] = useState<string | null>(null);
-  const indirizzo = formatAddress({
-    via: cliente.via ?? "",
-    cap: cliente.cap ?? "",
-    citta: cliente.citta ?? "",
-    provincia: cliente.provincia ?? "",
-    paese: cliente.paese,
-  });
-  const copy = (label: string, val: string | null | undefined) => {
-    if (!val) return;
-    navigator.clipboard.writeText(val);
-    setCopied(label);
-    setTimeout(() => setCopied(null), 1500);
-  };
-  const Field = ({
-    label,
-    value,
-  }: {
-    label: string;
-    value: string | null | undefined;
-  }) => (
-    <div className="grid grid-cols-[140px_1fr_28px] gap-2 items-start py-2 border-b border-gray-100 last:border-0">
-      <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide pt-0.5">
-        {label}
-      </span>
-      <span
-        className="text-sm text-gray-800 break-words"
-        style={{ textAlign: "left" }}
-      >
-        {value || <span className="text-gray-300">—</span>}
-      </span>
-      {value ? (
-        <button
-          onClick={() => copy(label, value)}
-          className="p-1 rounded hover:bg-gray-100 text-gray-400 hover:text-gray-700"
-          title={`Copia ${label}`}
-        >
-          {copied === label ? (
-            <Check className="w-3.5 h-3.5 text-emerald-600" />
-          ) : (
-            <Copy className="w-3.5 h-3.5" />
-          )}
-        </button>
-      ) : (
-        <span />
-      )}
-    </div>
-  );
-  return (
-    <div
-      className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4"
-      onClick={onClose}
-    >
-      <div
-        className="glass-modal rounded-2xl w-full max-w-xl p-6 space-y-4 max-h-[90vh] overflow-y-auto"
-        onClick={(e) => e.stopPropagation()}
-        style={{ textAlign: "left" }}
-      >
-        <div className="flex items-start justify-between">
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="text-2xl">
-                {PAESE_FLAG[cliente.paese] || "🌍"}
-              </span>
-              <h2 className="text-lg font-bold text-gray-900">
-                {cliente.nome}
-              </h2>
-            </div>
-            <p className="text-xs text-gray-500 mt-0.5">{cliente.paese}</p>
-          </div>
-          <button
-            onClick={onClose}
-            className="p-1.5 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-
-        {/* Stats fatturato */}
-        <div className="grid grid-cols-3 gap-3 bg-gray-50 rounded-xl p-3">
-          <div>
-            <p className="text-[10px] text-gray-500 uppercase tracking-wide">
-              Fatturato
-            </p>
-            <p className="text-sm font-bold text-gray-900">
-              {fmt(stats.totale)}
-            </p>
-          </div>
-          <div>
-            <p className="text-[10px] text-gray-500 uppercase tracking-wide">
-              Incassato
-            </p>
-            <p className="text-sm font-bold" style={{ color: "#22c55e" }}>
-              {fmt(stats.incassato)}
-            </p>
-          </div>
-          <div>
-            <p className="text-[10px] text-gray-500 uppercase tracking-wide">
-              Da incassare
-            </p>
-            <p className="text-sm font-bold" style={{ color: "#f59e0b" }}>
-              {fmt(stats.daIncassare)}
-            </p>
-          </div>
-        </div>
-
-        {/* Campi */}
-        <div className="bg-white/60 rounded-xl px-3">
-          <Field label="Ragione sociale" value={cliente.nome} />
-          <Field label="P.IVA / NIF" value={cliente.partitaIva} />
-          <Field label="Indirizzo" value={indirizzo || ""} />
-          <Field label="Email" value={cliente.email} />
-          <Field label="Telefono" value={cliente.telefono} />
-          <Field label="IBAN" value={cliente.iban} />
-          <Field label="Tipo imposta" value={cliente.tipoImposta} />
-          {cliente.note && <Field label="Note" value={cliente.note} />}
-        </div>
-
-        <div className="flex gap-3 pt-2">
-          <button
-            onClick={onClose}
-            className="flex-1 border border-gray-200 text-gray-600 text-sm font-medium py-2.5 rounded-xl hover:bg-gray-50"
-          >
-            Chiudi
-          </button>
-          <button
-            onClick={onEdit}
-            className="glass-btn-primary flex-1 text-white text-sm font-medium py-2.5 rounded-xl"
-          >
-            Modifica
-          </button>
-        </div>
-      </div>
     </div>
   );
 }

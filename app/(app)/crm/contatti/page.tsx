@@ -1,505 +1,319 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import {
-  Plus,
-  Pencil,
-  Trash2,
-  Mail,
-  Phone,
-  MapPin,
-  FileText,
-} from "lucide-react";
-import AddressFields, { formatAddress } from "@/components/AddressFields";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
+import { Plus, Pencil, Trash2, Search, Star, X } from "lucide-react";
+import { PageSizeSelect, PageNav } from "@/components/Pagination";
+import { cn } from "@/lib/utils";
 
 interface Contatto {
   id: number;
   nome: string;
-  paese: string;
+  cognome: string | null;
+  ruolo: string | null;
   email: string | null;
   telefono: string | null;
-  partitaIva: string | null;
-  via: string | null;
-  cap: string | null;
-  citta: string | null;
-  provincia: string | null;
   note: string | null;
-  status: string;
+  principale: boolean;
+  clienteId: number | null;
+  leadId: number | null;
+  cliente: { id: number; nome: string } | null;
+  lead: { id: number; codice: string | null; nome: string; azienda: string | null } | null;
 }
 
-const STATUS_OPTIONS = [
-  {
-    value: "lead",
-    label: "Lead",
-    bg: "#fef9c3",
-    text: "#a16207",
-    border: "#fde047",
-  },
-  {
-    value: "acquisito",
-    label: "Acquisito",
-    bg: "#dcfce7",
-    text: "#166534",
-    border: "#86efac",
-  },
-  {
-    value: "perso",
-    label: "Perso",
-    bg: "#fee2e2",
-    text: "#991b1b",
-    border: "#fca5a5",
-  },
-];
+const inputCls =
+  "w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-300 bg-white";
+const labelCls = "text-xs font-medium text-gray-600 block mb-1";
+const selectCls =
+  "text-sm border border-gray-200 rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-pink-300";
 
-const statusStyle = (s: string) =>
-  STATUS_OPTIONS.find((o) => o.value === s) ?? STATUS_OPTIONS[0];
-
-const paesiFlag: Record<string, string> = {
-  Italia: "🇮🇹",
-  Spagna: "🇪🇸",
-  Francia: "🇫🇷",
-  Germania: "🇩🇪",
-  Portogallo: "🇵🇹",
-  "Regno Unito": "🇬🇧",
-};
-
-const emptyForm = {
+const vuoto = () => ({
   nome: "",
-  paese: "Italia",
+  cognome: "",
+  ruolo: "",
   email: "",
   telefono: "",
-  partitaIva: "",
-  via: "",
-  cap: "",
-  citta: "",
-  provincia: "",
   note: "",
-  status: "lead",
-};
-
-const BRAND = "#e8308a";
+  tipo: "cliente" as "cliente" | "lead",
+  clienteId: "",
+  leadId: "",
+  principale: false,
+});
 
 export default function ContattiPage() {
-  const [contatti, setContatti] = useState<Contatto[]>([]);
+  const [rows, setRows] = useState<Contatto[]>([]);
+  const [clienti, setClienti] = useState<{ id: number; nome: string }[]>([]);
+  const [leads, setLeads] = useState<{ id: number; nome: string; azienda: string | null }[]>([]);
+  const [q, setQ] = useState("");
+  const [tipo, setTipo] = useState("");
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<Contatto | null>(null);
-  const [form, setForm] = useState({ ...emptyForm });
-  const [search, setSearch] = useState("");
-  const [filtroStatus, setFiltroStatus] = useState<string>("tutti");
+  const [form, setForm] = useState(vuoto());
 
-  const load = async () => {
-    const data = (await (await fetch("/api/contatti")).json()) as any;
-    setContatti(Array.isArray(data) ? data : []);
-  };
+  const load = useCallback(async () => {
+    const [c, cl, ld] = await Promise.all([
+      fetch("/api/contatti").then((r) => r.json()),
+      fetch("/api/clienti").then((r) => r.json()),
+      fetch("/api/leads").then((r) => r.json()),
+    ]);
+    setRows(Array.isArray(c) ? c : []);
+    setClienti(Array.isArray(cl) ? cl.map((x: { id: number; nome: string }) => ({ id: x.id, nome: x.nome })) : []);
+    setLeads(Array.isArray(ld) ? ld : []);
+  }, []);
   useEffect(() => {
     load();
-  }, []);
+  }, [load]);
+  useEffect(() => {
+    setPage(1);
+  }, [q, tipo, pageSize]);
+
+  const filtered = useMemo(() => {
+    const s = q.trim().toLowerCase();
+    return rows.filter(
+      (c) =>
+        (tipo === "" || (tipo === "cliente" ? !!c.clienteId : tipo === "lead" ? !!c.leadId && !c.clienteId : !c.clienteId && !c.leadId)) &&
+        (!s ||
+          [c.nome, c.cognome, c.email, c.telefono, c.ruolo, c.cliente?.nome, c.lead?.azienda, c.lead?.nome].some((v) =>
+            (v ?? "").toLowerCase().includes(s),
+          )),
+    );
+  }, [rows, q, tipo]);
+  const paged = filtered.slice((page - 1) * pageSize, page * pageSize);
 
   const openNew = () => {
     setEditing(null);
-    setForm({ ...emptyForm });
+    setForm(vuoto());
     setShowForm(true);
   };
   const openEdit = (c: Contatto) => {
     setEditing(c);
     setForm({
       nome: c.nome,
-      paese: c.paese,
-      email: c.email || "",
-      telefono: c.telefono || "",
-      partitaIva: c.partitaIva || "",
-      via: c.via || "",
-      cap: c.cap || "",
-      citta: c.citta || "",
-      provincia: c.provincia || "",
-      note: c.note || "",
-      status: c.status,
+      cognome: c.cognome ?? "",
+      ruolo: c.ruolo ?? "",
+      email: c.email ?? "",
+      telefono: c.telefono ?? "",
+      note: c.note ?? "",
+      tipo: c.clienteId ? "cliente" : "lead",
+      clienteId: c.clienteId ? String(c.clienteId) : "",
+      leadId: c.leadId ? String(c.leadId) : "",
+      principale: c.principale,
     });
     setShowForm(true);
   };
-
   const save = async () => {
-    if (!form.nome) return;
-    if (editing) {
-      await fetch(`/api/contatti/${editing.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
-      });
-    } else {
-      await fetch("/api/contatti", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
-      });
-    }
+    if (!form.nome.trim()) return;
+    const payload = {
+      nome: form.nome,
+      cognome: form.cognome,
+      ruolo: form.ruolo,
+      email: form.email,
+      telefono: form.telefono,
+      note: form.note,
+      clienteId: form.tipo === "cliente" ? form.clienteId || null : null,
+      leadId: form.tipo === "lead" ? form.leadId || null : null,
+      principale: form.principale,
+    };
+    await fetch(editing ? `/api/contatti/${editing.id}` : "/api/contatti", {
+      method: editing ? "PATCH" : "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
     setShowForm(false);
     load();
   };
-
-  const del = async (id: number) => {
-    if (!confirm("Eliminare questo contatto?")) return;
-    await fetch(`/api/contatti/${id}`, { method: "DELETE" });
+  const del = async (c: Contatto) => {
+    if (!confirm(`Eliminare il referente ${c.nome}?`)) return;
+    await fetch(`/api/contatti/${c.id}`, { method: "DELETE" });
+    load();
+  };
+  const setPrincipale = async (c: Contatto) => {
+    await fetch(`/api/contatti/${c.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ principale: true }),
+    });
     load();
   };
 
-  const q = (search ?? "").toLowerCase();
-  const filtered = (contatti ?? []).filter((c) => {
-    const matchSearch =
-      (c.nome ?? "").toLowerCase().includes(q) ||
-      (c.paese ?? "").toLowerCase().includes(q) ||
-      (c.email ?? "").toLowerCase().includes(q);
-    const matchStatus = filtroStatus === "tutti" || c.status === filtroStatus;
-    return matchSearch && matchStatus;
-  });
-
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between pl-10 md:pl-0">
+      <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Contatti</h1>
-          <p className="text-gray-500 text-sm mt-1">
-            {contatti.length} contatti in anagrafica
-          </p>
+          <p className="text-gray-500 text-sm mt-1">Persone di riferimento dei clienti e dei lead</p>
         </div>
-        <button
-          onClick={openNew}
-          className="flex items-center gap-2 text-white text-sm font-medium px-4 py-2.5 rounded-xl transition-all"
-          style={{ background: BRAND }}
-          onMouseEnter={(e) =>
-            ((e.currentTarget as HTMLElement).style.opacity = "0.85")
-          }
-          onMouseLeave={(e) =>
-            ((e.currentTarget as HTMLElement).style.opacity = "1")
-          }
-        >
-          <Plus className="w-4 h-4" /> Nuovo Contatto
+        <button onClick={openNew} className="glass-btn-primary flex items-center gap-2 text-white text-sm font-medium px-4 py-2 rounded-xl">
+          <Plus className="w-4 h-4" /> Nuovo contatto
         </button>
       </div>
 
-      {/* Filtri */}
-      <div className="flex gap-3 flex-wrap items-center">
-        <input
-          type="text"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Cerca per nome, paese, email..."
-          className="w-full max-w-sm border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-pink-300 bg-white"
-        />
-        <div className="flex gap-1 bg-gray-100 rounded-lg p-1">
-          {[{ value: "tutti", label: "Tutti" }, ...STATUS_OPTIONS].map((o) => (
+      <div className="flex items-center gap-2 flex-wrap">
+        <div className="relative">
+          <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
+          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Cerca nome, email, cliente…" className={cn(selectCls, "pl-9 w-72")} />
+        </div>
+        <div className="flex gap-1 bg-gray-100 rounded-xl p-1">
+          {[
+            { v: "", l: "Tutti" },
+            { v: "cliente", l: "Di clienti" },
+            { v: "lead", l: "Di lead" },
+            { v: "nessuno", l: "Non collegati" },
+          ].map((o) => (
             <button
-              key={o.value}
-              onClick={() => setFiltroStatus(o.value)}
-              className="text-sm px-3 py-1.5 rounded-md font-medium transition-colors"
-              style={
-                filtroStatus === o.value
-                  ? { background: BRAND, color: "#fff" }
-                  : { color: "#64748b" }
-              }
+              key={o.v}
+              onClick={() => setTipo(o.v)}
+              className="text-sm px-3 py-1.5 rounded-lg font-medium"
+              style={tipo === o.v ? { background: "#e8308a", color: "#fff" } : { color: "#64748b" }}
             >
-              {o.label}
+              {o.l}
             </button>
           ))}
         </div>
+        <PageSizeSelect pageSize={pageSize} onChange={setPageSize} />
       </div>
 
-      {/* Cards */}
-      {filtered.length === 0 ? (
-        <div className="text-center py-16 text-gray-400">
-          <p className="text-lg mb-1">Nessun contatto trovato</p>
-          <p className="text-sm">
-            Aggiungi il primo contatto con il pulsante in alto
-          </p>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
-          {filtered.map((c) => {
-            const st = statusStyle(c.status);
-            return (
-              <div key={c.id} className="glass-card rounded-2xl p-5 space-y-4">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-xl">
-                        {paesiFlag[c.paese] || "🌍"}
-                      </span>
-                      <h3 className="font-semibold text-gray-900">{c.nome}</h3>
-                    </div>
-                    <p className="text-xs text-gray-400 mt-0.5">{c.paese}</p>
+      <div className="glass-card rounded-2xl overflow-hidden">
+        <table className="w-full">
+          <thead>
+            <tr className="border-b border-gray-100 bg-gray-50">
+              {["Contatto", "Di", "Email", "Telefono", "", ""].map((h, i) => (
+                <th key={i} className="text-left text-[11px] font-semibold uppercase tracking-wide text-gray-500 px-4 py-3">{h}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody className="zebra">
+            {paged.length === 0 && (
+              <tr>
+                <td colSpan={6} className="text-center text-gray-400 py-12 text-sm">Nessun contatto</td>
+              </tr>
+            )}
+            {paged.map((c) => (
+              <tr key={c.id} className="border-b border-gray-50">
+                <td className="px-4 py-3">
+                  <div className="text-sm font-semibold text-gray-900">
+                    {c.nome}{c.cognome ? ` ${c.cognome}` : ""}
                   </div>
-                  <div className="flex items-center gap-2">
-                    <span
-                      className="text-xs font-semibold px-2.5 py-0.5 rounded-full border"
-                      style={{
-                        background: st.bg,
-                        color: st.text,
-                        borderColor: st.border,
-                      }}
-                    >
-                      {st.label}
-                    </span>
+                  {c.ruolo && <div className="text-xs text-gray-500">{c.ruolo}</div>}
+                </td>
+                <td className="px-4 py-3 text-sm">
+                  {c.cliente ? (
+                    <Link href={`/crm/clienti/${c.cliente.id}`} className="inline-flex items-center gap-1.5 hover:text-pink-600">
+                      <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700">cliente</span>
+                      {c.cliente.nome}
+                    </Link>
+                  ) : c.lead ? (
+                    <Link href={`/crm/lead/${c.lead.id}`} className="inline-flex items-center gap-1.5 hover:text-pink-600">
+                      <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-700">lead</span>
+                      {c.lead.azienda ?? c.lead.nome}
+                    </Link>
+                  ) : (
+                    <span className="text-gray-300">—</span>
+                  )}
+                </td>
+                <td className="px-4 py-3 text-sm text-gray-600">{c.email ?? "—"}</td>
+                <td className="px-4 py-3 text-sm text-gray-600">{c.telefono ?? "—"}</td>
+                <td className="px-4 py-3">
+                  {c.clienteId && (
                     <button
-                      onClick={() => openEdit(c)}
-                      className="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                      onClick={() => !c.principale && setPrincipale(c)}
+                      className={cn("inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-md", c.principale ? "bg-amber-50 text-amber-700" : "text-gray-300 hover:text-amber-600")}
+                      title={c.principale ? "Referente principale" : "Imposta come principale"}
                     >
-                      <Pencil className="w-4 h-4" />
+                      <Star className="w-3 h-3" /> {c.principale ? "principale" : ""}
                     </button>
-                    <button
-                      onClick={() => del(c.id)}
-                      className="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
+                  )}
+                </td>
+                <td className="px-4 py-3">
+                  <div className="flex items-center gap-1 justify-end">
+                    <button onClick={() => openEdit(c)} className="p-1.5 text-gray-400 hover:text-gray-700" title="Modifica"><Pencil className="w-4 h-4" /></button>
+                    <button onClick={() => del(c)} className="p-1.5 text-gray-400 hover:text-red-500" title="Elimina"><Trash2 className="w-4 h-4" /></button>
                   </div>
-                </div>
-
-                <div className="space-y-1.5">
-                  {c.email && (
-                    <div className="flex items-center gap-2 text-xs text-gray-500">
-                      <Mail className="w-3.5 h-3.5 text-gray-400" />
-                      {c.email}
-                    </div>
-                  )}
-                  {c.telefono && (
-                    <div className="flex items-center gap-2 text-xs text-gray-500">
-                      <Phone className="w-3.5 h-3.5 text-gray-400" />
-                      {c.telefono}
-                    </div>
-                  )}
-                  {(c.via || c.cap || c.citta || c.provincia) && (
-                    <div className="flex items-start gap-2 text-xs text-gray-500">
-                      <MapPin className="w-3.5 h-3.5 text-gray-400 mt-0.5 shrink-0" />
-                      <span>
-                        {formatAddress({
-                          via: c.via ?? "",
-                          cap: c.cap ?? "",
-                          citta: c.citta ?? "",
-                          provincia: c.provincia ?? "",
-                          paese: c.paese,
-                        })}
-                      </span>
-                    </div>
-                  )}
-                  {c.partitaIva && (
-                    <div className="flex items-center gap-2 text-xs text-gray-500">
-                      <FileText className="w-3.5 h-3.5 text-gray-400" />
-                      P.IVA: {c.partitaIva}
-                    </div>
-                  )}
-                </div>
-
-                {c.note && (
-                  <p className="text-xs text-gray-400 italic border-t border-gray-50 pt-2">
-                    {c.note}
-                  </p>
-                )}
-              </div>
-            );
-          })}
-        </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      {filtered.length > 0 && (
+        <PageNav total={filtered.length} page={page} pageSize={pageSize} onPage={setPage} labelSuffix="contatti" />
       )}
 
-      {/* Modal form */}
       {showForm && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-          <div className="glass-modal rounded-2xl w-full max-w-lg p-6 space-y-4 max-h-[90vh] overflow-y-auto">
-            <h2 className="text-lg font-bold text-gray-900">
-              {editing ? "Modifica Contatto" : "Nuovo Contatto"}
-            </h2>
-
-            {/* Status selector */}
-            <div>
-              <label className="text-xs font-medium text-gray-600 block mb-1">
-                Status
-              </label>
-              <div className="flex gap-2">
-                {STATUS_OPTIONS.map((o) => (
-                  <button
-                    key={o.value}
-                    onClick={() => setForm((f) => ({ ...f, status: o.value }))}
-                    className="flex-1 text-sm py-2 rounded-lg border font-semibold transition-all"
-                    style={
-                      form.status === o.value
-                        ? {
-                            background: o.bg,
-                            color: o.text,
-                            borderColor: o.border,
-                          }
-                        : {
-                            background: "#fff",
-                            borderColor: "#e2e8f0",
-                            color: "#94a3b8",
-                          }
-                    }
-                  >
-                    {o.label}
-                  </button>
-                ))}
-              </div>
+          <div className="glass-modal rounded-2xl w-full max-w-lg p-6 space-y-4">
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-bold text-gray-900">{editing ? "Modifica contatto" : "Nuovo contatto"}</h2>
+              <button onClick={() => setShowForm(false)} className="text-gray-400 hover:text-gray-700"><X className="w-5 h-5" /></button>
             </div>
-
-            <div>
-              <label className="text-xs font-medium text-gray-600 block mb-1">
-                Paese
-              </label>
-              <div className="flex gap-2">
-                {(["Spagna", "Italia"] as const).map((p) => {
-                  const active = form.paese === p;
-                  return (
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className={labelCls}>Nome *</label>
+                <input value={form.nome} onChange={(e) => setForm((f) => ({ ...f, nome: e.target.value }))} className={inputCls} />
+              </div>
+              <div>
+                <label className={labelCls}>Cognome</label>
+                <input value={form.cognome} onChange={(e) => setForm((f) => ({ ...f, cognome: e.target.value }))} className={inputCls} />
+              </div>
+              <div>
+                <label className={labelCls}>Ruolo</label>
+                <input value={form.ruolo} onChange={(e) => setForm((f) => ({ ...f, ruolo: e.target.value }))} className={inputCls} placeholder="Es. titolare, marketing" />
+              </div>
+              <div>
+                <label className={labelCls}>Telefono</label>
+                <input value={form.telefono} onChange={(e) => setForm((f) => ({ ...f, telefono: e.target.value }))} className={inputCls} />
+              </div>
+              <div className="col-span-2">
+                <label className={labelCls}>Email</label>
+                <input value={form.email} onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))} className={inputCls} />
+              </div>
+              <div className="col-span-2">
+                <label className={labelCls}>Collegato a</label>
+                <div className="flex gap-2 mb-2">
+                  {(["cliente", "lead"] as const).map((t) => (
                     <button
-                      key={p}
+                      key={t}
                       type="button"
-                      onClick={() =>
-                        setForm((f) => {
-                          const stripped = (f.partitaIva ?? "")
-                            .replace(/^IT/i, "")
-                            .trim();
-                          return {
-                            ...f,
-                            paese: p,
-                            partitaIva:
-                              p === "Italia" ? `IT${stripped}` : stripped,
-                          };
-                        })
-                      }
-                      className="flex-1 text-sm py-2 rounded-lg border font-semibold transition-all"
-                      style={
-                        active
-                          ? {
-                              background: BRAND,
-                              color: "#fff",
-                              borderColor: BRAND,
-                            }
-                          : {
-                              background: "#fff",
-                              borderColor: "#e2e8f0",
-                              color: "#94a3b8",
-                            }
-                      }
+                      onClick={() => setForm((f) => ({ ...f, tipo: t }))}
+                      className="flex-1 text-sm py-2 rounded-lg border font-semibold"
+                      style={form.tipo === t ? { background: "#e8308a", color: "#fff", borderColor: "#e8308a" } : { background: "#fff", borderColor: "#e2e8f0", color: "#94a3b8" }}
                     >
-                      {p}
+                      {t === "cliente" ? "Cliente" : "Lead"}
                     </button>
-                  );
-                })}
+                  ))}
+                </div>
+                {form.tipo === "cliente" ? (
+                  <select value={form.clienteId} onChange={(e) => setForm((f) => ({ ...f, clienteId: e.target.value }))} className={inputCls}>
+                    <option value="">— nessuno —</option>
+                    {clienti.map((c) => (
+                      <option key={c.id} value={c.id}>{c.nome}</option>
+                    ))}
+                  </select>
+                ) : (
+                  <select value={form.leadId} onChange={(e) => setForm((f) => ({ ...f, leadId: e.target.value }))} className={inputCls}>
+                    <option value="">— nessuno —</option>
+                    {leads.map((l) => (
+                      <option key={l.id} value={l.id}>{l.azienda ?? l.nome}</option>
+                    ))}
+                  </select>
+                )}
+              </div>
+              {form.tipo === "cliente" && (
+                <label className="col-span-2 flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
+                  <input type="checkbox" checked={form.principale} onChange={(e) => setForm((f) => ({ ...f, principale: e.target.checked }))} />
+                  Referente principale del cliente
+                </label>
+              )}
+              <div className="col-span-2">
+                <label className={labelCls}>Note</label>
+                <input value={form.note} onChange={(e) => setForm((f) => ({ ...f, note: e.target.value }))} className={inputCls} />
               </div>
             </div>
-
-            <div className="space-y-3">
-              <div className="grid grid-cols-2 gap-3">
-                <div className="col-span-2">
-                  <label className="text-xs font-medium text-gray-600 block mb-1">
-                    Nome / Ragione Sociale *
-                  </label>
-                  <input
-                    type="text"
-                    value={form.nome}
-                    onChange={(e) =>
-                      setForm((f) => ({ ...f, nome: e.target.value }))
-                    }
-                    placeholder="Es. Acme Srl"
-                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-300"
-                  />
-                </div>
-                <div>
-                  <label className="text-xs font-medium text-gray-600 block mb-1">
-                    Partita IVA
-                  </label>
-                  <input
-                    type="text"
-                    value={form.partitaIva}
-                    onChange={(e) =>
-                      setForm((f) => ({ ...f, partitaIva: e.target.value }))
-                    }
-                    placeholder="IT12345678901"
-                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-300"
-                  />
-                </div>
-                <div>
-                  <label className="text-xs font-medium text-gray-600 block mb-1">
-                    Email
-                  </label>
-                  <input
-                    type="email"
-                    value={form.email}
-                    onChange={(e) =>
-                      setForm((f) => ({ ...f, email: e.target.value }))
-                    }
-                    placeholder="info@azienda.com"
-                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-300"
-                  />
-                </div>
-                <div className="col-span-2">
-                  <label className="text-xs font-medium text-gray-600 block mb-1">
-                    Telefono
-                  </label>
-                  <input
-                    type="tel"
-                    value={form.telefono}
-                    onChange={(e) =>
-                      setForm((f) => ({ ...f, telefono: e.target.value }))
-                    }
-                    placeholder="+39 02..."
-                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-300"
-                  />
-                </div>
-                <div className="col-span-2">
-                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
-                    Indirizzo
-                  </p>
-                  <AddressFields
-                    value={{
-                      via: form.via,
-                      cap: form.cap,
-                      citta: form.citta,
-                      provincia: form.provincia,
-                      paese: form.paese,
-                    }}
-                    onChange={(a) =>
-                      setForm((f) => ({
-                        ...f,
-                        via: a.via,
-                        cap: a.cap,
-                        citta: a.citta,
-                        provincia: a.provincia,
-                        paese: a.paese,
-                      }))
-                    }
-                    inputClass="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-300"
-                  />
-                </div>
-                <div className="col-span-2">
-                  <label className="text-xs font-medium text-gray-600 block mb-1">
-                    Note
-                  </label>
-                  <textarea
-                    value={form.note}
-                    onChange={(e) =>
-                      setForm((f) => ({ ...f, note: e.target.value }))
-                    }
-                    rows={2}
-                    placeholder="Note interne..."
-                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-300 resize-none"
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div className="flex gap-3 pt-2">
-              <button
-                onClick={() => setShowForm(false)}
-                className="flex-1 border border-gray-200 text-gray-600 text-sm font-medium py-2.5 rounded-xl hover:bg-gray-50 transition-colors"
-              >
-                Annulla
-              </button>
-              <button
-                onClick={save}
-                className="flex-1 text-white text-sm font-medium py-2.5 rounded-xl transition-all"
-                style={{ background: BRAND }}
-              >
-                {editing ? "Salva Modifiche" : "Aggiungi"}
-              </button>
+            <div className="flex justify-end gap-2">
+              <button onClick={() => setShowForm(false)} className="text-sm text-gray-500 hover:text-gray-800 px-3 py-2">Annulla</button>
+              <button onClick={save} className="glass-btn-primary text-white text-sm font-medium px-5 py-2 rounded-xl">{editing ? "Salva" : "Aggiungi"}</button>
             </div>
           </div>
         </div>

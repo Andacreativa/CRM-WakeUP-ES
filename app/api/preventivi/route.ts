@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { nextCodiceLead } from "@/lib/lead";
 
 export async function GET() {
   try {
@@ -38,50 +39,44 @@ export async function POST(request: Request) {
     const anno = new Date().getFullYear();
     const numero = `PRE-${anno}-${String(count + 1).padStart(3, "0")}`;
 
-    // Crea Contatto se non esiste già (cerca per email o nome)
-    const existingContatto = await prisma.contatto.findFirst({
-      where: body.emailCliente
-        ? { email: body.emailCliente }
-        : { nome: body.nomeCliente },
-    });
-    if (!existingContatto) {
-      await prisma.contatto.create({
-        data: {
-          nome: body.nomeCliente,
-          email: body.emailCliente || null,
-          note: body.aziendaCliente ? `Azienda: ${body.aziendaCliente}` : null,
-          status: "acquisito",
-        },
-      });
-    }
-
-    // Crea Lead in pipeline (stage proposta) se non esiste già per questo cliente
+    // Lead collegato: lo trova per email o nome/azienda, altrimenti lo crea.
+    // Un preventivo inviato porta il lead a "opportunità" (se ancora aperto).
+    const APERTI = ["nuovo", "contattato", "qualificato", "prospect", "opportunita"];
     const existingLead = await prisma.lead.findFirst({
       where: {
         OR: [
-          body.emailCliente ? { email: body.emailCliente } : {},
+          ...(body.emailCliente ? [{ email: body.emailCliente }] : []),
           { nome: body.nomeCliente },
+          ...(body.aziendaCliente ? [{ azienda: body.aziendaCliente }] : []),
         ],
       },
     });
-
     let leadId: number | null = null;
     if (!existingLead) {
-      const newLead = await prisma.lead.create({
-        data: {
-          nome: body.nomeCliente,
-          azienda: body.aziendaCliente || null,
-          email: body.emailCliente || null,
-          valore: totale,
-          stage: "proposta",
-          note: `Preventivo ${numero}: ${body.oggetto}`,
-        },
+      const newLead = await prisma.$transaction(async (tx) => {
+        const codice = await nextCodiceLead(tx, new Date().getFullYear());
+        return tx.lead.create({
+          data: {
+            codice,
+            nome: body.nomeCliente,
+            azienda: body.aziendaCliente || null,
+            email: body.emailCliente || null,
+            valore: totale,
+            stato: "opportunita",
+            stage: "proposta",
+            fonte: "altro",
+            note: `Preventivo ${numero}: ${body.oggetto}`,
+          },
+        });
       });
       leadId = newLead.id;
     } else {
       await prisma.lead.update({
         where: { id: existingLead.id },
-        data: { stage: "proposta", valore: totale },
+        data: {
+          valore: totale,
+          ...(APERTI.includes(existingLead.stato) ? { stato: "opportunita", stage: "proposta" } : {}),
+        },
       });
       leadId = existingLead.id;
     }

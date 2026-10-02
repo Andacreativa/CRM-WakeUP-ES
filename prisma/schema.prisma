@@ -24,6 +24,8 @@ model Cliente {
   fatture      Fattura[]
   contratti    Contratto[]
   richiesteFattura RichiestaFattura[]
+  contatti     Contatto[]
+  leads        Lead[]
 }
 
 model Fattura {
@@ -261,9 +263,15 @@ model PagamentoDipendente {
   @@unique([dipendenteId, anno, mese, tipo])
 }
 
+// Contatto = persona di riferimento di un cliente o di un lead (come i
+// "contacts" di Northstar). I campi anagrafici azienda (paese, partitaIva,
+// indirizzo, status) sono storici: restano nel DB ma l'interfaccia usa
+// clienteId / leadId.
 model Contatto {
   id         Int      @id @default(autoincrement())
   nome       String
+  cognome    String?
+  ruolo      String?
   paese      String   @default("Italia")
   email      String?
   telefono   String?
@@ -273,23 +281,76 @@ model Contatto {
   citta      String?
   provincia  String?
   note       String?
-  status     String   @default("lead")
+  status     String   @default("lead") // storico
+  clienteId  Int?
+  cliente    Cliente? @relation(fields: [clienteId], references: [id], onDelete: SetNull)
+  leadId     Int?
+  lead       Lead?    @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  principale Boolean  @default(false)
   createdAt  DateTime @default(now())
+
+  @@index([clienteId])
+  @@index([leadId])
 }
 
+// Lead = potenziale cliente (modello Northstar): stato di pipeline, fonte,
+// responsabile, attività con esito e prossima azione, conversione in cliente.
+// `stage` è il vecchio campo del kanban: resta ma non si usa più.
 model Lead {
   id         Int           @id @default(autoincrement())
+  codice     String?       @unique // LEAD-2026-0001
   nome       String
   azienda    String?
   email      String?
   telefono   String?
   valore     Float?
-  stage      String        @default("nuovo")
+  stage      String        @default("nuovo") // storico
+  stato      String        @default("nuovo") // nuovo | contattato | qualificato | prospect | opportunita | vinta | persa | non_qualificato
+  fonte      String?       // sito | referral | social | evento | passaparola | import | altro
+  fonteDettaglio String?
+  responsabile String?
+  qualifica  String        @default("fredda") // fredda | tiepida | calda
+  priorita   String        @default("media") // bassa | media | alta
+  paese      String?
+  citta      String?
+  partitaIva String?
+  sitoWeb    String?
+  settore    String?
+  prossimaAzione     String?
+  prossimaAzioneData DateTime?
+  clienteId  Int?
+  cliente    Cliente?      @relation(fields: [clienteId], references: [id], onDelete: SetNull)
+  convertitoIl DateTime?
+  legacyContattoId Int?    @unique // Contatto da cui è nato (script di conversione)
   note       String?
   createdAt  DateTime      @default(now())
   updatedAt  DateTime      @updatedAt
   appunti    AppuntoCall[]
   preventivi Preventivo[]
+  attivita   AttivitaLead[]
+  contatti   Contatto[]
+
+  @@index([stato])
+  @@index([clienteId])
+}
+
+// Attività su un lead: chiamata, email, riunione, nota, whatsapp, task;
+// esito e prossima azione con data (come le activities di Northstar).
+model AttivitaLead {
+  id                 Int       @id @default(autoincrement())
+  leadId             Int
+  lead               Lead      @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  tipo               String    @default("nota")
+  oggetto            String?
+  descrizione        String?
+  esito              String?   // positivo | neutro | negativo
+  prossimaAzione     String?
+  prossimaAzioneData DateTime?
+  completata         Boolean   @default(false)
+  data               DateTime  @default(now())
+  createdAt          DateTime  @default(now())
+
+  @@index([leadId])
 }
 
 model AppuntoCall {
