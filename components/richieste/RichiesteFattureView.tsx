@@ -1,5 +1,6 @@
 "use client";
 
+import SearchBox from "@/components/SearchBox";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
@@ -432,15 +433,7 @@ export default function RichiesteFattureView({
 
       {/* Filtri */}
       <div className="flex items-center gap-2 flex-wrap">
-        <div className="relative">
-          <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
-          <input
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            placeholder="Cerca cliente, descrizione, codice…"
-            className={cn(selectCls, "pl-9 w-64")}
-          />
-        </div>
+        <SearchBox value={q} onChange={setQ} placeholder="Cerca cliente, descrizione, codice…" className="w-64" />
         <select value={mese} onChange={(e) => setMese(parseInt(e.target.value))} className={selectCls}>
           <option value={0}>Tutti i mesi</option>
           {MESI.map((m, i) => (

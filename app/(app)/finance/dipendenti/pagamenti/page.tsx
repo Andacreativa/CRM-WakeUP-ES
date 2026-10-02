@@ -1,5 +1,7 @@
 "use client";
 
+import SearchBox from "@/components/SearchBox";
+import { matchQ } from "@/lib/utils";
 import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
 import { Check, ChevronLeft, ChevronRight, Plus, Trash2, X, Zap } from "lucide-react";
 import { fmt, MESI } from "@/lib/constants";
@@ -50,6 +52,7 @@ export default function PagamentiPage() {
   const [mese, setMese] = useState(new Date().getMonth() + 1);
   const [persone, setPersone] = useState<Persona[]>([]);
   const [pagamenti, setPagamenti] = useState<Pagamento[]>([]);
+  const [q, setQ] = useState("");
   const [loading, setLoading] = useState(true);
   const [msg, setMsg] = useState<string | null>(null);
   const [modal, setModal] = useState<{
@@ -148,6 +151,7 @@ export default function PagamentiPage() {
           </p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
+          <SearchBox value={q} onChange={setQ} placeholder="Cerca persona…" className="w-52" />
           <div className="flex items-center gap-1 bg-white border border-gray-200 rounded-xl px-1 py-1">
             <button onClick={prevMese} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-600" aria-label="Mese precedente">
               <ChevronLeft className="w-4 h-4" />
@@ -207,7 +211,7 @@ export default function PagamentiPage() {
                   </td>
                 </tr>
               )}
-              {gruppiPerTipo(persone).map((g) => (
+              {gruppiPerTipo(persone.filter((p) => matchQ(q, p.nome, p.cognome))).map((g) => (
                 <Fragment key={g.tipo}>
                   <tr>
                     <td

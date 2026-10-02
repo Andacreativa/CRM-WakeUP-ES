@@ -1,8 +1,9 @@
 "use client";
 
+import SearchBox from "@/components/SearchBox";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { Plus, Search, Trash2, ExternalLink } from "lucide-react";
+import { Plus, Trash2, ExternalLink } from "lucide-react";
 import { fmt } from "@/lib/constants";
 import { FONTI_LEAD, STATI_LEAD, STATO_LEAD } from "@/lib/lead";
 import LeadFormModal, { type LeadFormValues } from "@/components/crm/LeadFormModal";
@@ -110,7 +111,9 @@ export default function LeadPage() {
         ))}
       </div>
 
-      <div className="flex gap-1 bg-gray-100 rounded-xl p-1 w-fit flex-wrap">
+      <div className="flex items-center gap-2 flex-wrap">
+        <SearchBox value={q} onChange={setQ} placeholder="Cerca azienda, nome, email, città…" />
+        <div className="flex gap-1 bg-gray-100 rounded-xl p-1 w-fit flex-wrap">
         {[{ value: "", label: "Tutti" }, ...STATI_LEAD].map((s) => (
           <button
             key={s.value}
@@ -122,12 +125,6 @@ export default function LeadPage() {
             {s.value && counts[s.value] ? ` (${counts[s.value]})` : s.value === "" ? ` (${leads.length})` : ""}
           </button>
         ))}
-      </div>
-
-      <div className="flex items-center gap-2 flex-wrap">
-        <div className="relative">
-          <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
-          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Cerca azienda, nome, email, città…" className={cn(selectCls, "pl-9 w-72")} />
         </div>
         <select value={fonte} onChange={(e) => setFonte(e.target.value)} className={selectCls}>
           <option value="">Tutte le fonti</option>

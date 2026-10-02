@@ -1,5 +1,6 @@
 "use client";
 
+import SearchBox from "@/components/SearchBox";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Plus, Pencil, Trash2, Check, X, Info } from "lucide-react";
 import {
@@ -12,7 +13,7 @@ import { useAnno } from "@/lib/anno-context";
 import { isFinnRitenuta } from "@/lib/finn-split";
 import FiltriBar from "@/components/FiltriBar";
 import { PageSizeSelect, PageNav } from "@/components/Pagination";
-import { cn } from "@/lib/utils";
+import { cn, matchQ } from "@/lib/utils";
 
 interface AltroIngresso {
   id: number;
@@ -62,6 +63,7 @@ export default function AltriIngressiPage() {
   const [azienda, setAzienda] = useState("");
   const [mese, setMese] = useState(0);
   const [categoria, setCategoria] = useState("");
+  const [q, setQ] = useState("");
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
   const [showForm, setShowForm] = useState(false);
@@ -81,14 +83,17 @@ export default function AltriIngressiPage() {
   }, [load]);
   useEffect(() => {
     setPage(1);
-  }, [anno, azienda, mese, categoria, pageSize]);
+  }, [anno, azienda, mese, categoria, q, pageSize]);
 
   const filtered = useMemo(
     () =>
       rows.filter(
-        (r) => (!mese || r.mese === mese) && (!categoria || categoriaDi(r) === categoria),
+        (r) =>
+          (!mese || r.mese === mese) &&
+          (!categoria || categoriaDi(r) === categoria) &&
+          matchQ(q, r.fonte, r.descrizione),
       ),
-    [rows, mese, categoria],
+    [rows, mese, categoria, q],
   );
   const sommabili = filtered.filter((r) => !soloContabile(r));
   const totale = sommabili.reduce((s, r) => s + r.importo, 0);
@@ -182,6 +187,7 @@ export default function AltriIngressiPage() {
       </div>
 
       <div className="flex items-center gap-2 flex-wrap">
+        <SearchBox value={q} onChange={setQ} placeholder="Cerca fonte, descrizione…" />
         <select value={mese} onChange={(e) => setMese(parseInt(e.target.value))} className={selectCls}>
           <option value={0}>Tutti i mesi</option>
           {MESI.map((m, i) => (
@@ -197,7 +203,7 @@ export default function AltriIngressiPage() {
         <PageSizeSelect pageSize={pageSize} onChange={setPageSize} />
         <span className="text-xs text-gray-400 inline-flex items-center gap-1 ml-auto">
           <Info className="w-3.5 h-3.5" />
-          Le voci "solo contabili" (ritenute commerciali, legate a una fattura) non si sommano
+          Le voci &quot;solo contabili&quot; (ritenute commerciali, legate a una fattura) non si sommano
         </span>
       </div>
 

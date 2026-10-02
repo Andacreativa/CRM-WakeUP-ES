@@ -1,5 +1,6 @@
 "use client";
 
+import SearchBox from "@/components/SearchBox";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -102,10 +103,7 @@ export default function ClientiPage() {
       </div>
 
       <div className="flex items-center gap-2 flex-wrap">
-        <div className="relative">
-          <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
-          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Cerca nome, P.IVA, email, città…" className={cn(selectCls, "pl-9 w-72")} />
-        </div>
+        <SearchBox value={q} onChange={setQ} placeholder="Cerca nome, P.IVA, email, città…" />
         <div className="flex gap-1 bg-gray-100 rounded-xl p-1">
           {["", "Italia", "Spagna", "Altri"].map((p) => (
             <button key={p} onClick={() => setPaese(p)} className="text-sm px-3 py-1.5 rounded-lg font-medium" style={paese === p ? { background: "#e8308a", color: "#fff" } : { color: "#6b7280" }}>

@@ -1,5 +1,6 @@
 "use client";
 
+import SearchBox from "@/components/SearchBox";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
@@ -545,6 +546,7 @@ export default function BancaView() {
         <>
           {/* Filtri */}
           <div className="flex items-center gap-2 flex-wrap">
+            <SearchBox value={q} onChange={setQ} placeholder="Cerca beneficiario, concetto…" className="w-64" />
             <Pills
               value={tipo}
               onChange={(v) => {
@@ -577,15 +579,6 @@ export default function BancaView() {
                 </option>
               ))}
             </select>
-            <div className="relative">
-              <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
-              <input
-                value={q}
-                onChange={(e) => setQ(e.target.value)}
-                placeholder="Cerca beneficiario, concetto…"
-                className={cn(selectCls, "pl-9 w-64")}
-              />
-            </div>
             <span className="text-xs text-gray-400 ml-auto whitespace-nowrap">
               {visibili.length} movimenti · {fmt(totaleVisibili)}
             </span>

@@ -1,5 +1,7 @@
 "use client";
 
+import SearchBox from "@/components/SearchBox";
+import { matchQ } from "@/lib/utils";
 import { useEffect, useState } from "react";
 import { Upload, Download, Trash2, X, Folder } from "lucide-react";
 
@@ -20,6 +22,8 @@ interface Documento {
 export default function DocumentiPage() {
   const [tab, setTab] = useState<Tab>("azienda");
   const [docs, setDocs] = useState<Documento[]>([]);
+  const [q, setQ] = useState("");
+  const visibili = docs.filter((d) => matchQ(q, d.nome, d.categoria, d.socio, d.fileName));
   const [showUpload, setShowUpload] = useState(false);
   const [preview, setPreview] = useState<Documento | null>(null);
 
@@ -93,8 +97,11 @@ export default function DocumentiPage() {
         ))}
       </div>
 
-      <div className="flex items-center justify-between">
-        <p className="text-xs text-gray-500">{docs.length} documenti</p>
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <div className="flex items-center gap-3">
+          <SearchBox value={q} onChange={setQ} placeholder="Cerca documento, categoria…" />
+          <p className="text-xs text-gray-500">{visibili.length} documenti</p>
+        </div>
         <button
           onClick={() => setShowUpload(true)}
           className="glass-btn-primary flex items-center gap-2 text-white text-sm font-medium px-4 py-2.5 rounded-xl"
@@ -136,7 +143,7 @@ export default function DocumentiPage() {
                 </td>
               </tr>
             )}
-            {docs.map((d, i) => (
+            {visibili.map((d, i) => (
               <tr
                 key={d.id}
                 className={`border-b border-gray-50 hover:bg-gray-50 transition-colors ${i % 2 === 1 ? "bg-[#f9fafb]" : "bg-white"}`}

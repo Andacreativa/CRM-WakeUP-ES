@@ -1,5 +1,6 @@
 "use client";
 
+import SearchBox from "@/components/SearchBox";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   AlertTriangle,
@@ -14,7 +15,7 @@ import { fmt, MESI, AZIENDE } from "@/lib/constants";
 import { exportPDF } from "@/lib/export";
 import { useAnno } from "@/lib/anno-context";
 import { compilaTesto, type ImpostazioniFatture } from "@/lib/impostazioni";
-import { cn } from "@/lib/utils";
+import { cn, matchQ } from "@/lib/utils";
 
 interface Fattura {
   id: number;
@@ -61,6 +62,7 @@ export default function ScadenzePage() {
   const [cfg, setCfg] = useState<ImpostazioniFatture | null>(null);
   const [filtroAzienda, setFiltroAzienda] = useState("");
   const [filtroCliente, setFiltroCliente] = useState("");
+  const [q, setQ] = useState("");
   const [filtroStato, setFiltroStato] = useState<"tutte" | Stato>("tutte");
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [msg, setMsg] = useState<string | null>(null);
@@ -101,6 +103,7 @@ export default function ScadenzePage() {
     .filter((f) => {
       if (filtroStato === "tutte" ? f.stato === "ok" : f.stato !== filtroStato) return false;
       if (filtroCliente && f.cliente?.nome !== filtroCliente) return false;
+      if (!matchQ(q, f.numero, f.cliente?.nome)) return false;
       return true;
     })
     .sort((a, b) => {
@@ -227,6 +230,7 @@ export default function ScadenzePage() {
           <p className="text-gray-500 text-sm mt-1">Fatture non pagate con data di scadenza</p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
+          <SearchBox value={q} onChange={setQ} placeholder="Cerca cliente, numero…" className="w-64" />
           <select
             value={filtroAzienda}
             onChange={(e) => setFiltroAzienda(e.target.value)}

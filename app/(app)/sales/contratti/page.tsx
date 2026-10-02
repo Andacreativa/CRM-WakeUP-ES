@@ -1,5 +1,7 @@
 "use client";
 
+import SearchBox from "@/components/SearchBox";
+import { matchQ } from "@/lib/utils";
 import { useEffect, useState } from "react";
 import { Download, Trash2, Plus, FileText, X, Receipt } from "lucide-react";
 import Link from "next/link";
@@ -58,6 +60,7 @@ const newVoce = (): Voce => ({ id: uid(), servizio: "", descrizione: "" });
 export default function ContrattiPage() {
   const [contratti, setContratti] = useState<Contratto[]>([]);
   const [filtroStatus, setFiltroStatus] = useState<string>("tutti");
+  const [q, setQ] = useState("");
   const [editing, setEditing] = useState<Contratto | null>(null);
   const [showNew, setShowNew] = useState(false);
   const [exporting, setExporting] = useState<Contratto | null>(null);
@@ -123,7 +126,9 @@ export default function ContrattiPage() {
   };
 
   const filtered = (contratti ?? []).filter(
-    (c) => filtroStatus === "tutti" || c.status === filtroStatus,
+    (c) =>
+      (filtroStatus === "tutti" || c.status === filtroStatus) &&
+      matchQ(q, c.numero, c.cliente?.nome, c.nomeClienteFallback, c.preventivo?.numero),
   );
 
   return (
@@ -157,6 +162,7 @@ export default function ContrattiPage() {
           </p>
         </div>
         <div className="flex items-center gap-3 flex-wrap">
+          <SearchBox value={q} onChange={setQ} placeholder="Cerca numero, cliente…" className="w-60" />
           <div className="flex gap-1 bg-gray-100 rounded-xl p-1 w-fit">
             {(["tutti", ...STATI] as string[]).map((s) => (
               <button

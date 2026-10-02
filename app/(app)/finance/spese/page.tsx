@@ -1,5 +1,7 @@
 "use client";
 
+import SearchBox from "@/components/SearchBox";
+import { matchQ } from "@/lib/utils";
 import { useEffect, useState, useRef } from "react";
 import {
   Plus,
@@ -67,6 +69,7 @@ export default function SpesePage() {
   const [editing, setEditing] = useState<Spesa | null>(null);
   const [form, setForm] = useState({ ...emptyForm });
   const [filtroMese, setFiltroMese] = useState(0);
+  const [q, setQ] = useState("");
   const [filtroCategoria, setFiltroCategoria] = useState("");
   const [filtroFornitore, setFiltroFornitore] = useState("");
   const { anno, setAnno } = useAnno();
@@ -201,6 +204,7 @@ export default function SpesePage() {
     if (filtroMese && s.mese !== filtroMese) return false;
     if (filtroCategoria && s.categoria !== filtroCategoria) return false;
     if (filtroFornitore && s.fornitore !== filtroFornitore) return false;
+    if (!matchQ(q, s.fornitore, s.descrizione, s.categoria)) return false;
     return true;
   });
 
@@ -211,7 +215,7 @@ export default function SpesePage() {
   // Reset page se i filtri restringono il dataset
   useEffect(() => {
     setPage(1);
-  }, [filtroMese, filtroCategoria, filtroFornitore, anno, azienda, pageSize]);
+  }, [filtroMese, filtroCategoria, filtroFornitore, q, anno, azienda, pageSize]);
   const paged = filtered.slice((page - 1) * pageSize, page * pageSize);
 
   const totale = filtered.reduce((s, e) => s + (e?.importo ?? 0), 0);
@@ -313,6 +317,7 @@ export default function SpesePage() {
 
       {/* Filtri */}
       <div className="flex gap-3 flex-wrap">
+        <SearchBox value={q} onChange={setQ} placeholder="Cerca fornitore, descrizione…" />
         <select
           value={filtroMese}
           onChange={(e) => setFiltroMese(parseInt(e.target.value))}

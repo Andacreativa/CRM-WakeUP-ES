@@ -1,5 +1,6 @@
 "use client";
 
+import SearchBox from "@/components/SearchBox";
 import { useEffect, useState } from "react";
 import {
   Plus,
@@ -18,7 +19,7 @@ import {
 } from "lucide-react";
 import { fmt, MESI, CANALI, canaleLabel } from "@/lib/constants";
 import RichiesteFattureView from "@/components/richieste/RichiesteFattureView";
-import { cn } from "@/lib/utils";
+import { cn, matchQ } from "@/lib/utils";
 import { useAnno } from "@/lib/anno-context";
 import {
   exportExcel,
@@ -133,6 +134,7 @@ export default function FatturePage() {
   const [editing, setEditing] = useState<Fattura | null>(null);
   const [form, setForm] = useState({ ...emptyForm });
   const [filtroMese, setFiltroMese] = useState(0);
+  const [q, setQ] = useState("");
   const [filtroClienteId, setFiltroClienteId] = useState<number>(0);
   const [filtroPagato, setFiltroPagato] = useState<
     "tutti" | "pagato" | "attesa"
@@ -370,6 +372,7 @@ export default function FatturePage() {
     .filter((f) => {
       if (filtroMese && f.mese !== filtroMese) return false;
       if (filtroClienteId && f.clienteId !== filtroClienteId) return false;
+      if (!matchQ(q, f.numero, f.cliente?.nome, f.aziendaNota)) return false;
       const stato = statoCalcolato(f);
       if (filtroPagato === "pagato" && stato !== "pagato") return false;
       if (
@@ -395,7 +398,7 @@ export default function FatturePage() {
   // Reset page se i filtri restringono il dataset
   useEffect(() => {
     setPage(1);
-  }, [filtroMese, filtroClienteId, filtroPagato, anno, azienda, pageSize]);
+  }, [filtroMese, filtroClienteId, filtroPagato, q, anno, azienda, pageSize]);
   const paged = filtered.slice((page - 1) * pageSize, page * pageSize);
 
   // ── Selezione righe per export ──────────────────────────────────────────
@@ -632,6 +635,7 @@ export default function FatturePage() {
 
       {/* Filtri */}
       <div className="flex gap-3 flex-wrap items-center">
+        <SearchBox value={q} onChange={setQ} placeholder="Cerca numero, cliente…" />
         <select
           value={filtroMese}
           onChange={(e) => setFiltroMese(parseInt(e.target.value))}

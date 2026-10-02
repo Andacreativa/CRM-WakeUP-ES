@@ -1,5 +1,6 @@
 "use client";
 
+import SearchBox from "@/components/SearchBox";
 import { useEffect, useState } from "react";
 import { Plus, Pencil, Trash2, X, Copy, Check, Upload, Download } from "lucide-react";
 import { fmt, MESI } from "@/lib/constants";
@@ -213,6 +214,7 @@ export default function FornitoriPage() {
           </p>
         </div>
         <div className="flex items-center gap-3 flex-wrap">
+          <SearchBox value={search} onChange={setSearch} placeholder="Cerca nome, NIF, paese, email…" className="w-64" />
           <FiltriBar
             anno={0}
             azienda={paeseFiltro}
@@ -230,15 +232,6 @@ export default function FornitoriPage() {
           </button>
         </div>
       </div>
-
-      {/* Ricerca */}
-      <input
-        type="text"
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-        placeholder="Cerca per nome, NIF, paese, email..."
-        className="w-full max-w-sm border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30 bg-white"
-      />
 
       {/* Tabella */}
       <div className="glass-card rounded-2xl overflow-hidden">

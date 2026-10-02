@@ -1,5 +1,7 @@
 "use client";
 
+import SearchBox from "@/components/SearchBox";
+import { matchQ } from "@/lib/utils";
 import { Fragment, useEffect, useRef, useState } from "react";
 import { Plus, Pencil, Trash2, Upload } from "lucide-react";
 import { fmt } from "@/lib/constants";
@@ -69,6 +71,7 @@ export default function DipendentiPage() {
   const [dipendenti, setDipendenti] = useState<Dipendente[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<Dipendente | null>(null);
+  const [q, setQ] = useState("");
   const [form, setForm] = useState({ ...emptyForm });
   const [infoDip, setInfoDip] = useState<Dipendente | null>(null);
   const [uploadingFoto, setUploadingFoto] = useState(false);
@@ -210,6 +213,7 @@ export default function DipendentiPage() {
           </p>
         </div>
         <div className="flex items-center gap-3">
+          <SearchBox value={q} onChange={setQ} placeholder="Cerca persona…" className="w-56" />
           <button
             onClick={openNew}
             className="glass-btn-primary flex items-center gap-2 text-white text-sm font-medium px-4 py-2.5 rounded-xl"
@@ -254,7 +258,7 @@ export default function DipendentiPage() {
                 </td>
               </tr>
             )}
-            {gruppiPerTipo(dipendenti).map((g) => (
+            {gruppiPerTipo(dipendenti.filter((d) => matchQ(q, d.nome, d.cognome))).map((g) => (
               <Fragment key={g.tipo}>
                 <tr>
                   <td

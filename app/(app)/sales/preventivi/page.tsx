@@ -1,5 +1,7 @@
 "use client";
 
+import SearchBox from "@/components/SearchBox";
+import { matchQ } from "@/lib/utils";
 import { useEffect, useState } from "react";
 import {
   Plus,
@@ -137,6 +139,7 @@ export default function PreventiviPage() {
   const [form, setForm] = useState({ ...emptyForm });
   const [voci, setVoci] = useState<Voce[]>([newVoce()]);
   const [filtroStatus, setFiltroStatus] = useState("tutti");
+  const [q, setQ] = useState("");
   const [genContratto, setGenContratto] = useState<Preventivo | null>(null);
   const [downloadingId, setDownloadingId] = useState<number | null>(null);
 
@@ -333,7 +336,9 @@ export default function PreventiviPage() {
   };
 
   const filtered = (preventivi ?? []).filter(
-    (p) => filtroStatus === "tutti" || p.status === filtroStatus,
+    (p) =>
+      (filtroStatus === "tutti" || p.status === filtroStatus) &&
+      matchQ(q, p.numero, p.nomeCliente, p.aziendaCliente, p.oggetto),
   );
 
   const updateVoce = (
@@ -369,8 +374,10 @@ export default function PreventiviPage() {
         </button>
       </div>
 
-      {/* Status filter */}
-      <div className="flex gap-1 bg-gray-100 rounded-lg p-1 w-fit">
+      {/* Filtri */}
+      <div className="flex items-center gap-2 flex-wrap">
+        <SearchBox value={q} onChange={setQ} placeholder="Cerca numero, cliente, oggetto…" />
+        <div className="flex gap-1 bg-gray-100 rounded-xl p-1 w-fit">
         {[{ value: "tutti", label: "Tutti" }, ...STATUS_OPTIONS].map((o) => (
           <button
             key={o.value}
@@ -385,6 +392,7 @@ export default function PreventiviPage() {
             {o.label}
           </button>
         ))}
+      </div>
       </div>
 
       {/* KPI cards */}
