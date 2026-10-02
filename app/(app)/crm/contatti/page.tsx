@@ -77,7 +77,7 @@ const emptyForm = {
   status: "lead",
 };
 
-const BRAND = "#db291b";
+const BRAND = "#e8308a";
 
 export default function ContattiPage() {
   const [contatti, setContatti] = useState<Contatto[]>([]);
@@ -185,7 +185,7 @@ export default function ContattiPage() {
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Cerca per nome, paese, email..."
-          className="w-full max-w-sm border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-red-300 bg-white"
+          className="w-full max-w-sm border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-pink-300 bg-white"
         />
         <div className="flex gap-1 bg-gray-100 rounded-lg p-1">
           {[{ value: "tutti", label: "Tutti" }, ...STATUS_OPTIONS].map((o) => (
@@ -399,7 +399,7 @@ export default function ContattiPage() {
                       setForm((f) => ({ ...f, nome: e.target.value }))
                     }
                     placeholder="Es. Acme Srl"
-                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-300"
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-300"
                   />
                 </div>
                 <div>
@@ -413,7 +413,7 @@ export default function ContattiPage() {
                       setForm((f) => ({ ...f, partitaIva: e.target.value }))
                     }
                     placeholder="IT12345678901"
-                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-300"
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-300"
                   />
                 </div>
                 <div>
@@ -427,7 +427,7 @@ export default function ContattiPage() {
                       setForm((f) => ({ ...f, email: e.target.value }))
                     }
                     placeholder="info@azienda.com"
-                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-300"
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-300"
                   />
                 </div>
                 <div className="col-span-2">
@@ -441,7 +441,7 @@ export default function ContattiPage() {
                       setForm((f) => ({ ...f, telefono: e.target.value }))
                     }
                     placeholder="+39 02..."
-                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-300"
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-300"
                   />
                 </div>
                 <div className="col-span-2">
@@ -466,7 +466,7 @@ export default function ContattiPage() {
                         paese: a.paese,
                       }))
                     }
-                    inputClass="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-300"
+                    inputClass="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-300"
                   />
                 </div>
                 <div className="col-span-2">
@@ -480,7 +480,7 @@ export default function ContattiPage() {
                     }
                     rows={2}
                     placeholder="Note interne..."
-                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-300 resize-none"
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-300 resize-none"
                   />
                 </div>
               </div>

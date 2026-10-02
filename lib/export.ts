@@ -14,7 +14,7 @@ export interface PreventivoPDFData {
   nomeCliente: string;
   emailCliente?: string | null;
   aziendaCliente?: string | null;
-  azienda?: string | null; // "Anda" | "Wake Up"
+  azienda?: string | null; // storico, sempre "Anda"
   oggetto: string;
   voci: string; // JSON string
   iva: number;
@@ -438,10 +438,8 @@ export async function exportPreventivoPDF(p: PreventivoPDFData) {
     MR = 14;
   const CW = W - ML - MR; // 182mm
 
-  const isAnda = p.azienda === "Anda";
-  const ACCENT: [number, number, number] = isAnda
-    ? [233, 30, 140] // #E91E8C
-    : [219, 41, 27]; // rosso Wake Up
+  // Accento sempre rosa Anda: l'azienda emittente è una sola.
+  const ACCENT: [number, number, number] = [232, 48, 138]; // #e8308a
 
   const DARK: [number, number, number] = [20, 20, 20];
   const CARD: [number, number, number] = [38, 38, 38];

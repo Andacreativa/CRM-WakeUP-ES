@@ -28,7 +28,8 @@ function LoginForm() {
         setError(j.error ?? "Errore di autenticazione");
         return;
       }
-      const next = params.get("next") || "/";
+      const requested = params.get("next");
+      const next = requested && requested !== "/" ? requested : "/finance";
       router.replace(next);
       router.refresh();
     } finally {
@@ -41,11 +42,18 @@ function LoginForm() {
       onSubmit={submit}
       className="glass-card rounded-2xl w-full max-w-sm p-8 space-y-5"
     >
-      <div className="text-center space-y-1">
-        <h1 className="text-2xl font-bold text-gray-900">
-          CRM WakeUP Labs! España
-        </h1>
-        <p className="text-sm text-gray-500">Accedi alla dashboard</p>
+      <div className="text-center space-y-2">
+        <div className="mx-auto w-16 h-16 rounded-full bg-white border border-gray-100 flex items-center justify-center shadow-sm">
+          <img
+            src="/logo anda.png"
+            alt="Anda"
+            className="w-11 h-11 object-contain"
+          />
+        </div>
+        <h1 className="text-2xl font-bold text-gray-900">Anda</h1>
+        <p className="text-sm text-gray-500">
+          Gestionale Anda Agencia de Publicidad SL
+        </p>
       </div>
 
       <div className="space-y-3">

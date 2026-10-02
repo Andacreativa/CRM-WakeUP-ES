@@ -8,7 +8,7 @@ import {
   Check,
   Download,
 } from "lucide-react";
-import { fmt, MESI, AZIENDE, ANNI } from "@/lib/constants";
+import { fmt, MESI, AZIENDE } from "@/lib/constants";
 import { exportPDF } from "@/lib/export";
 import { useAnno } from "@/lib/anno-context";
 
@@ -75,7 +75,7 @@ const STATI_CONFIG = {
 
 export default function ScadenzePage() {
   const [fatture, setFatture] = useState<Fattura[]>([]);
-  const { anno, setAnno } = useAnno();
+  const { anno } = useAnno();
   const [filtroAzienda, setFiltroAzienda] = useState("");
   const [filtroCliente, setFiltroCliente] = useState("");
   const [filtroStato, setFiltroStato] = useState<
@@ -201,35 +201,6 @@ export default function ScadenzePage() {
           </p>
         </div>
         <div className="flex items-center gap-3 flex-wrap">
-          <select
-            value={anno}
-            onChange={(e) => setAnno(parseInt(e.target.value))}
-            className="text-sm font-semibold px-3 py-1.5 rounded-xl border-none outline-none cursor-pointer appearance-none"
-            style={{
-              background: "#e8308a",
-              color: "#ffffff",
-              backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E")`,
-              backgroundRepeat: "no-repeat",
-              backgroundPosition: "right 10px center",
-              paddingRight: "28px",
-            }}
-          >
-            <option
-              value={0}
-              style={{ background: "#fff", color: "#1a1d2e" }}
-            >
-              Tutti
-            </option>
-            {ANNI.map((a) => (
-              <option
-                key={a}
-                value={a}
-                style={{ background: "#fff", color: "#1a1d2e" }}
-              >
-                {a}
-              </option>
-            ))}
-          </select>
           <select
             value={filtroAzienda}
             onChange={(e) => setFiltroAzienda(e.target.value)}

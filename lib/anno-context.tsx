@@ -1,16 +1,11 @@
 "use client";
 
-import {
-  createContext,
-  useContext,
-  useState,
-  useEffect,
-  ReactNode,
-} from "react";
+import { createContext, useContext, ReactNode } from "react";
 import { ANNI } from "./constants";
+import { useLocalStorageValue, writeLocalStorage } from "./use-local-storage";
 
 interface AnnoCtx {
-  anno: number;
+  anno: number; // 0 = "Tutti gli anni"
   setAnno: (a: number) => void;
 }
 
@@ -19,22 +14,16 @@ const AnnoContext = createContext<AnnoCtx>({
   setAnno: () => {},
 });
 
+const LS_KEY = "lf_anno";
+
 export function AnnoProvider({ children }: { children: ReactNode }) {
-  const [anno, setAnnoState] = useState(ANNI[0]);
+  // Anno scelto nella topbar, ricordato nel browser. Al primo render
+  // (server) vale l'anno più recente; dopo l'idratazione quello salvato.
+  const saved = useLocalStorageValue(LS_KEY);
+  const n = saved === null ? NaN : parseInt(saved);
+  const anno = n === 0 || ANNI.includes(n) ? n : ANNI[0];
 
-  // Al primo mount legge da localStorage, altrimenti usa il primo anno della lista
-  useEffect(() => {
-    const saved = localStorage.getItem("lf_anno");
-    if (saved) {
-      const n = parseInt(saved);
-      if (ANNI.includes(n)) setAnnoState(n);
-    }
-  }, []);
-
-  const setAnno = (a: number) => {
-    setAnnoState(a);
-    localStorage.setItem("lf_anno", String(a));
-  };
+  const setAnno = (a: number) => writeLocalStorage(LS_KEY, String(a));
 
   return (
     <AnnoContext.Provider value={{ anno, setAnno }}>

@@ -46,7 +46,8 @@ export default function FiltriBar({
   onAnno,
   onAzienda,
   showAzienda = true,
-  showAnno = true,
+  // L'anno si sceglie nella topbar (selettore globale): qui resta opzionale
+  showAnno = false,
   altroLabel,
   hideOptions,
   includeAllYears = false,

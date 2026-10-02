@@ -76,7 +76,7 @@ const STAGES = [
   { key: "perso", label: "Perso", color: "#ef4444", bg: "#fef2f2" },
 ];
 
-const BRAND = "#db291b";
+const BRAND = "#e8308a";
 
 const emptyForm = {
   nome: "",

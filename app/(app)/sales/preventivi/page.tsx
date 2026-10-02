@@ -84,7 +84,7 @@ const STATUS_OPTIONS = [
 const statusStyle = (s: string) =>
   STATUS_OPTIONS.find((o) => o.value === s) ?? STATUS_OPTIONS[0];
 
-const BRAND = "#db291b";
+const BRAND = "#e8308a";
 
 const DEFAULT_CONDIZIONI = `Saldo fattura entro 30 giorni dalla data di emissione.
 Inclusa 1 revisione per asset prodotto.
@@ -602,45 +602,8 @@ export default function PreventiviPage() {
                     setForm((f) => ({ ...f, oggetto: e.target.value }))
                   }
                   placeholder="Es. Servizi di Marketing Digitale & Social Media"
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-300"
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-300"
                 />
-              </div>
-              <div>
-                <label className="text-xs font-medium text-gray-600 block mb-1">
-                  Azienda *
-                </label>
-                <div className="flex gap-2">
-                  {[
-                    { val: "Anda", color: "#E91E8C", iva: 0 },
-                    { val: "Wake Up", color: "#DB291B", iva: 22 },
-                  ].map(({ val, color, iva }) => {
-                    const active = form.azienda === val;
-                    return (
-                      <button
-                        key={val}
-                        onClick={() =>
-                          setForm((f) => ({ ...f, azienda: val, iva }))
-                        }
-                        className="flex-1 text-sm py-2 rounded-lg border font-semibold transition-all"
-                        style={
-                          active
-                            ? {
-                                background: color,
-                                color: "#fff",
-                                borderColor: color,
-                              }
-                            : {
-                                background: "#fff",
-                                borderColor: "#e2e8f0",
-                                color: "#94a3b8",
-                              }
-                        }
-                      >
-                        {val}
-                      </button>
-                    );
-                  })}
-                </div>
               </div>
               <div>
                 <label className="text-xs font-medium text-gray-600 block mb-1">
@@ -730,7 +693,7 @@ export default function PreventiviPage() {
                   <select
                     onChange={(e) => applyContatto(e.target.value)}
                     defaultValue=""
-                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-300 text-gray-500"
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-300 text-gray-500"
                   >
                     <option value="">Seleziona da contatti...</option>
                     {(contatti ?? []).map((c) => (
@@ -748,7 +711,7 @@ export default function PreventiviPage() {
                       setForm((f) => ({ ...f, nomeCliente: e.target.value }))
                     }
                     placeholder="Nome cliente *"
-                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-300"
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-300"
                   />
                 </div>
                 <div>
@@ -759,7 +722,7 @@ export default function PreventiviPage() {
                       setForm((f) => ({ ...f, aziendaCliente: e.target.value }))
                     }
                     placeholder="Ragione sociale"
-                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-300"
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-300"
                   />
                 </div>
                 <div className="col-span-2">
@@ -770,7 +733,7 @@ export default function PreventiviPage() {
                       setForm((f) => ({ ...f, emailCliente: e.target.value }))
                     }
                     placeholder="Email cliente"
-                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-300"
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-300"
                   />
                 </div>
                 <div>
@@ -780,7 +743,7 @@ export default function PreventiviPage() {
                     onChange={(e) =>
                       setForm((f) => ({ ...f, dataScadenza: e.target.value }))
                     }
-                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-300 text-gray-700"
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-300 text-gray-700"
                   />
                 </div>
               </div>
@@ -835,7 +798,7 @@ export default function PreventiviPage() {
                               updateVoce(v.id, "servizio", e.target.value)
                             }
                             placeholder="Es. Social Media Management"
-                            className="w-full border border-gray-200 rounded-md px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-red-300"
+                            className="w-full border border-gray-200 rounded-md px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-pink-300"
                           />
                         </td>
                         <td className="px-2 py-1.5">
@@ -846,7 +809,7 @@ export default function PreventiviPage() {
                               updateVoce(v.id, "descrizione", e.target.value)
                             }
                             placeholder="Dettaglio breve"
-                            className="w-full border border-gray-200 rounded-md px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-red-300"
+                            className="w-full border border-gray-200 rounded-md px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-pink-300"
                           />
                         </td>
                         <td className="px-2 py-1.5">
@@ -859,7 +822,7 @@ export default function PreventiviPage() {
                                 e.target.value as TipoVoce,
                               )
                             }
-                            className="w-full border border-gray-200 rounded-md px-2 py-1.5 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-red-300"
+                            className="w-full border border-gray-200 rounded-md px-2 py-1.5 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-pink-300"
                           >
                             <option value="mensile">Mensile</option>
                             <option value="una_tantum">Una Tantum</option>
@@ -877,7 +840,7 @@ export default function PreventiviPage() {
                                 parseFloat(e.target.value) || 1,
                               )
                             }
-                            className="w-full border border-gray-200 rounded-md px-2 py-1.5 text-xs text-center focus:outline-none focus:ring-1 focus:ring-red-300"
+                            className="w-full border border-gray-200 rounded-md px-2 py-1.5 text-xs text-center focus:outline-none focus:ring-1 focus:ring-pink-300"
                           />
                         </td>
                         <td className="px-2 py-1.5">
@@ -893,7 +856,7 @@ export default function PreventiviPage() {
                                 parseFloat(e.target.value) || 0,
                               )
                             }
-                            className="w-full border border-gray-200 rounded-md px-2 py-1.5 text-xs text-right focus:outline-none focus:ring-1 focus:ring-red-300"
+                            className="w-full border border-gray-200 rounded-md px-2 py-1.5 text-xs text-right focus:outline-none focus:ring-1 focus:ring-pink-300"
                           />
                         </td>
                         <td className="px-2 py-1.5 text-xs font-semibold text-gray-900 text-right whitespace-nowrap">
@@ -941,7 +904,7 @@ export default function PreventiviPage() {
                             iva: parseFloat(e.target.value) || 0,
                           }))
                         }
-                        className="w-14 border border-gray-200 rounded px-2 py-0.5 text-xs text-right focus:outline-none focus:ring-1 focus:ring-red-300"
+                        className="w-14 border border-gray-200 rounded px-2 py-0.5 text-xs text-right focus:outline-none focus:ring-1 focus:ring-pink-300"
                       />
                       <span className="text-xs text-gray-400">%</span>
                       <span className="font-medium ml-1">{fmt(ivaAmt)}</span>
@@ -962,7 +925,7 @@ export default function PreventiviPage() {
                             feeCommerciale: parseFloat(e.target.value) || 0,
                           }))
                         }
-                        className="w-16 border border-gray-200 rounded px-2 py-0.5 text-xs text-right focus:outline-none focus:ring-1 focus:ring-red-300"
+                        className="w-16 border border-gray-200 rounded px-2 py-0.5 text-xs text-right focus:outline-none focus:ring-1 focus:ring-pink-300"
                       />
                       <span className="text-xs text-gray-400">%</span>
                       <span className="font-medium ml-1 text-orange-600">
@@ -996,7 +959,7 @@ export default function PreventiviPage() {
                     setForm((f) => ({ ...f, condizioni: e.target.value }))
                   }
                   rows={4}
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-red-300 resize-none"
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-pink-300 resize-none"
                 />
               </div>
               <div>
@@ -1010,7 +973,7 @@ export default function PreventiviPage() {
                   }
                   rows={4}
                   placeholder="Note non visibili nel PDF..."
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-red-300 resize-none"
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-pink-300 resize-none"
                 />
               </div>
             </div>
@@ -1226,7 +1189,7 @@ function GeneraContrattoModal({
             <select
               value={clienteId ?? ""}
               onChange={(e) => setClienteId(parseInt(e.target.value) || null)}
-              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-300"
+              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-300"
             >
               <option value="">Seleziona cliente...</option>
               {clienti.map((c) => (
@@ -1254,7 +1217,7 @@ function GeneraContrattoModal({
               value={rappresentante}
               onChange={(e) => setRappresentante(e.target.value)}
               placeholder="Es. Eugenio Zuppichin"
-              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-300"
+              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-300"
             />
           </div>
 
@@ -1276,9 +1239,9 @@ function GeneraContrattoModal({
                   style={
                     lingua === v
                       ? {
-                          background: "#db291b",
+                          background: "#e8308a",
                           color: "#fff",
-                          borderColor: "#db291b",
+                          borderColor: "#e8308a",
                         }
                       : {
                           background: "#fff",
@@ -1302,7 +1265,7 @@ function GeneraContrattoModal({
                 type="date"
                 value={dataDecorrenza}
                 onChange={(e) => setDataDecorrenza(e.target.value)}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-300"
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-300"
               />
             </div>
             <div>
@@ -1318,7 +1281,7 @@ function GeneraContrattoModal({
                   setDurataMesi(v);
                   setNumeroRate(v);
                 }}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-300"
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-300"
               />
             </div>
             <div>
@@ -1332,7 +1295,7 @@ function GeneraContrattoModal({
                 onChange={(e) =>
                   setImportoMensile(parseFloat(e.target.value) || 0)
                 }
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-300"
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-300"
               />
             </div>
             <div>
@@ -1344,7 +1307,7 @@ function GeneraContrattoModal({
                 min={1}
                 value={numeroRate}
                 onChange={(e) => setNumeroRate(parseInt(e.target.value) || 1)}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-300"
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-300"
               />
             </div>
           </div>

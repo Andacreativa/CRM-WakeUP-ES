@@ -69,7 +69,10 @@ export default function DipendentiPage() {
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<Dipendente | null>(null);
   const [form, setForm] = useState({ ...emptyForm });
-  const { anno } = useAnno();
+  // I pagamenti mensili hanno sempre bisogno di un anno concreto:
+  // con "Tutti gli anni" nella topbar si usa l'anno corrente.
+  const { anno: annoSelezionato } = useAnno();
+  const anno = annoSelezionato > 0 ? annoSelezionato : new Date().getFullYear();
   const [busy, setBusy] = useState<string | null>(null);
   const [infoDip, setInfoDip] = useState<Dipendente | null>(null);
   const [uploadingFoto, setUploadingFoto] = useState(false);

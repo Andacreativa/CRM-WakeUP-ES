@@ -30,7 +30,7 @@ import {
 } from "@/lib/export";
 import { PageSizeSelect, PageNav } from "@/components/Pagination";
 
-const BRAND = "#db291b";
+const BRAND = "#e8308a";
 
 interface Cliente {
   id: number;
@@ -535,7 +535,7 @@ export default function FattureContrattiPage() {
         <select
           value={filtroMese}
           onChange={(e) => setFiltroMese(parseInt(e.target.value))}
-          className="text-sm border border-gray-200 rounded-lg px-3 py-2 bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-red-300"
+          className="text-sm border border-gray-200 rounded-lg px-3 py-2 bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-pink-300"
         >
           <option value={0}>Tutti i mesi</option>
           {MESI.map((m, i) => (
@@ -548,7 +548,7 @@ export default function FattureContrattiPage() {
           <select
             value={filtroClienteId}
             onChange={(e) => setFiltroClienteId(parseInt(e.target.value) || 0)}
-            className="text-sm border border-gray-200 rounded-lg px-3 py-2 bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-red-300 min-w-[180px]"
+            className="text-sm border border-gray-200 rounded-lg px-3 py-2 bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-pink-300 min-w-[180px]"
           >
             <option value={0}>Tutti i clienti</option>
             {[...clienti]
@@ -900,7 +900,7 @@ export default function FattureContrattiPage() {
                       contrattoId: "",
                     }))
                   }
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-300"
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-300"
                 >
                   <option value="">Seleziona cliente...</option>
                   {clienti.map((c) => (
@@ -920,7 +920,7 @@ export default function FattureContrattiPage() {
                     setForm((f) => ({ ...f, contrattoId: e.target.value }))
                   }
                   disabled={!form.clienteId}
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-300 disabled:bg-gray-50 disabled:text-gray-400"
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-300 disabled:bg-gray-50 disabled:text-gray-400"
                 >
                   <option value="">
                     {form.clienteId
@@ -953,7 +953,7 @@ export default function FattureContrattiPage() {
                         mese: parseInt(e.target.value),
                       }))
                     }
-                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-300"
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-300"
                   >
                     {MESI_NUMS.map((m) => (
                       <option key={m} value={m}>
@@ -978,7 +978,7 @@ export default function FattureContrattiPage() {
                         setForm((f) => ({ ...f, importo: e.target.value }))
                       }
                       placeholder="0.00"
-                      className="w-full border border-gray-200 rounded-lg pl-7 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-300"
+                      className="w-full border border-gray-200 rounded-lg pl-7 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-300"
                     />
                   </div>
                 </div>
@@ -1027,7 +1027,7 @@ export default function FattureContrattiPage() {
                   onChange={(e) =>
                     setForm((f) => ({ ...f, scadenza: e.target.value }))
                   }
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-300"
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-300"
                 />
               </div>
               <div>
@@ -1041,7 +1041,7 @@ export default function FattureContrattiPage() {
                     setForm((f) => ({ ...f, commerciale: e.target.value }))
                   }
                   placeholder="Nome o sigla commerciale di riferimento"
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-300"
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-300"
                 />
               </div>
               <div className="grid grid-cols-2 gap-3">
@@ -1059,7 +1059,7 @@ export default function FattureContrattiPage() {
                         anno: parseInt(e.target.value) || new Date().getFullYear(),
                       }))
                     }
-                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-300"
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-300"
                   />
                 </div>
                 <div>
@@ -1072,7 +1072,7 @@ export default function FattureContrattiPage() {
                     onChange={(e) =>
                       setForm((f) => ({ ...f, dataInvio: e.target.value }))
                     }
-                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-300"
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-300"
                   />
                 </div>
               </div>
@@ -1183,7 +1183,7 @@ export default function FattureContrattiPage() {
                     setNewCliente((c) => ({ ...c, nome: e.target.value }))
                   }
                   placeholder="Es. Acme Srl"
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-300"
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-300"
                   autoFocus
                 />
               </div>
@@ -1203,7 +1203,7 @@ export default function FattureContrattiPage() {
                   placeholder={
                     newCliente.paese === "Italia" ? "IT12345678901" : "B12345678"
                   }
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-red-300"
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-pink-300"
                 />
               </div>
               <div className="grid grid-cols-2 gap-3">
@@ -1218,7 +1218,7 @@ export default function FattureContrattiPage() {
                       setNewCliente((c) => ({ ...c, email: e.target.value }))
                     }
                     placeholder="email@esempio.com"
-                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-300"
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-300"
                   />
                 </div>
                 <div>
@@ -1232,7 +1232,7 @@ export default function FattureContrattiPage() {
                       setNewCliente((c) => ({ ...c, telefono: e.target.value }))
                     }
                     placeholder="+34 ..."
-                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-300"
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-300"
                   />
                 </div>
               </div>
@@ -1293,7 +1293,7 @@ export default function FattureContrattiPage() {
                       paese: a.paese,
                     }))
                   }
-                  inputClass="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-300"
+                  inputClass="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-300"
                 />
               </div>
               <div>
@@ -1307,7 +1307,7 @@ export default function FattureContrattiPage() {
                   }
                   rows={2}
                   placeholder="Note interne..."
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-300 resize-none"
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-300 resize-none"
                 />
               </div>
             </div>
@@ -1462,7 +1462,7 @@ function AccontoModal({
               value={importo}
               onChange={(e) => setImporto(e.target.value)}
               placeholder="0.00"
-              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-300"
+              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-300"
             />
           </div>
           <div>
@@ -1473,7 +1473,7 @@ function AccontoModal({
               type="date"
               value={data}
               onChange={(e) => setData(e.target.value)}
-              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-300"
+              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-300"
             />
           </div>
           <div>
@@ -1485,7 +1485,7 @@ function AccontoModal({
               value={metodoPagamento}
               onChange={(e) => setMetodoPagamento(e.target.value)}
               placeholder="Bonifico, Contanti, ..."
-              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-300"
+              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-300"
             />
           </div>
           <div>
@@ -1496,7 +1496,7 @@ function AccontoModal({
               value={note}
               onChange={(e) => setNote(e.target.value)}
               rows={2}
-              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-300"
+              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-300"
             />
           </div>
         </div>

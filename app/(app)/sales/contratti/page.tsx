@@ -114,7 +114,7 @@ export default function ContrattiPage() {
                 className="text-sm px-4 py-1.5 rounded-lg font-medium transition-colors capitalize"
                 style={
                   filtroStatus === s
-                    ? { background: "#db291b", color: "#fff" }
+                    ? { background: "#e8308a", color: "#fff" }
                     : { color: "#64748b" }
                 }
               >
@@ -125,7 +125,7 @@ export default function ContrattiPage() {
           <button
             onClick={() => setShowNew(true)}
             className="flex items-center gap-2 text-white text-sm font-medium px-4 py-2 rounded-xl"
-            style={{ background: "#db291b" }}
+            style={{ background: "#e8308a" }}
           >
             <Plus className="w-4 h-4" /> Nuovo Contratto
           </button>
@@ -442,9 +442,9 @@ function ContrattoFormModal({
                     style={
                       lingua === v
                         ? {
-                            background: "#db291b",
+                            background: "#e8308a",
                             color: "#fff",
-                            borderColor: "#db291b",
+                            borderColor: "#e8308a",
                           }
                         : {
                             background: "#fff",
@@ -465,7 +465,7 @@ function ContrattoFormModal({
               <select
                 value={status}
                 onChange={(e) => setStatus(e.target.value)}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-300 capitalize"
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-300 capitalize"
               >
                 {STATI.map((s) => (
                   <option key={s} value={s}>
@@ -483,7 +483,7 @@ function ContrattoFormModal({
             <select
               value={clienteId ?? ""}
               onChange={(e) => setClienteId(parseInt(e.target.value) || null)}
-              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-300"
+              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-300"
             >
               <option value="">— manuale (nome libero sotto) —</option>
               {clienti.map((c) => (
@@ -506,7 +506,7 @@ function ContrattoFormModal({
                 value={nomeFallback}
                 onChange={(e) => setNomeFallback(e.target.value)}
                 placeholder="Nome cliente (free text)"
-                className="mt-2 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-300"
+                className="mt-2 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-300"
               />
             )}
           </div>
@@ -520,7 +520,7 @@ function ContrattoFormModal({
               value={rappresentante}
               onChange={(e) => setRappresentante(e.target.value)}
               placeholder="Es. Eugenio Zuppichin"
-              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-300"
+              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-300"
             />
           </div>
 
@@ -533,7 +533,7 @@ function ContrattoFormModal({
               value={oggetto}
               onChange={(e) => setOggetto(e.target.value)}
               placeholder="Descrizione attività"
-              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-300"
+              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-300"
             />
           </div>
 
@@ -546,7 +546,7 @@ function ContrattoFormModal({
                 type="date"
                 value={dataDecorrenza}
                 onChange={(e) => setDataDecorrenza(e.target.value)}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-300"
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-300"
               />
             </div>
             <div>
@@ -562,7 +562,7 @@ function ContrattoFormModal({
                   setDurataMesi(v);
                   setNumeroRate(v);
                 }}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-300"
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-300"
               />
             </div>
             <div>
@@ -576,7 +576,7 @@ function ContrattoFormModal({
                 onChange={(e) =>
                   setImportoMensile(parseFloat(e.target.value) || 0)
                 }
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-300"
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-300"
               />
             </div>
             <div>
@@ -588,7 +588,7 @@ function ContrattoFormModal({
                 min={1}
                 value={numeroRate}
                 onChange={(e) => setNumeroRate(parseInt(e.target.value) || 1)}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-300"
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-300"
               />
             </div>
           </div>
@@ -621,7 +621,7 @@ function ContrattoFormModal({
                     value={v.servizio}
                     onChange={(e) => updateVoce(v.id, { servizio: e.target.value })}
                     placeholder="Servizio"
-                    className="flex-1 border border-gray-200 rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-red-300"
+                    className="flex-1 border border-gray-200 rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-pink-300"
                   />
                   <input
                     type="text"
@@ -630,7 +630,7 @@ function ContrattoFormModal({
                       updateVoce(v.id, { descrizione: e.target.value })
                     }
                     placeholder="Descrizione (opzionale)"
-                    className="flex-1 border border-gray-200 rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-red-300"
+                    className="flex-1 border border-gray-200 rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-pink-300"
                   />
                   {voci.length > 1 && (
                     <button
@@ -663,7 +663,7 @@ function ContrattoFormModal({
             onClick={submit}
             disabled={saving}
             className="flex-1 text-white text-sm font-medium py-2.5 rounded-xl disabled:opacity-60"
-            style={{ background: "#db291b" }}
+            style={{ background: "#e8308a" }}
           >
             {saving ? "Salvataggio..." : editing ? "Salva" : "Crea Contratto"}
           </button>

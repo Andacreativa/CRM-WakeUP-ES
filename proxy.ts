@@ -1,16 +1,26 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { verifySession, SESSION_COOKIE } from "@/lib/auth";
 
-export async function middleware(req: NextRequest) {
+export async function proxy(req: NextRequest) {
   const { pathname, search } = req.nextUrl;
-
-  // /login e API auth sempre accessibili
-  if (pathname === "/login" || pathname.startsWith("/api/auth/")) {
-    return NextResponse.next();
-  }
 
   const token = req.cookies.get(SESSION_COOKIE)?.value;
   const session = await verifySession(token);
+
+  // /login e API auth sempre accessibili; chi è già loggato salta il login
+  if (pathname === "/login") {
+    if (session) {
+      const url = req.nextUrl.clone();
+      url.pathname = "/finance";
+      url.search = "";
+      return NextResponse.redirect(url);
+    }
+    return NextResponse.next();
+  }
+  if (pathname.startsWith("/api/auth/")) {
+    return NextResponse.next();
+  }
+
   if (session) return NextResponse.next();
 
   // Per richieste API non autenticate → 401 JSON, niente redirect.

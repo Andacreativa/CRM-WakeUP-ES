@@ -188,8 +188,8 @@ export default function ContrattoExportModal({
               style={
                 tab === v
                   ? {
-                      color: "#db291b",
-                      borderBottom: "2px solid #db291b",
+                      color: "#e8308a",
+                      borderBottom: "2px solid #e8308a",
                       marginBottom: "-1px",
                     }
                   : { color: "#6b7280" }
@@ -221,9 +221,9 @@ export default function ContrattoExportModal({
                       style={
                         lingua === v
                           ? {
-                              background: "#db291b",
+                              background: "#e8308a",
                               color: "#fff",
-                              borderColor: "#db291b",
+                              borderColor: "#e8308a",
                             }
                           : {
                               background: "#fff",
@@ -245,7 +245,7 @@ export default function ContrattoExportModal({
                   type="text"
                   value={rappresentante}
                   onChange={(e) => setRappresentante(e.target.value)}
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-300"
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-300"
                 />
               </div>
             </div>
@@ -259,7 +259,7 @@ export default function ContrattoExportModal({
                   type="date"
                   value={dataDecorrenza}
                   onChange={(e) => setDataDecorrenza(e.target.value)}
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-300"
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-300"
                 />
               </div>
               <div>
@@ -286,7 +286,7 @@ export default function ContrattoExportModal({
                     setDurataMesi(v);
                     setNumeroRate(v);
                   }}
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-300"
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-300"
                 />
               </div>
               <div>
@@ -300,7 +300,7 @@ export default function ContrattoExportModal({
                   onChange={(e) =>
                     setImportoMensile(parseFloat(e.target.value) || 0)
                   }
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-300"
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-300"
                 />
               </div>
               <div>
@@ -312,7 +312,7 @@ export default function ContrattoExportModal({
                   min={1}
                   value={numeroRate}
                   onChange={(e) => setNumeroRate(parseInt(e.target.value) || 1)}
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-300"
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-300"
                 />
               </div>
               <div className="flex items-end">
@@ -399,7 +399,7 @@ export default function ContrattoExportModal({
                 setManuallyEdited(true);
               }}
               rows={28}
-              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-xs font-mono leading-relaxed focus:outline-none focus:ring-2 focus:ring-red-300 resize-none"
+              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-xs font-mono leading-relaxed focus:outline-none focus:ring-2 focus:ring-pink-300 resize-none"
               spellCheck={false}
             />
             <p className="text-[10px] text-gray-400">
@@ -420,7 +420,7 @@ export default function ContrattoExportModal({
           <button
             onClick={handleExport}
             className="flex-1 flex items-center justify-center gap-2 text-white text-sm font-medium py-2.5 rounded-xl"
-            style={{ background: "#db291b" }}
+            style={{ background: "#e8308a" }}
           >
             <Download className="w-4 h-4" /> Esporta PDF
           </button>
