@@ -1431,3 +1431,186 @@ a.pill-wait:hover {
   font-size: 13px;
   margin-bottom: 14px;
 }
+
+/* ── Board riconciliazione entrate (stile Northstar) ─────────────────────── */
+.recon-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+}
+.recon-scroll {
+  overflow-y: auto;
+  max-height: 60vh;
+}
+@media (min-width: 1024px) {
+  /* due pannelli affiancati ad altezza schermo: scorre solo la sinistra */
+  .recon-grid {
+    grid-template-columns: minmax(0, 1fr) 370px;
+    height: calc(100vh - 330px);
+    min-height: 480px;
+  }
+  .recon-left {
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding-right: 6px;
+  }
+  .recon-right {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+  }
+  .recon-scroll {
+    flex: 1;
+    max-height: none;
+  }
+}
+.recon-right {
+  background: var(--bg-card);
+  border: 1px solid var(--border-light);
+  border-radius: 14px;
+  overflow: hidden;
+}
+.recon-right-head {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border-light);
+  background: #f9fafb;
+}
+.recon-sez {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: 700;
+  padding: 4px 4px 0;
+}
+.recon-cliente {
+  background: var(--bg-card);
+  border: 1px solid var(--border-light);
+  border-radius: 14px;
+  overflow: hidden;
+}
+.recon-cliente-head {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 11px 14px;
+  text-align: left;
+  font-size: 13.5px;
+  cursor: pointer;
+  transition: background 0.12s ease;
+}
+.recon-cliente-head:hover {
+  background: var(--bg-input);
+}
+.recon-caret {
+  width: 0;
+  height: 0;
+  border-top: 4px solid transparent;
+  border-bottom: 4px solid transparent;
+  border-left: 5px solid var(--text-4);
+  flex-shrink: 0;
+  transition: transform 0.12s ease;
+}
+.recon-caret.open {
+  transform: rotate(90deg);
+}
+.recon-fatt {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--color-info);
+  border-radius: 10px;
+  padding: 10px;
+  transition:
+    background 0.12s ease,
+    outline-color 0.12s ease;
+}
+.recon-fatt.drop {
+  outline: 2px dashed var(--color-ok);
+  outline-offset: 2px;
+  background: color-mix(in oklab, var(--color-ok) 8%, white);
+}
+.recon-fatt.nodrop {
+  opacity: 0.55;
+}
+.recon-link {
+  margin: 8px 0 0 12px;
+  padding: 8px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  background: color-mix(in oklab, var(--color-ok) 8%, white);
+  border: 1px solid color-mix(in oklab, var(--color-ok) 35%, white);
+}
+.recon-x {
+  padding: 2px 6px;
+  border-radius: 6px;
+  font-size: 10px;
+  background: color-mix(in oklab, var(--color-bad) 12%, white);
+  color: #b91c1c;
+}
+.recon-doc {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--color-ok);
+  border-radius: 10px;
+  padding: 10px;
+  cursor: grab;
+  transition: border-color 0.12s ease;
+}
+.recon-doc:hover {
+  border-color: var(--brand);
+  border-left-color: var(--color-ok);
+}
+.recon-doc.dragging {
+  opacity: 0.5;
+}
+.recon-doc.proposta {
+  border-left-color: var(--color-warn);
+  border-color: #fde68a;
+  background: #fffbeb;
+}
+.recon-noincasso {
+  max-width: 150px;
+  font-size: 10.5px;
+  color: var(--text-4);
+  background: transparent;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.recon-noincasso:hover {
+  color: var(--text-2);
+}
+.recon-proposta {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  max-width: 190px;
+  font-size: 10.5px;
+  font-weight: 600;
+  color: #15803d;
+  background: color-mix(in oklab, var(--color-ok) 12%, white);
+  border-radius: 6px;
+  padding: 2px 6px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.recon-proposta:hover {
+  background: color-mix(in oklab, var(--color-ok) 22%, white);
+}
+.recon-escluso {
+  border: 1px solid var(--border-light);
+  border-radius: 10px;
+  padding: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  opacity: 0.6;
+}

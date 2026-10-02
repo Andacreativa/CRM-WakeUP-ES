@@ -16,18 +16,16 @@ import {
   Unlink,
   Upload,
 } from "lucide-react";
-import { fmt, MESI, CATEGORIE_SPESA, CATEGORIE_COLORI, CATEGORIE_INGRESSO } from "@/lib/constants";
+import { fmt, MESI, CATEGORIE_SPESA, CATEGORIE_COLORI } from "@/lib/constants";
 import { useAnno } from "@/lib/anno-context";
 import { cn } from "@/lib/utils";
 import {
   STATO_MOVIMENTO_LABEL,
-  type CategoriaAltroIngresso,
-  type FatturaCandidata,
   type StatoMovimento,
   type Suggerimento,
-  type SuggerimentoEntrata,
 } from "@/lib/banca-shared";
 import ImportEstrattoModal from "./ImportEstrattoModal";
+import BoardEntrate from "./BoardEntrate";
 
 // Vista "Banca": estratto conto BBVA importato, uscite da trasformare in
 // Spese (o da abbinare a spese già registrate, stipendi compresi),
@@ -66,7 +64,6 @@ interface Movimento {
   nota: string | null;
   abbinamenti: Abbinamento[];
   suggerimento: Suggerimento | null;
-  entrata: SuggerimentoEntrata | null;
   import: { id: number; nomeFile: string; createdAt: string };
 }
 interface Importazione {
@@ -92,23 +89,6 @@ interface Edit {
   candidatoId: number; // 0 = crea una nuova spesa
   dipendenteId: number | null; // rimborsi/benefit: persona del registro
 }
-
-// Scelte dell'utente per un'entrata da rivedere
-interface EditEntrata {
-  fattureIds: number[]; // fatture da incassare (nell'ordine di assegnazione)
-  altro: CategoriaAltroIngresso | ""; // il resto (o tutto) come altro ingresso
-  extra: FatturaCandidata[]; // fatture aggiunte a mano dalla ricerca
-  cerca: string;
-  risultati: FatturaCandidata[];
-}
-const editEntrataDa = (e: SuggerimentoEntrata): EditEntrata => ({
-  fattureIds: [...e.proposti],
-  altro: e.altro ?? "",
-  extra: [],
-  cerca: "",
-  risultati: [],
-});
-const CATEGORIE_ALTRO = CATEGORIE_INGRESSO.filter((c) => c.value !== "ritenuta_commerciale");
 
 type Vista = "movimenti" | "importazioni";
 type Tipo = "uscite" | "entrate";
@@ -162,7 +142,6 @@ export default function BancaView() {
   const [fornitori, setFornitori] = useState<{ id: number; nome: string }[]>([]);
   const [persone, setPersone] = useState<{ id: number; nome: string }[]>([]);
   const [edits, setEdits] = useState<Record<number, Edit>>({});
-  const [editsE, setEditsE] = useState<Record<number, EditEntrata>>({});
   const [sel, setSel] = useState<Set<number>>(new Set());
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState<string | null>(null);
@@ -188,13 +167,6 @@ export default function BancaView() {
         const next: Record<number, Edit> = {};
         for (const r of list) {
           if (r.suggerimento) next[r.id] = prev[r.id] ?? editDaSuggerimento(r.suggerimento);
-        }
-        return next;
-      });
-      setEditsE((prev) => {
-        const next: Record<number, EditEntrata> = {};
-        for (const r of list) {
-          if (r.entrata) next[r.id] = prev[r.id] ?? editEntrataDa(r.entrata);
         }
         return next;
       });
@@ -229,9 +201,6 @@ export default function BancaView() {
   const entrate = useMemo(() => rows.filter((r) => r.importo > 0), [rows]);
   // Uscite "da rivedere": la tabella mostra gli abbinamenti da confermare
   const inRevisione = tipo === "uscite" && stato === "da_abbinare";
-  // Entrate "da rivedere": fatture da incassare o altro ingresso
-  const inRevisioneE = tipo === "entrate" && stato === "da_abbinare";
-  const revisione = inRevisione || inRevisioneE;
 
   const kpi = useMemo(() => {
     const daRivedere = uscite.filter((r) => r.stato === "da_abbinare");
@@ -307,168 +276,6 @@ export default function BancaView() {
     if (!res.ok) return j.error || "Errore";
     sostituisci(j);
     return null;
-  };
-
-  // ── Entrate ──
-  const setEditE = (id: number, patch: Partial<EditEntrata>) =>
-    setEditsE((e) => ({ ...e, [id]: { ...e[id], ...patch } }));
-  const toggleFatturaE = (id: number, fid: number) =>
-    setEditsE((all) => {
-      const e = all[id];
-      if (!e) return all;
-      const ids = e.fattureIds.includes(fid) ? e.fattureIds.filter((x) => x !== fid) : [...e.fattureIds, fid];
-      return { ...all, [id]: { ...e, fattureIds: ids } };
-    });
-  const cercaFattureE = async (id: number, q: string) => {
-    setEditE(id, { cerca: q });
-    if (q.trim().length < 2) {
-      setEditE(id, { risultati: [] });
-      return;
-    }
-    const res = await fetch(`/api/banca/fatture?q=${encodeURIComponent(q.trim())}&anno=${anno || new Date().getFullYear()}`);
-    const j = await res.json();
-    setEditE(id, { risultati: Array.isArray(j) ? j.slice(0, 6) : [] });
-  };
-  const aggiungiFatturaE = (id: number, f: FatturaCandidata) =>
-    setEditsE((all) => {
-      const e = all[id];
-      if (!e) return all;
-      const extra = e.extra.some((x) => x.id === f.id) ? e.extra : [...e.extra, f];
-      const fattureIds = e.fattureIds.includes(f.id) ? e.fattureIds : [...e.fattureIds, f.id];
-      return { ...all, [id]: { ...e, extra, fattureIds, cerca: "", risultati: [] } };
-    });
-  // Candidati mostrati per un'entrata: proposte + aggiunte a mano
-  const candidatiE = (r: Movimento): FatturaCandidata[] => {
-    const e = editsE[r.id];
-    const base = r.entrata?.candidati ?? [];
-    const tutti = [...base, ...(e?.extra ?? []).filter((x) => !base.some((b) => b.id === x.id))];
-    const scelti = new Set(e?.fattureIds ?? []);
-    return [...tutti.filter((c) => scelti.has(c.id)), ...tutti.filter((c) => !scelti.has(c.id))];
-  };
-  const quotaDi = (c: FatturaCandidata) => (c.residuo > 0 ? c.residuo : c.importo);
-  // Incassa (fatture e/o altro ingresso) oppure esclude se è un giroconto. Ritorna l'errore o null.
-  const applicaEntrata = async (r: Movimento): Promise<string | null> => {
-    const e = editsE[r.id];
-    if (r.entrata?.escludi && (!e || (!e.fattureIds.length && !e.altro))) return patch(r, { azione: "escludi" });
-    if (!e || (!e.fattureIds.length && !e.altro)) return "Scegli almeno una fattura o un altro ingresso";
-    const res = await fetch(`/api/banca/movimenti/${r.id}/incassa`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        fatture: e.fattureIds.map((id) => ({ id })),
-        ...(e.altro ? { altroIngresso: { categoria: e.altro } } : {}),
-      }),
-    });
-    const j = await res.json();
-    if (!res.ok) return j.error || "Errore";
-    sostituisci(j);
-    return null;
-  };
-  // In blocco: solo le proposte certe (numero citato o cliente+importo che quadrano, giroconti, cashback…)
-  const applicaEntrataCerta = async (r: Movimento): Promise<string | null> => {
-    if (!r.entrata?.certo && !r.entrata?.escludi) return "proposta da confermare a mano";
-    return applicaEntrata(r);
-  };
-  const singoloEntrata = async (r: Movimento) => {
-    setBusy(`#${r.id}`);
-    const err = await applicaEntrata(r);
-    setBusy(null);
-    if (err) notify("err", err);
-    else {
-      notify("ok", r.entrata?.escludi && !editsE[r.id]?.fattureIds.length ? "Movimento escluso" : "Bonifico incassato");
-      await load();
-    }
-  };
-  const cellaEntrata = (r: Movimento) => {
-    const ent = r.entrata;
-    const e = editsE[r.id];
-    if (!ent || !e) return <span className="text-xs text-gray-400">—</span>;
-    const lista = candidatiE(r);
-    const giaAssegnato = r.abbinamenti.reduce((t, a) => t + a.importo, 0);
-    const daAssegnare = Math.round((r.importo - giaAssegnato) * 100) / 100;
-    const scelte = lista.filter((c) => e.fattureIds.includes(c.id));
-    let resta = daAssegnare;
-    const assegnato = scelte.reduce((t, c) => {
-      const q = Math.min(quotaDi(c), Math.max(0, resta));
-      resta = Math.round((resta - q) * 100) / 100;
-      return t + q;
-    }, 0);
-    return (
-      <div className="space-y-1">
-        {giaAssegnato > 0 && (
-          <div className="tag tag-soft-warn">Assegnati {fmt(giaAssegnato)} · restano {fmt(daAssegnare)}</div>
-        )}
-        {lista.length > 0 && (
-          <div className="space-y-0.5">
-            {lista.slice(0, 4).map((c) => {
-              const on = e.fattureIds.includes(c.id);
-              return (
-                <label
-                  key={c.id}
-                  className={cn("flex items-center gap-2 text-xs rounded-md px-1.5 py-0.5 cursor-pointer", on ? "bg-ok/10" : "hover:bg-gray-50")}
-                  title={c.motivi.length ? `Indizi: ${c.motivi.join(", ")}` : undefined}
-                >
-                  <input type="checkbox" checked={on} onChange={() => toggleFatturaE(r.id, c.id)} className="accent-pink-600" />
-                  <span className="tbl-primary whitespace-nowrap">{c.numero ?? "s.n."}</span>
-                  <span className="truncate text-gray-700">{c.cliente}</span>
-                  <span className="ml-auto tabular-nums whitespace-nowrap font-medium text-gray-900">{fmt(quotaDi(c))}</span>
-                  {c.pagato ? (
-                    <span className="tag tag-neutral">già incassata</span>
-                  ) : c.incassato > 0 ? (
-                    <span className="tag tag-soft-warn">residuo</span>
-                  ) : null}
-                </label>
-              );
-            })}
-          </div>
-        )}
-        <div className="relative">
-          <input
-            value={e.cerca}
-            onChange={(ev) => cercaFattureE(r.id, ev.target.value)}
-            placeholder={lista.length ? "Aggiungi un'altra fattura: numero o cliente…" : "Cerca la fattura: numero o cliente…"}
-            className="sel sel-sm w-full"
-          />
-          {e.risultati.length > 0 && (
-            <div className="absolute left-0 right-0 top-full mt-1 z-20 bg-white border border-gray-200 rounded-lg shadow-lg max-h-56 overflow-y-auto">
-              {e.risultati.map((f) => (
-                <button
-                  key={f.id}
-                  type="button"
-                  onClick={() => aggiungiFatturaE(r.id, f)}
-                  className="w-full flex items-center gap-2 text-xs px-2 py-1.5 hover:bg-gray-50 text-left"
-                >
-                  <span className="tbl-primary whitespace-nowrap">{f.numero ?? "s.n."}</span>
-                  <span className="truncate">{f.cliente}</span>
-                  <span className="ml-auto tabular-nums whitespace-nowrap">{fmt(quotaDi(f))}</span>
-                  {f.pagato && <span className="tag tag-neutral">già incassata</span>}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-        <div className="flex items-center gap-1.5">
-          <select
-            value={e.altro}
-            onChange={(ev) => setEditE(r.id, { altro: ev.target.value as CategoriaAltroIngresso | "" })}
-            className={cn("sel sel-sm flex-1", e.altro && "border-ok/30 bg-ok/10")}
-            title="Quello che non è incasso di fattura (tutto il bonifico o il resto)"
-          >
-            <option value="">{scelte.length ? "Il resto: lascia da assegnare" : "Oppure altro ingresso…"}</option>
-            {CATEGORIE_ALTRO.map((c) => (
-              <option key={c.value} value={c.value}>
-                {scelte.length ? `Il resto come ${c.label.toLowerCase()}` : `Altro ingresso: ${c.label}`}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div className={cn("tbl-muted truncate", ent.certo && !scelte.length && !e.altro ? "" : "")} title={ent.motivo}>
-          {scelte.length
-            ? `Assegnati ${fmt(assegnato)} di ${fmt(daAssegnare)}${resta > 0.009 ? ` · resta ${fmt(resta)}${e.altro ? " → altro ingresso" : " da assegnare"}` : ""}`
-            : ent.motivo}
-        </div>
-      </div>
-    );
   };
 
   const patch = async (r: Movimento, body: Record<string, unknown>): Promise<string | null> => {
@@ -704,7 +511,6 @@ export default function BancaView() {
         <>
           {/* Filtri */}
           <div className="flex items-center gap-2 flex-wrap">
-            <SearchBox value={q} onChange={setQ} placeholder="Cerca beneficiario, concetto…" className="w-64" />
             <Pills
               value={tipo}
               onChange={(v) => {
@@ -716,6 +522,9 @@ export default function BancaView() {
                 { val: "entrate", label: "Entrate" },
               ]}
             />
+            {tipo === "uscite" && (
+            <>
+            <SearchBox value={q} onChange={setQ} placeholder="Cerca beneficiario, concetto…" className="w-64" />
             <Pills
               value={stato}
               onChange={(v) => {
@@ -740,22 +549,27 @@ export default function BancaView() {
             <span className="text-xs text-gray-400 ml-auto whitespace-nowrap">
               {visibili.length} movimenti · {fmt(totaleVisibili)}
             </span>
+            </>
+            )}
           </div>
+
+          {/* Entrate: board di riconciliazione (bonifici → fatture) */}
+          {tipo === "entrate" && <BoardEntrate anno={anno} onChange={load} />}
 
 
           {/* Barra selezione */}
-          {revisione && selezionabili.length > 0 && (
+          {tipo === "uscite" && stato === "da_abbinare" && selezionabili.length > 0 && (
             <div className="flex items-center gap-2 flex-wrap text-sm">
               <span className="text-gray-500">
                 {sel.size > 0 ? `${sel.size} selezionati` : "Seleziona le righe per agire in blocco"}
               </span>
               <button
-                onClick={() => inBlocco(inRevisioneE ? applicaEntrataCerta : applica, inRevisioneE ? "Incassati" : "Applicati")}
+                onClick={() => inBlocco(applica, "Applicati")}
                 disabled={!sel.size || !!busy}
                 className="btn btn-primary disabled:opacity-50"
               >
                 {busy && !busy.startsWith("#") ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
-                {busy && !busy.startsWith("#") ? busy : inRevisioneE ? "Applica proposte certe" : "Applica proposte"}
+                {busy && !busy.startsWith("#") ? busy : "Applica proposte"}
               </button>
               <button
                 onClick={() => inBlocco((r) => patch(r, { azione: "escludi" }), "Esclusi")}
@@ -773,28 +587,29 @@ export default function BancaView() {
             ))}
           </datalist>
 
-          {/* Tabella */}
+          {/* Tabella (uscite) */}
+          {tipo === "uscite" && (
           <div className="glass-card rounded-2xl overflow-hidden">
             <div className="overflow-x-auto">
               <table className="tbl tbl-fixed min-w-[900px]">
                 <colgroup>
-                  {revisione && <col style={{ width: 36 }} />}
+                  {inRevisione && <col style={{ width: 36 }} />}
                   <col style={{ width: 72 }} />
                   <col />
                   <col style={{ width: 104 }} />
-                  {revisione ? (
-                    <col style={{ width: inRevisioneE ? 430 : 400 }} />
+                  {inRevisione ? (
+                    <col style={{ width: 400 }} />
                   ) : (
                     <>
                       <col style={{ width: 110 }} />
                       <col style={{ width: "34%" }} />
                     </>
                   )}
-                  <col style={{ width: revisione ? 124 : 112 }} />
+                  <col style={{ width: inRevisione ? 124 : 112 }} />
                 </colgroup>
                 <thead>
                   <tr>
-                    {revisione && (
+                    {inRevisione && (
                       <th>
                         <input
                           type="checkbox"
@@ -807,8 +622,8 @@ export default function BancaView() {
                     <th>Data</th>
                     <th>Movimento</th>
                     <th className="text-right">Importo</th>
-                    {revisione ? (
-                      <th>{inRevisioneE ? "Incasso" : "Abbinamento"}</th>
+                    {inRevisione ? (
+                      <th>Abbinamento</th>
                     ) : (
                       <>
                         <th>Stato</th>
@@ -841,7 +656,7 @@ export default function BancaView() {
                       const e = edits[r.id];
                       const s = r.suggerimento;
                       const daRivedere = r.stato === "da_abbinare";
-                      const editing = revisione;
+                      const editing = inRevisione;
                       const candidato = e?.candidatoId
                         ? s?.candidati.find((c) => c.id === e.candidatoId)
                         : undefined;
@@ -882,9 +697,7 @@ export default function BancaView() {
                             {fmt(r.importo)}
                           </td>
 
-                          {inRevisioneE ? (
-                            <td>{cellaEntrata(r)}</td>
-                          ) : editing ? (
+                          {editing ? (
                             <td>
                               {haCandidati && (
                                 <select
@@ -1003,7 +816,7 @@ export default function BancaView() {
                                         {a.fattura.cliente ? ` · ${a.fattura.cliente.nome}` : ""} · {fmt(a.importo)}
                                       </span>
                                     )}
-                                    {a.acconto && !a.fattura && <span>Acconto fattura #{a.acconto.fatturaId} · {fmt(a.importo)}</span>}
+                                    {a.acconto && <span>Acconto fattura #{a.acconto.fatturaId} · {fmt(a.importo)}</span>}
                                     {a.altroIngresso && (
                                       <span>
                                         Altro ingresso {a.altroIngresso.fonte} · {fmt(a.importo)}
@@ -1023,27 +836,12 @@ export default function BancaView() {
                             ) : editing ? (
                               <div className="flex items-center justify-end gap-1">
                                 <button
-                                  onClick={() => (inRevisioneE ? singoloEntrata(r) : singolo(r))}
-                                  disabled={!!busy || (inRevisioneE && !r.entrata?.escludi && !editsE[r.id]?.fattureIds.length && !editsE[r.id]?.altro)}
+                                  onClick={() => singolo(r)}
+                                  disabled={!!busy}
                                   className="btn btn-primary btn-sm"
-                                  title={
-                                    inRevisioneE
-                                      ? "Registra l'incasso: un acconto per ogni fattura con la data del bonifico"
-                                      : e?.candidatoId
-                                        ? "Collega il movimento alla spesa scelta"
-                                        : "Crea la spesa e collegala"
-                                  }
+                                  title={e?.candidatoId ? "Collega il movimento alla spesa scelta" : "Crea la spesa e collegala"}
                                 >
-                                  <Check />{" "}
-                                  {inRevisioneE
-                                    ? r.entrata?.escludi && !editsE[r.id]?.fattureIds.length && !editsE[r.id]?.altro
-                                      ? "Escludi"
-                                      : editsE[r.id]?.fattureIds.length
-                                        ? "Incassa"
-                                        : "Registra"
-                                    : e?.candidatoId
-                                      ? "Abbina"
-                                      : "Crea"}
+                                  <Check /> {e?.candidatoId ? "Abbina" : "Crea"}
                                 </button>
                                 <button
                                   onClick={() => azioneSingola(r, { azione: "escludi" }, "Movimento escluso")}
@@ -1093,6 +891,7 @@ export default function BancaView() {
               </table>
             </div>
           </div>
+          )}
         </>
       )}
 
