@@ -43,6 +43,21 @@ export async function PATCH(
         ...(body.seguridadSocial !== undefined && {
           seguridadSocial: parseFloat(body.seguridadSocial) || 0,
         }),
+        ...(body.tipo !== undefined && {
+          tipo: ["dipendente", "socio_dipendente", "commerciale"].includes(body.tipo)
+            ? body.tipo
+            : "dipendente",
+        }),
+        ...(body.percentualeCommissione !== undefined && {
+          percentualeCommissione: parseFloat(body.percentualeCommissione) || 0,
+        }),
+        ...(body.rimborsiMensili !== undefined && {
+          rimborsiMensili: parseFloat(body.rimborsiMensili) || 0,
+        }),
+        ...(body.benefitMensili !== undefined && {
+          benefitMensili: parseFloat(body.benefitMensili) || 0,
+        }),
+        ...(body.attivo !== undefined && { attivo: Boolean(body.attivo) }),
       },
     });
     return NextResponse.json(dipendente);
@@ -58,11 +73,13 @@ export async function DELETE(
 ) {
   try {
     const { id } = await params;
-    // Cancella anche le spese collegate ai pagamenti
-    const pagamenti = await prisma.pagamentoDipendente.findMany({
-      where: { dipendenteId: parseInt(id) },
-    });
-    const spesaIds = pagamenti
+    // Cancella anche le spese collegate ai pagamenti (vecchio e nuovo registro)
+    const dipendenteId = parseInt(id);
+    const [vecchi, nuovi] = await Promise.all([
+      prisma.pagamentoDipendente.findMany({ where: { dipendenteId } }),
+      prisma.pagamentoMensile.findMany({ where: { dipendenteId } }),
+    ]);
+    const spesaIds = [...vecchi, ...nuovi]
       .map((p) => p.spesaId)
       .filter((x): x is number => x !== null);
     if (spesaIds.length) {

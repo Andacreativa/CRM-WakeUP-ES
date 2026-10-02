@@ -277,55 +277,55 @@ tbody.zebra > tr:nth-child(even) {
   width: var(--sb-w-collapsed);
 }
 .sb-head {
-  padding: 14px 12px 12px;
+  padding: 18px 12px 14px;
   border-bottom: 1px solid var(--border-light);
 }
 .sb-brand {
   display: flex;
+  flex-direction: column;
   align-items: center;
   gap: 10px;
   width: 100%;
-  text-align: left;
   border-radius: 12px;
-  padding: 4px;
+  padding: 6px 4px;
   cursor: pointer;
 }
 .sb-brand:hover {
   background: var(--bg-input);
 }
 .sb-logo {
-  width: 40px;
-  height: 40px;
+  width: 76px;
+  height: 76px;
   border-radius: 999px;
   background: #ffffff;
   border: 1px solid var(--border-light);
+  box-shadow: 0 1px 3px rgba(17, 24, 39, 0.06);
   display: grid;
   place-items: center;
   flex-shrink: 0;
   overflow: hidden;
+  transition: width 0.2s ease, height 0.2s ease;
 }
 .sb-logo img {
-  width: 30px;
-  height: 30px;
+  width: 60px;
+  height: 60px;
   object-fit: contain;
 }
 .sb-brand-text {
-  display: flex;
-  flex-direction: column;
-  line-height: 1.15;
-  min-width: 0;
+  text-align: center;
+  line-height: 1.25;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--text-2);
+  letter-spacing: 0.2px;
 }
-.sb-brand-text strong {
-  font-size: 14px;
-  font-weight: 700;
-  color: var(--text-1);
+.sb-collapsed .sb-logo {
+  width: 40px;
+  height: 40px;
 }
-.sb-brand-text small {
-  font-size: 10.5px;
-  color: var(--text-4);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+.sb-collapsed .sb-logo img {
+  width: 30px;
+  height: 30px;
 }
 .sb-nav {
   flex: 1;
@@ -346,6 +346,7 @@ tbody.zebra > tr:nth-child(even) {
 .sb-item {
   display: flex;
   align-items: center;
+  margin-bottom: 2px;
   border-radius: 10px;
   color: var(--text-3);
   font-size: 13.5px;
@@ -398,17 +399,17 @@ tbody.zebra > tr:nth-child(even) {
   padding: 10px 0;
 }
 .sb-sub {
-  margin: 2px 0 6px 22px;
+  margin: 8px 0 12px 22px;
   padding-left: 10px;
   border-left: 1px solid var(--border);
   display: flex;
   flex-direction: column;
-  gap: 1px;
+  gap: 3px;
 }
 .sb-sub-link {
   font-size: 12.5px;
   color: var(--text-3);
-  padding: 6px 10px;
+  padding: 7px 10px;
   border-radius: 8px;
   font-weight: 500;
 }
@@ -687,8 +688,3 @@ tbody.zebra > tr:nth-child(even) {
   }
 }
 
-/* Sidebar compressa: logo centrato */
-.sb-collapsed .sb-brand {
-  justify-content: center;
-  padding: 4px 0;
-}

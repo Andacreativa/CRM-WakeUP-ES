@@ -62,6 +62,7 @@ interface Fattura {
   pagato: boolean;
   metodo: string | null;
   commerciale: string | null;
+  commercialeId: number | null;
   scadenza: string | null;
   acconti: Acconto[];
 }
@@ -111,6 +112,7 @@ const emptyForm = {
   azienda: AZIENDE[0],
   aziendaNota: "",
   commerciale: "",
+  commercialeId: "",
   mese: new Date().getMonth() + 1,
   anno: 2025,
   importo: "",
@@ -122,6 +124,9 @@ const emptyForm = {
 export default function FatturePage() {
   const [fatture, setFatture] = useState<Fattura[]>([]);
   const [clienti, setClienti] = useState<Cliente[]>([]);
+  const [commerciali, setCommerciali] = useState<
+    { id: number; nome: string; cognome: string | null; percentualeCommissione: number }[]
+  >([]);
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<Fattura | null>(null);
   const [form, setForm] = useState({ ...emptyForm });
@@ -139,6 +144,13 @@ export default function FatturePage() {
   const [togglingId, setTogglingId] = useState<number | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [lastClickedId, setLastClickedId] = useState<number | null>(null);
+
+  useEffect(() => {
+    fetch("/api/dipendenti?tipo=commerciale")
+      .then((r) => r.json())
+      .then((d) => setCommerciali(Array.isArray(d) ? d : []))
+      .catch(() => {});
+  }, []);
 
   const load = async () => {
     const params = new URLSearchParams();
@@ -173,6 +185,7 @@ export default function FatturePage() {
       azienda: f.azienda,
       aziendaNota: f.aziendaNota || "",
       commerciale: f.commerciale || "",
+      commercialeId: f.commercialeId ? String(f.commercialeId) : "",
       mese: f.mese,
       anno: f.anno,
       importo: String(f.importo),
@@ -1114,15 +1127,27 @@ export default function FatturePage() {
                 <label className="text-xs font-medium text-gray-600 block mb-1">
                   Commerciale
                 </label>
-                <input
-                  type="text"
-                  value={form.commerciale}
+                <select
+                  value={form.commercialeId}
                   onChange={(e) =>
-                    setForm((f) => ({ ...f, commerciale: e.target.value }))
+                    setForm((f) => ({ ...f, commercialeId: e.target.value }))
                   }
-                  placeholder="Nome o sigla commerciale di riferimento"
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-300"
-                />
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-300 bg-white"
+                >
+                  <option value="">— nessuno —</option>
+                  {commerciali.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.nome}
+                      {c.cognome ? ` ${c.cognome}` : ""} · {c.percentualeCommissione}%
+                    </option>
+                  ))}
+                </select>
+                <p className="text-[11px] text-gray-400 mt-1">
+                  All&apos;incasso crea la commissione in automatico (voce Commissioni).
+                  {form.commerciale && !form.commercialeId
+                    ? ` Valore storico: ${form.commerciale}.`
+                    : ""}
+                </p>
               </div>
               <label className="flex items-center gap-2 cursor-pointer">
                 <input

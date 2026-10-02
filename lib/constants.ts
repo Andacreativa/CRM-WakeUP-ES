@@ -25,6 +25,9 @@ export const CATEGORIE_SPESA = [
   "Soci",
   "Costi Bancari",
   "Ufficio",
+  "Rimborsi",
+  "Benefit",
+  "Commissioni",
   "Altro",
 ];
 
@@ -63,6 +66,9 @@ export const CATEGORIE_COLORI: Record<string, string> = {
   Tasse: "#FFC9A0", // pesca pastello (non specificato, coerente)
   "Costi Aziendali": "#C8E6F0", // azzurro tenue (non specificato)
   Ufficio: "#FFE0B0", // ambra pastello
+  Rimborsi: "#C9F0E8", // acqua pastello
+  Benefit: "#E6D8F5", // lilla pastello
+  Commissioni: "#FBD5E8", // rosa pastello
   Altro: "#EDEDED", // grigio neutro
 };
 
@@ -83,6 +89,9 @@ export const CATEGORIE_COLORI_CHART: Record<string, string> = {
   Tasse: "#FF9940",
   "Costi Aziendali": "#5BA9D8",
   Ufficio: "#F5A623",
+  Rimborsi: "#2BB5A0",
+  Benefit: "#A77BE0",
+  Commissioni: "#E8308A",
   Altro: "#B0B0B0",
 };
 

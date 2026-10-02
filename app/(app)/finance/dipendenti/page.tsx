@@ -1,20 +1,12 @@
 "use client";
 
-import { Fragment, useEffect, useRef, useState } from "react";
-import { Plus, Pencil, Trash2, Check, Upload } from "lucide-react";
-import { fmt, MESI } from "@/lib/constants";
-import { useAnno } from "@/lib/anno-context";
+import { useEffect, useRef, useState } from "react";
+import { Plus, Pencil, Trash2, Upload } from "lucide-react";
+import { fmt } from "@/lib/constants";
+import { TIPI_DIPENDENTE, TIPO_LABEL } from "@/lib/dipendenti";
 import CopyFieldsModal, { CopyField } from "@/components/CopyFieldsModal";
 import AddressFields, { formatAddress } from "@/components/AddressFields";
 import Avatar from "@/components/Avatar";
-
-interface Pagamento {
-  id: number;
-  anno: number;
-  mese: number;
-  tipo: "stipendio" | "seguridad";
-  spesaId: number | null;
-}
 
 interface Dipendente {
   id: number;
@@ -38,7 +30,11 @@ interface Dipendente {
   irpf: number;
   irpfImporto: number;
   seguridadSocial: number;
-  pagamenti: Pagamento[];
+  tipo: string;
+  percentualeCommissione: number;
+  rimborsiMensili: number;
+  benefitMensili: number;
+  attivo: boolean;
 }
 
 const emptyForm = {
@@ -62,6 +58,11 @@ const emptyForm = {
   irpf: "",
   irpfImporto: "",
   seguridadSocial: "",
+  tipo: "dipendente",
+  percentualeCommissione: "",
+  rimborsiMensili: "",
+  benefitMensili: "",
+  attivo: true,
 };
 
 export default function DipendentiPage() {
@@ -69,11 +70,6 @@ export default function DipendentiPage() {
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<Dipendente | null>(null);
   const [form, setForm] = useState({ ...emptyForm });
-  // I pagamenti mensili hanno sempre bisogno di un anno concreto:
-  // con "Tutti gli anni" nella topbar si usa l'anno corrente.
-  const { anno: annoSelezionato } = useAnno();
-  const anno = annoSelezionato > 0 ? annoSelezionato : new Date().getFullYear();
-  const [busy, setBusy] = useState<string | null>(null);
   const [infoDip, setInfoDip] = useState<Dipendente | null>(null);
   const [uploadingFoto, setUploadingFoto] = useState(false);
   const fotoRef = useRef<HTMLInputElement>(null);
@@ -96,14 +92,12 @@ export default function DipendentiPage() {
   };
 
   const load = async () => {
-    const url =
-      anno > 0 ? `/api/dipendenti?anno=${anno}` : `/api/dipendenti`;
-    const data = (await (await fetch(url)).json()) as any;
+    const data = (await (await fetch("/api/dipendenti")).json()) as any;
     setDipendenti(Array.isArray(data) ? data : []);
   };
   useEffect(() => {
     load();
-  }, [anno]);
+  }, []);
 
   const openNew = () => {
     setEditing(null);
@@ -133,6 +127,11 @@ export default function DipendentiPage() {
       irpf: String(d.irpf ?? ""),
       irpfImporto: String(d.irpfImporto ?? ""),
       seguridadSocial: String(d.seguridadSocial ?? ""),
+      tipo: d.tipo ?? "dipendente",
+      percentualeCommissione: String(d.percentualeCommissione ?? ""),
+      rimborsiMensili: String(d.rimborsiMensili ?? ""),
+      benefitMensili: String(d.benefitMensili ?? ""),
+      attivo: d.attivo ?? true,
     });
     setShowForm(true);
   };
@@ -200,29 +199,6 @@ export default function DipendentiPage() {
     load();
   };
 
-  const togglePagamento = async (
-    dipendenteId: number,
-    mese: number,
-    tipo: "stipendio" | "seguridad",
-  ) => {
-    const key = `${dipendenteId}-${mese}-${tipo}`;
-    if (busy === key) return;
-    setBusy(key);
-    await fetch(`/api/dipendenti/${dipendenteId}/pagamento`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ anno, mese, tipo }),
-    });
-    await load();
-    setBusy(null);
-  };
-
-  const isPaid = (
-    d: Dipendente,
-    mese: number,
-    tipo: "stipendio" | "seguridad",
-  ) => (d.pagamenti ?? []).some((p) => p.mese === mese && p.tipo === tipo);
-
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -230,7 +206,7 @@ export default function DipendentiPage() {
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Dipendenti</h1>
           <p className="text-gray-500 text-sm mt-1">
-            {dipendenti.length} dipendenti in anagrafica · anno {anno}
+            {dipendenti.length} persone in anagrafica
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -238,7 +214,7 @@ export default function DipendentiPage() {
             onClick={openNew}
             className="glass-btn-primary flex items-center gap-2 text-white text-sm font-medium px-4 py-2.5 rounded-xl"
           >
-            <Plus className="w-4 h-4" /> Crea dipendente
+            <Plus className="w-4 h-4" /> Nuova persona
           </button>
         </div>
       </div>
@@ -249,22 +225,18 @@ export default function DipendentiPage() {
           <thead>
             <tr className="border-b border-gray-100 bg-gray-50">
               {[
-                "Nome",
-                "Netto busta paga",
-                "IRPF (%)",
-                "IRPF (€)",
-                "Seguridad Social",
-                "",
-              ].map((h, i) => (
+                ["Persona", "text-left"],
+                ["Tipo", "text-left"],
+                ["Stipendio netto", "text-right"],
+                ["Seg. Social", "text-right"],
+                ["IRPF", "text-right"],
+                ["Rimborsi / Benefit", "text-right"],
+                ["Commissione", "text-right"],
+                ["", ""],
+              ].map(([h, al], i) => (
                 <th
-                  key={h}
-                  className={`text-xs font-semibold text-gray-500 uppercase tracking-wide px-4 py-3 ${
-                    i === 0
-                      ? "text-left"
-                      : i === 4
-                        ? "text-right"
-                        : "text-right"
-                  }`}
+                  key={i}
+                  className={`text-xs font-semibold text-gray-500 uppercase tracking-wide px-4 py-3 ${al}`}
                 >
                   {h}
                 </th>
@@ -275,10 +247,10 @@ export default function DipendentiPage() {
             {dipendenti.length === 0 && (
               <tr>
                 <td
-                  colSpan={5}
+                  colSpan={8}
                   className="text-center text-gray-400 py-12 text-sm"
                 >
-                  Nessun dipendente. Aggiungi il primo con il pulsante in alto.
+                  Nessuna persona. Aggiungi la prima con il pulsante in alto.
                 </td>
               </tr>
             )}
@@ -304,17 +276,51 @@ export default function DipendentiPage() {
                     </button>
                   </div>
                 </td>
+                <td className="px-4 py-3">
+                  <span
+                    className={`text-[11px] font-semibold px-2 py-0.5 rounded-md ${
+                      d.tipo === "commerciale"
+                        ? "bg-pink-50 text-pink-700"
+                        : d.tipo === "socio_dipendente"
+                          ? "bg-violet-50 text-violet-700"
+                          : "bg-sky-50 text-sky-700"
+                    }`}
+                  >
+                    {TIPO_LABEL[d.tipo] ?? d.tipo}
+                  </span>
+                  {!d.attivo && (
+                    <span className="ml-2 text-[10px] text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded">
+                      non attivo
+                    </span>
+                  )}
+                </td>
                 <td className="px-4 py-3 text-sm font-semibold text-gray-900 text-right">
                   {fmt(d.nettoBustaPaga)}
                 </td>
                 <td className="px-4 py-3 text-sm text-gray-700 text-right">
-                  {(d.irpf ?? 0).toFixed(2).replace(".", ",")}%
+                  {d.tipo === "commerciale" ? "—" : fmt(d.seguridadSocial)}
                 </td>
                 <td className="px-4 py-3 text-sm text-gray-700 text-right">
-                  {fmt(d.irpfImporto)}
+                  {d.tipo === "commerciale" ? (
+                    "—"
+                  ) : (
+                    <>
+                      {fmt(d.irpfImporto)}
+                      <span className="text-[11px] text-gray-400 ml-1">
+                        ({(d.irpf ?? 0).toFixed(2).replace(".", ",")}%)
+                      </span>
+                    </>
+                  )}
                 </td>
                 <td className="px-4 py-3 text-sm text-gray-700 text-right">
-                  {fmt(d.seguridadSocial)}
+                  {d.tipo === "dipendente"
+                    ? "—"
+                    : `${fmt(d.rimborsiMensili)} / ${fmt(d.benefitMensili)}`}
+                </td>
+                <td className="px-4 py-3 text-sm text-gray-700 text-right">
+                  {d.tipo === "commerciale"
+                    ? `${(d.percentualeCommissione ?? 0).toFixed(1).replace(".", ",")}%`
+                    : "—"}
                 </td>
                 <td className="px-4 py-3">
                   <div className="flex items-center gap-2 justify-end">
@@ -338,147 +344,12 @@ export default function DipendentiPage() {
         </table>
       </div>
 
-      {/* Griglia pagamenti compatta — 1 riga per dipendente, 12 mesi × 2 sub-celle */}
-      {dipendenti.length > 0 && (
-        <div className="glass-card rounded-2xl p-4 space-y-3">
-          <div className="flex items-center justify-between flex-wrap gap-2">
-            <h3 className="text-base font-bold text-gray-900">
-              Pagamenti mensili {anno}
-            </h3>
-            <div className="flex items-center gap-4 text-xs text-gray-500">
-              <span className="flex items-center gap-1.5">
-                <span className="w-3 h-3 rounded-sm bg-emerald-500" />
-                <strong className="text-gray-700">N</strong> = Stipendio
-                (Nómina)
-              </span>
-              <span className="flex items-center gap-1.5">
-                <span className="w-3 h-3 rounded-sm bg-blue-500" />
-                <strong className="text-gray-700">SS</strong> = Seguridad Social
-              </span>
-            </div>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="border-separate border-spacing-0 text-xs min-w-[820px]">
-              <thead>
-                <tr>
-                  <th
-                    rowSpan={2}
-                    className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide px-3 py-2 sticky left-0 bg-white z-10 border-b border-gray-100"
-                  >
-                    Dipendente
-                  </th>
-                  {MESI.map((m) => (
-                    <th
-                      key={m}
-                      colSpan={2}
-                      className="text-center text-[11px] font-semibold text-gray-500 uppercase tracking-wide px-1 py-1 border-b border-gray-100"
-                    >
-                      {m.slice(0, 3)}
-                    </th>
-                  ))}
-                </tr>
-                <tr>
-                  {MESI.map((m, i) => (
-                    <Fragment key={`mh-${i}`}>
-                      <th
-                        className="text-center text-[10px] font-semibold text-emerald-700 px-1 py-1 border-b border-gray-100"
-                        title={`${m} — Stipendio (Nómina)`}
-                      >
-                        N
-                      </th>
-                      <th
-                        className="text-center text-[10px] font-semibold text-blue-700 px-1 py-1 border-b border-gray-100"
-                        title={`${m} — Seguridad Social`}
-                      >
-                        SS
-                      </th>
-                    </Fragment>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {dipendenti.map((d, rowIdx) => (
-                  <tr
-                    key={d.id}
-                    className={rowIdx % 2 === 1 ? "bg-[#F0F0F0]" : ""}
-                  >
-                    <td
-                      className="px-3 py-1.5 sticky left-0 z-10 border-b border-gray-50 whitespace-nowrap"
-                      style={{
-                        background: rowIdx % 2 === 1 ? "#F0F0F0" : "#fff",
-                      }}
-                    >
-                      <div className="flex items-center gap-2">
-                        <Avatar
-                          nome={d.nome}
-                          cognome={d.cognome}
-                          fotoPath={d.fotoPath}
-                          size={24}
-                        />
-                        <span className="text-sm font-medium text-gray-800">
-                          {d.nome}
-                          {d.cognome ? ` ${d.cognome}` : ""}
-                        </span>
-                      </div>
-                    </td>
-                    {Array.from({ length: 12 }, (_, i) => i + 1).map((mese) => {
-                      const stipPaid = isPaid(d, mese, "stipendio");
-                      const ssPaid = isPaid(d, mese, "seguridad");
-                      const stipKey = `${d.id}-${mese}-stipendio`;
-                      const ssKey = `${d.id}-${mese}-seguridad`;
-                      return (
-                        <Fragment key={`m-${d.id}-${mese}`}>
-                          <td className="px-0.5 py-1 text-center border-b border-gray-50">
-                            <button
-                              onClick={() =>
-                                togglePagamento(d.id, mese, "stipendio")
-                              }
-                              disabled={busy === stipKey}
-                              className={`inline-flex items-center justify-center w-5 h-5 rounded border transition-all ${
-                                stipPaid
-                                  ? "bg-emerald-500 border-emerald-500 text-white hover:bg-emerald-600"
-                                  : "bg-white border-gray-300 text-transparent hover:border-emerald-400"
-                              } ${busy === stipKey ? "opacity-50 cursor-wait" : "cursor-pointer"}`}
-                              title={`${MESI[mese - 1]} — Stipendio ${stipPaid ? "pagato" : "non pagato"}`}
-                            >
-                              <Check className="w-3 h-3" strokeWidth={3} />
-                            </button>
-                          </td>
-                          <td
-                            className={`px-0.5 py-1 text-center border-b border-gray-50 ${mese < 12 ? "border-r border-gray-100" : ""}`}
-                          >
-                            <button
-                              onClick={() =>
-                                togglePagamento(d.id, mese, "seguridad")
-                              }
-                              disabled={busy === ssKey}
-                              className={`inline-flex items-center justify-center w-5 h-5 rounded border transition-all ${
-                                ssPaid
-                                  ? "bg-blue-500 border-blue-500 text-white hover:bg-blue-600"
-                                  : "bg-white border-gray-300 text-transparent hover:border-blue-400"
-                              } ${busy === ssKey ? "opacity-50 cursor-wait" : "cursor-pointer"}`}
-                              title={`${MESI[mese - 1]} — Seguridad Social ${ssPaid ? "pagata" : "non pagata"}`}
-                            >
-                              <Check className="w-3 h-3" strokeWidth={3} />
-                            </button>
-                          </td>
-                        </Fragment>
-                      );
-                    })}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
-
       {/* Modal crea/modifica dipendente */}
       {showForm && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
           <div className="glass-modal rounded-2xl w-full max-w-2xl p-6 space-y-4 max-h-[90vh] overflow-y-auto">
             <h2 className="text-lg font-bold text-gray-900">
-              {editing ? "Modifica Dipendente" : "Nuovo Dipendente"}
+              {editing ? "Modifica persona" : "Nuova persona"}
             </h2>
 
             {/* Foto profilo */}
@@ -525,6 +396,41 @@ export default function DipendentiPage() {
                   PNG/JPG. In assenza di foto verranno mostrate le iniziali.
                 </p>
               </div>
+            </div>
+
+            {/* Tipologia */}
+            <div className="space-y-2">
+              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                Tipologia
+              </p>
+              <div className="flex gap-2">
+                {TIPI_DIPENDENTE.map((t) => {
+                  const active = form.tipo === t.value;
+                  return (
+                    <button
+                      key={t.value}
+                      type="button"
+                      onClick={() => setForm((f) => ({ ...f, tipo: t.value }))}
+                      className="flex-1 text-sm py-2 rounded-lg border font-semibold transition-all"
+                      style={
+                        active
+                          ? { background: "#e8308a", color: "#fff", borderColor: "#e8308a" }
+                          : { background: "#fff", borderColor: "#e2e8f0", color: "#94a3b8" }
+                      }
+                    >
+                      {t.label}
+                    </button>
+                  );
+                })}
+              </div>
+              <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer pt-1">
+                <input
+                  type="checkbox"
+                  checked={form.attivo}
+                  onChange={(e) => setForm((f) => ({ ...f, attivo: e.target.checked }))}
+                />
+                Attivo (compare nel registro pagamenti)
+              </label>
             </div>
 
             {/* Anagrafica */}
@@ -772,6 +678,69 @@ export default function DipendentiPage() {
                 </div>
               </div>
             </div>
+
+            {form.tipo !== "dipendente" && (
+              <div className="space-y-3">
+                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                  {form.tipo === "commerciale" ? "Commissioni e benefit" : "Rimborsi e benefit"}
+                </p>
+                <div className="grid grid-cols-2 gap-3">
+                  {form.tipo === "commerciale" && (
+                    <div>
+                      <label className="text-xs font-medium text-gray-600 block mb-1">
+                        Commissione (% sulle fatture incassate)
+                      </label>
+                      <input
+                        type="number"
+                        step="0.1"
+                        value={form.percentualeCommissione}
+                        onChange={(e) =>
+                          setForm((f) => ({ ...f, percentualeCommissione: e.target.value }))
+                        }
+                        placeholder="Es. 85"
+                        className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-300"
+                      />
+                    </div>
+                  )}
+                  {form.tipo === "socio_dipendente" && (
+                    <div>
+                      <label className="text-xs font-medium text-gray-600 block mb-1">
+                        Rimborsi mensili di default (€)
+                      </label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={form.rimborsiMensili}
+                        onChange={(e) =>
+                          setForm((f) => ({ ...f, rimborsiMensili: e.target.value }))
+                        }
+                        placeholder="0.00"
+                        className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-300"
+                      />
+                    </div>
+                  )}
+                  <div>
+                    <label className="text-xs font-medium text-gray-600 block mb-1">
+                      Benefit mensili di default (€)
+                    </label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={form.benefitMensili}
+                      onChange={(e) =>
+                        setForm((f) => ({ ...f, benefitMensili: e.target.value }))
+                      }
+                      placeholder="0.00"
+                      className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-300"
+                    />
+                  </div>
+                </div>
+                <p className="text-[11px] text-gray-400">
+                  Gli importi di default vengono proposti ogni mese nel registro pagamenti e
+                  restano modificabili voce per voce.
+                </p>
+              </div>
+            )}
 
             <div className="flex gap-3 pt-2">
               <button

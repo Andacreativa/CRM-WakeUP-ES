@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { applySplit, getSplitType } from "@/lib/finn-split";
+import { syncCommissioneFattura } from "@/lib/commissioni";
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -57,14 +58,20 @@ export async function POST(request: Request) {
       origine: body.origine || "finance",
       metodo: body.metodo || null,
       commerciale: body.commerciale || null,
+      commercialeId: body.commercialeId ? parseInt(body.commercialeId, 10) : null,
       scadenza: body.scadenza ? new Date(body.scadenza) : null,
     },
     include: { cliente: true },
   });
 
-  const splitType = getSplitType(fattura.commerciale);
-  if (splitType && fattura.pagato) {
-    await applySplit(prisma, fattura, splitType);
+  // Commerciale in anagrafica → commissione; altrimenti ripartizione storica
+  if (fattura.commercialeId) {
+    await syncCommissioneFattura(prisma, fattura.id);
+  } else {
+    const splitType = getSplitType(fattura.commerciale);
+    if (splitType && fattura.pagato) {
+      await applySplit(prisma, fattura, splitType);
+    }
   }
 
   return NextResponse.json(fattura);

@@ -53,6 +53,11 @@ export const NAV: NavSection[] = [
         label: "Dipendenti",
         icon: UserCog,
         href: "/finance/dipendenti",
+        tabs: [
+          { label: "Persone", href: "/finance/dipendenti" },
+          { label: "Pagamenti", href: "/finance/dipendenti/pagamenti" },
+          { label: "Report", href: "/finance/dipendenti/report" },
+        ],
       },
       {
         code: "documenti",

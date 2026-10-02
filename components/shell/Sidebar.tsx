@@ -64,8 +64,9 @@ export default function Sidebar({ username }: { username: string }) {
             </span>
             {!collapsed && (
               <span className="sb-brand-text">
-                <strong>Anda</strong>
-                <small>Agencia de Publicidad SL</small>
+                Anda Agencia de
+                <br />
+                Publicidad SL
               </span>
             )}
           </button>

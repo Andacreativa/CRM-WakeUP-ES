@@ -47,15 +47,19 @@ model Fattura {
   checkInvio    String         @default("in_attesa")
   origine       String         @default("finance")
   metodo        String?
-  commerciale   String?
+  commerciale   String? // storico (testo libero); oggi si usa commercialeId
+  commercialeId Int?
+  commercialeRef Dipendente?   @relation("FatturaCommerciale", fields: [commercialeId], references: [id], onDelete: SetNull)
   scadenza      DateTime?
   createdAt     DateTime       @default(now())
   altriIngressi AltroIngresso[]
   spese         Spesa[]
   acconti       Acconto[]
   richiesta     RichiestaFattura?
+  commissioni   PagamentoMensile[] @relation("CommissioneFattura")
 
   @@index([contrattoId])
+  @@index([commercialeId])
 }
 
 model Acconto {
@@ -114,6 +118,7 @@ model Spesa {
   fatturaId    Int?
   fattura      Fattura? @relation(fields: [fatturaId], references: [id], onDelete: Cascade)
   createdAt    DateTime @default(now())
+  pagamentoMensile PagamentoMensile?
 }
 
 model Fornitore {
@@ -181,8 +186,42 @@ model Dipendente {
   irpf             Float     @default(0)
   irpfImporto      Float     @default(0)
   seguridadSocial  Float     @default(0)
+  // Tipologia: dipendente | socio_dipendente | commerciale
+  tipo                   String  @default("dipendente")
+  percentualeCommissione Float   @default(0) // solo commerciale: % sulle fatture incassate
+  rimborsiMensili        Float   @default(0) // default mensile (socio dipendente)
+  benefitMensili         Float   @default(0) // default mensile
+  attivo                 Boolean @default(true)
   createdAt        DateTime  @default(now())
   pagamenti        PagamentoDipendente[]
+  pagamentiMensili PagamentoMensile[]
+  fattureCommerciale Fattura[] @relation("FatturaCommerciale")
+}
+
+// Registro pagamenti mensili per persona: una riga per voce (stipendio,
+// seguridad, irpf, rimborsi, benefit, commissioni). Ogni riga ha la sua
+// Spesa collegata, così i totali finance restano coerenti. Le commissioni
+// nascono in automatico dalle fatture incassate con commerciale assegnato.
+model PagamentoMensile {
+  id           Int        @id @default(autoincrement())
+  dipendenteId Int
+  dipendente   Dipendente @relation(fields: [dipendenteId], references: [id], onDelete: Cascade)
+  anno         Int
+  mese         Int
+  voce         String
+  importo      Float
+  data         DateTime?
+  note         String?
+  spesaId      Int?       @unique
+  spesa        Spesa?     @relation(fields: [spesaId], references: [id], onDelete: SetNull)
+  fatturaId    Int? // commissioni: fattura di origine
+  fattura      Fattura?   @relation("CommissioneFattura", fields: [fatturaId], references: [id], onDelete: Cascade)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  @@index([anno, mese])
+  @@index([dipendenteId, anno])
+  @@index([fatturaId])
 }
 
 model PagamentoDipendente {

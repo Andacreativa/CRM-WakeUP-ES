@@ -5,6 +5,7 @@ import {
   deleteSplitForFattura,
   getSplitType,
 } from "@/lib/finn-split";
+import { syncCommissioneFattura } from "@/lib/commissioni";
 
 export async function PATCH(
   request: Request,
@@ -49,6 +50,11 @@ export async function PATCH(
         ...(body.commerciale !== undefined && {
           commerciale: body.commerciale || null,
         }),
+        ...(body.commercialeId !== undefined && {
+          commercialeId: body.commercialeId
+            ? parseInt(body.commercialeId, 10)
+            : null,
+        }),
         ...(body.scadenza !== undefined && {
           scadenza: body.scadenza ? new Date(body.scadenza) : null,
         }),
@@ -71,8 +77,10 @@ export async function PATCH(
     );
 
     stage = "split-logic";
-    const beforeType = getSplitType(before.commerciale);
-    const afterType = getSplitType(fattura.commerciale);
+    // Con un commerciale in anagrafica la ripartizione storica (testo libero)
+    // non si applica: vale la commissione calcolata sulla percentuale.
+    const beforeType = before.commercialeId ? null : getSplitType(before.commerciale);
+    const afterType = fattura.commercialeId ? null : getSplitType(fattura.commerciale);
     const wasSplit = beforeType !== null && before.pagato;
     const isSplit = afterType !== null && fattura.pagato;
     const typeChanged = beforeType !== afterType;
@@ -92,6 +100,15 @@ export async function PATCH(
       stage = "delete+apply-split";
       await deleteSplitForFattura(prisma, fatturaId);
       await applySplit(prisma, fattura, afterType);
+    }
+
+    stage = "commissione";
+    if (
+      before.commercialeId !== fattura.commercialeId ||
+      before.pagato !== fattura.pagato ||
+      dataChanged
+    ) {
+      await syncCommissioneFattura(prisma, fatturaId);
     }
 
     return NextResponse.json(fattura);

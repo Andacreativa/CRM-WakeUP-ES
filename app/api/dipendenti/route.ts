@@ -1,16 +1,22 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { TIPI_DIPENDENTE } from "@/lib/dipendenti";
 
+const tipoValido = (t: unknown) =>
+  TIPI_DIPENDENTE.some((x) => x.value === t) ? String(t) : "dipendente";
+
+// ?tipo=commerciale  ?attivi=1
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
-    const annoParam = searchParams.get("anno");
-    const anno = annoParam ? parseInt(annoParam) : null;
+    const tipo = searchParams.get("tipo") || undefined;
+    const soloAttivi = searchParams.get("attivi") === "1";
     const dipendenti = await prisma.dipendente.findMany({
-      orderBy: { nome: "asc" },
-      include: {
-        pagamenti: anno && anno > 0 ? { where: { anno } } : true,
+      where: {
+        ...(tipo ? { tipo } : {}),
+        ...(soloAttivi ? { attivo: true } : {}),
       },
+      orderBy: [{ attivo: "desc" }, { nome: "asc" }],
     });
     return NextResponse.json(dipendenti);
   } catch (e) {
@@ -44,6 +50,11 @@ export async function POST(request: Request) {
         irpf: parseFloat(body.irpf) || 0,
         irpfImporto: parseFloat(body.irpfImporto) || 0,
         seguridadSocial: parseFloat(body.seguridadSocial) || 0,
+        tipo: tipoValido(body.tipo),
+        percentualeCommissione: parseFloat(body.percentualeCommissione) || 0,
+        rimborsiMensili: parseFloat(body.rimborsiMensili) || 0,
+        benefitMensili: parseFloat(body.benefitMensili) || 0,
+        attivo: body.attivo === undefined ? true : Boolean(body.attivo),
       },
     });
     return NextResponse.json(dipendente);
