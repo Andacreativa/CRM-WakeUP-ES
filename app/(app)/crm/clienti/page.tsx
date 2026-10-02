@@ -350,7 +350,7 @@ export default function ClientiPage() {
                     </td>
                     <td>
                       <span
-                        className={cn("text-[11px] font-semibold px-2 py-0.5 rounded-md", s.attivo ? "pill-ok" : "pill-off")}
+                        className={cn("tag", s.attivo ? "pill-ok" : "pill-off")}
                         title={
                           s.ultima
                             ? `Ultima fattura: ${new Date(s.ultima).toLocaleDateString("it-IT")}`

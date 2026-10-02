@@ -108,7 +108,7 @@ function LoginForm() {
       <button
         type="submit"
         disabled={loading || !username || !password}
-        className="btn btn-primary w-full .5 disabled:opacity-60"
+        className="btn btn-primary w-full disabled:opacity-60"
       >
         {loading ? "Accesso..." : "Accedi"}
       </button>

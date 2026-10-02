@@ -832,7 +832,7 @@ export default function FatturePage() {
                       return (
                         <span
                           title={`${fmt(totalePagato(f))} ricevuti / ${fmt(residuo(f))} residuo`}
-                          className="pill-partial inline-flex items-center gap-1 text-xs font-semibold px-3 py-1 rounded-full whitespace-nowrap"
+                          className="pill-partial"
                         >
                           <Wallet className="w-3 h-3" /> Acconto
                         </span>
@@ -845,7 +845,7 @@ export default function FatturePage() {
                           togglePagato(f);
                         }}
                         disabled={togglingId === f.id}
-                        className="pill-wait inline-flex items-center gap-1 text-xs font-semibold px-3 py-1 rounded-full whitespace-nowrap transition-colors disabled:opacity-60 disabled:cursor-wait"
+                        className="pill-wait disabled:opacity-60 disabled:cursor-wait"
                       >
                         <X className="w-3 h-3" /> In Attesa
                       </button>
@@ -1185,13 +1185,13 @@ export default function FatturePage() {
             <div className="flex gap-3 pt-2">
               <button
                 onClick={() => setShowForm(false)}
-                className="btn btn-secondary flex-1 .5"
+                className="btn btn-secondary flex-1"
               >
                 Annulla
               </button>
               <button
                 onClick={save}
-                className="btn btn-primary flex-1 .5"
+                className="btn btn-primary flex-1"
               >
                 {editing ? "Salva" : "Aggiungi"}
               </button>
@@ -1376,14 +1376,14 @@ function AccontoModal({
         <div className="flex gap-3 pt-2">
           <button
             onClick={onClose}
-            className="btn btn-secondary flex-1 .5"
+            className="btn btn-secondary flex-1"
           >
             Annulla
           </button>
           <button
             onClick={submit}
             disabled={saving}
-            className="btn btn-primary flex-1 .5 disabled:opacity-50"
+            className="btn btn-primary flex-1 disabled:opacity-50"
           >
             {saving ? "Salvataggio..." : "Registra"}
           </button>

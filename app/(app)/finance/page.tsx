@@ -398,7 +398,7 @@ export default function Dashboard() {
                       {fmt(f.importo ?? 0)}
                     </p>
                     <span
-                      className={`text-xs font-semibold px-2 py-0.5 rounded-full ${f.pagato ? "pill-ok" : "pill-wait"}`}
+                      className={`tag ${f.pagato ?"pill-ok" : "pill-wait"}`}
                     >
                       {f.pagato ? "Pagato" : "In attesa"}
                     </span>

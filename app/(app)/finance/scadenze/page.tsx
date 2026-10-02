@@ -380,7 +380,7 @@ export default function ScadenzePage() {
                             <span className="text-gray-400">({n}{ultimo.canale !== "email" ? ` · ${ultimo.canale}` : ""})</span>
                           </>
                         ) : f.stato === "scaduta" ? (
-                          <span className="pill-wait text-[11px] font-semibold px-2 py-0.5 rounded-md">
+                          <span className="pill-wait">
                             mai sollecitata
                           </span>
                         ) : (

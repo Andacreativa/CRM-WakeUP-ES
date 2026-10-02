@@ -226,7 +226,7 @@ export default function FornitoriPage() {
           <PageSizeSelect pageSize={pageSize} onChange={setPageSize} />
           <button
             onClick={openNew}
-            className="btn btn-primary .5"
+            className="btn btn-primary"
           >
             <Plus className="w-4 h-4" /> Nuovo Fornitore
           </button>
@@ -440,13 +440,13 @@ export default function FornitoriPage() {
             <div className="flex gap-3 pt-2">
               <button
                 onClick={() => setShowForm(false)}
-                className="btn btn-secondary flex-1 .5"
+                className="btn btn-secondary flex-1"
               >
                 Annulla
               </button>
               <button
                 onClick={save}
-                className="btn btn-primary flex-1 .5"
+                className="btn btn-primary flex-1"
               >
                 {editing ? "Salva Modifiche" : "Aggiungi"}
               </button>
@@ -571,13 +571,13 @@ function FornitoreDetailModal({
         <div className="flex gap-3 pt-2">
           <button
             onClick={onClose}
-            className="btn btn-secondary flex-1 .5"
+            className="btn btn-secondary flex-1"
           >
             Chiudi
           </button>
           <button
             onClick={onEdit}
-            className="btn btn-primary flex-1 .5"
+            className="btn btn-primary flex-1"
           >
             Modifica
           </button>
@@ -694,13 +694,13 @@ function FattureFornitoriTab({
             }}
             disabled={fatture.length === 0}
             title={fatture.length === 0 ? "Nessuna fattura nel filtro" : "Scarica ZIP"}
-            className="btn btn-secondary .5 disabled:cursor-not-allowed"
+            className="btn btn-secondary disabled:cursor-not-allowed"
           >
             <Download className="w-4 h-4" /> Scarica ZIP
           </button>
           <button
             onClick={() => setShowUpload(true)}
-            className="btn btn-primary .5"
+            className="btn btn-primary"
           >
             <Upload className="w-4 h-4" /> Carica Fattura
           </button>
@@ -1184,14 +1184,14 @@ function UploadFatturaModal({
         <div className="flex gap-3 pt-2">
           <button
             onClick={onClose}
-            className="btn btn-secondary flex-1 .5"
+            className="btn btn-secondary flex-1"
           >
             Annulla
           </button>
           <button
             onClick={submit}
             disabled={uploading || !file || !fornitoreId}
-            className="btn btn-primary flex-1 .5 disabled:opacity-60"
+            className="btn btn-primary flex-1 disabled:opacity-60"
           >
             {uploading ? "Caricamento..." : "Carica"}
           </button>

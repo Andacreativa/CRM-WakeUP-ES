@@ -94,10 +94,8 @@ type Vista = "movimenti" | "importazioni";
 type Tipo = "uscite" | "entrate";
 type FiltroStato = "da_abbinare" | "collegati" | "escluso" | "";
 
-const selectCls =
-  "text-sm border border-gray-200 rounded-lg px-2.5 py-1.5 bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-brand/30";
-const inputCls =
-  "w-full border border-gray-200 rounded-lg px-2.5 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-brand/30 disabled:bg-gray-50 disabled:text-gray-400";
+const selectCls = "sel";
+const inputCls = "sel sel-sm w-full min-w-0 disabled:bg-gray-50 disabled:text-gray-400";
 const thCls = "text-left ";
 
 const data = (iso: string | null | undefined) =>
@@ -126,10 +124,7 @@ const CON_REGISTRO = new Set(["Rimborsi", "Benefit"]);
 
 function CategoriaBadge({ categoria }: { categoria: string }) {
   return (
-    <span
-      className="text-[11px] font-semibold px-2 py-0.5 rounded-md text-gray-700"
-      style={{ background: CATEGORIE_COLORI[categoria] || "#EDEDED" }}
-    >
+    <span className="tag" style={{ background: CATEGORIE_COLORI[categoria] || "#EDEDED", color: "#1f2937" }}>
       {categoria}
     </span>
   );
@@ -204,6 +199,9 @@ export default function BancaView() {
   // ── Derivati ──
   const uscite = useMemo(() => rows.filter((r) => r.importo < 0), [rows]);
   const entrate = useMemo(() => rows.filter((r) => r.importo > 0), [rows]);
+  // Uscite "da rivedere": la tabella mostra gli abbinamenti da confermare
+  const inRevisione = tipo === "uscite" && stato === "da_abbinare";
+
   const kpi = useMemo(() => {
     const daRivedere = uscite.filter((r) => r.stato === "da_abbinare");
     const collegate = uscite.filter(collegato);
@@ -592,11 +590,26 @@ export default function BancaView() {
           {/* Tabella */}
           <div className="glass-card rounded-2xl overflow-hidden">
             <div className="overflow-x-auto">
-              <table className="tbl min-w-[1040px]">
+              <table className="tbl tbl-fixed min-w-[900px]">
+                <colgroup>
+                  {inRevisione && <col style={{ width: 36 }} />}
+                  <col style={{ width: 72 }} />
+                  <col />
+                  <col style={{ width: 104 }} />
+                  {inRevisione ? (
+                    <col style={{ width: 400 }} />
+                  ) : (
+                    <>
+                      <col style={{ width: 110 }} />
+                      <col style={{ width: "34%" }} />
+                    </>
+                  )}
+                  <col style={{ width: inRevisione ? 124 : 112 }} />
+                </colgroup>
                 <thead>
                   <tr>
-                    {tipo === "uscite" && stato === "da_abbinare" && (
-                      <th className="px-3 py-3 w-8">
+                    {inRevisione && (
+                      <th>
                         <input
                           type="checkbox"
                           checked={selezionabili.length > 0 && sel.size === selezionabili.length}
@@ -605,21 +618,18 @@ export default function BancaView() {
                         />
                       </th>
                     )}
-                    <th className={thCls}>Data</th>
-                    <th className={thCls}>Movimento</th>
-                    <th className={cn(thCls, "text-right")}>Importo</th>
-                    {tipo === "uscite" && stato === "da_abbinare" ? (
-                      <>
-                        <th className={thCls}>Categoria e fornitore</th>
-                        <th className={thCls}>Proposta</th>
-                      </>
+                    <th>Data</th>
+                    <th>Movimento</th>
+                    <th className="text-right">Importo</th>
+                    {inRevisione ? (
+                      <th>Abbinamento</th>
                     ) : (
                       <>
-                        <th className={thCls}>Stato</th>
-                        <th className={thCls}>Collegato a / nota</th>
+                        <th>Stato</th>
+                        <th>Collegato a / nota</th>
                       </>
                     )}
-                    <th className={thCls}></th>
+                    <th />
                   </tr>
                 </thead>
                 <tbody>
@@ -645,11 +655,13 @@ export default function BancaView() {
                       const e = edits[r.id];
                       const s = r.suggerimento;
                       const daRivedere = r.stato === "da_abbinare";
-                      const editing = tipo === "uscite" && stato === "da_abbinare";
+                      const editing = inRevisione;
                       const candidato = e?.candidatoId
                         ? s?.candidati.find((c) => c.id === e.candidatoId)
                         : undefined;
                       const occupato = busy === `#${r.id}`;
+                      const haCandidati = !!s && s.candidati.length > 0;
+                      const persona = e?.dipendenteId ? persone.find((d) => d.id === e.dipendenteId)?.nome : undefined;
                       return (
                         <tr key={r.id} className="align-top">
                           {editing && (
@@ -662,15 +674,13 @@ export default function BancaView() {
                               />
                             </td>
                           )}
-                          <td className="text-xs whitespace-nowrap">
-                            {dataBreve(r.dataContabile)}
-                          </td>
+                          <td className="text-xs whitespace-nowrap">{dataBreve(r.dataContabile)}</td>
                           <td>
-                            <div className="text-sm font-semibold text-gray-900 max-w-[260px] truncate" title={r.beneficiario ?? r.concetto}>
+                            <div className="tbl-primary truncate" title={r.beneficiario ?? r.concetto}>
                               {r.beneficiario ?? r.concetto}
                             </div>
                             <div
-                              className="text-xs text-gray-500 max-w-[260px] truncate"
+                              className="tbl-muted truncate"
                               title={[r.concetto, r.osservazioni].filter(Boolean).join(" · ")}
                             >
                               {r.beneficiario ? `${r.concetto} · ` : ""}
@@ -679,7 +689,7 @@ export default function BancaView() {
                           </td>
                           <td
                             className={cn(
-                              "px-3 py-3 text-right text-sm font-semibold whitespace-nowrap",
+                              "text-right font-semibold whitespace-nowrap",
                               r.importo < 0 ? "text-bad" : "text-ok",
                             )}
                           >
@@ -687,19 +697,46 @@ export default function BancaView() {
                           </td>
 
                           {editing ? (
-                            <>
-                              <td>
-                                {candidato ? (
-                                  <div className="space-y-1">
-                                    <CategoriaBadge categoria={candidato.categoria} />
-                                    <div className="text-sm text-gray-700">{candidato.fornitore}</div>
-                                  </div>
-                                ) : (
-                                  <div className="space-y-1.5 min-w-[190px]">
+                            <td>
+                              {haCandidati && (
+                                <select
+                                  value={e?.candidatoId ?? 0}
+                                  onChange={(ev) => setEdit(r.id, { candidatoId: parseInt(ev.target.value) })}
+                                  className={cn(inputCls, e?.candidatoId && "border-ok/30 bg-ok/10")}
+                                >
+                                  <option value={0}>Crea nuova spesa</option>
+                                  {s!.candidati.map((c) => (
+                                    <option key={c.id} value={c.id}>
+                                      Abbina a #{c.id} · {MESI[c.mese - 1].slice(0, 3)} {c.anno}
+                                      {c.stessoMese ? "" : " (altro mese)"} · {c.registro ?? c.fornitore}
+                                    </option>
+                                  ))}
+                                </select>
+                              )}
+                              {candidato ? (
+                                <div className="flex items-center gap-1.5 mt-1 min-w-0">
+                                  <CategoriaBadge categoria={candidato.categoria} />
+                                  <span
+                                    className="tbl-muted truncate"
+                                    title={[candidato.fornitore, candidato.descrizione].filter(Boolean).join(" · ")}
+                                  >
+                                    <span className="font-medium text-gray-700">{candidato.fornitore}</span>
+                                    {" · "}
+                                    {candidato.registro ? "già nel registro pagamenti" : "già in Spese"}
+                                    {candidato.descrizione ? ` · ${candidato.descrizione}` : ""}
+                                    {!candidato.registro && e && CON_REGISTRO.has(e.categoria) && persona
+                                      ? ` · entra nel registro come ${e.categoria.toLowerCase()} di ${persona}`
+                                      : ""}
+                                  </span>
+                                </div>
+                              ) : (
+                                <div className={cn("space-y-1", haCandidati && "mt-1")}>
+                                  <div className="flex gap-1.5">
                                     <select
                                       value={e?.categoria ?? ""}
                                       onChange={(ev) => setEdit(r.id, { categoria: ev.target.value })}
-                                      className={inputCls}
+                                      className={cn(inputCls, "w-[45%]")}
+                                      title="Categoria della spesa"
                                     >
                                       {CATEGORIE_SPESA.map((c) => (
                                         <option key={c} value={c}>
@@ -712,74 +749,45 @@ export default function BancaView() {
                                       value={e?.fornitore ?? ""}
                                       onChange={(ev) => cambiaFornitore(r.id, ev.target.value)}
                                       placeholder="Fornitore"
-                                      className={inputCls}
+                                      className={cn(inputCls, "flex-1")}
                                     />
-                                    {e && CON_REGISTRO.has(e.categoria) && (
-                                      <select
-                                        value={e.dipendenteId ?? 0}
-                                        onChange={(ev) =>
-                                          setEdit(r.id, { dipendenteId: parseInt(ev.target.value) || null })
-                                        }
-                                        className={cn(inputCls, e.dipendenteId && "border-ok/30 bg-ok/10")}
-                                        title="Persona del registro pagamenti"
-                                      >
-                                        <option value={0}>Registro: nessuna persona</option>
-                                        {persone.map((d) => (
-                                          <option key={d.id} value={d.id}>
-                                            Registro: {d.nome}
-                                          </option>
-                                        ))}
-                                      </select>
-                                    )}
-                                    {((s && s.origine !== "default") || e?.fornitoreId) && (
-                                      <div className="text-[10px] text-gray-400">
-                                        {s && s.origine !== "default"
-                                          ? `categoria da ${s.origine === "memoria" ? "memoria" : "regola"}`
-                                          : ""}
-                                        {s && s.origine !== "default" && e?.fornitoreId ? " · " : ""}
-                                        {e?.fornitoreId ? "fornitore in anagrafica" : ""}
-                                      </div>
-                                    )}
                                   </div>
-                                )}
-                              </td>
-                              <td className="min-w-[230px] max-w-[280px]">
-                                {s && s.candidati.length > 0 ? (
-                                  <>
+                                  {e && CON_REGISTRO.has(e.categoria) && (
                                     <select
-                                      value={e?.candidatoId ?? 0}
-                                      onChange={(ev) => setEdit(r.id, { candidatoId: parseInt(ev.target.value) })}
-                                      className={cn(inputCls, e?.candidatoId && "border-ok/30 bg-ok/10")}
+                                      value={e.dipendenteId ?? 0}
+                                      onChange={(ev) =>
+                                        setEdit(r.id, { dipendenteId: parseInt(ev.target.value) || null })
+                                      }
+                                      className={cn(inputCls, e.dipendenteId && "border-ok/30 bg-ok/10")}
+                                      title="Persona del registro pagamenti"
                                     >
-                                      <option value={0}>Crea nuova spesa</option>
-                                      {s.candidati.map((c) => (
-                                        <option key={c.id} value={c.id}>
-                                          Abbina a #{c.id} · {MESI[c.mese - 1].slice(0, 3)} {c.anno}
-                                          {c.stessoMese ? "" : " (altro mese)"} · {c.registro ?? c.fornitore}
+                                      <option value={0}>Registro: nessuna persona</option>
+                                      {persone.map((d) => (
+                                        <option key={d.id} value={d.id}>
+                                          Registro: {d.nome}
                                         </option>
                                       ))}
                                     </select>
-                                    {candidato && (
-                                      <div className="text-[10px] text-ok mt-0.5 truncate" title={candidato.descrizione ?? undefined}>
-                                        {candidato.registro ? "Già nel registro pagamenti" : "Già registrata in Spese"}
-                                        {candidato.descrizione ? ` · ${candidato.descrizione}` : ""}
-                                        {!candidato.registro && e && CON_REGISTRO.has(e.categoria) && e.dipendenteId
-                                          ? ` · entra nel registro come ${e.categoria.toLowerCase()} di ${persone.find((d) => d.id === e.dipendenteId)?.nome ?? "persona"}`
-                                          : ""}
-                                      </div>
-                                    )}
-                                  </>
-                                ) : (
-                                  <span className="text-xs text-gray-400">Nessuna spesa simile: ne crea una nuova</span>
-                                )}
-                              </td>
-                            </>
+                                  )}
+                                  {((s && s.origine !== "default") || e?.fornitoreId || !haCandidati) && (
+                                    <div className="tbl-muted truncate">
+                                      {!haCandidati ? "Nessuna spesa simile: ne crea una nuova" : ""}
+                                      {!haCandidati && ((s && s.origine !== "default") || e?.fornitoreId) ? " · " : ""}
+                                      {s && s.origine !== "default"
+                                        ? `categoria da ${s.origine === "memoria" ? "memoria" : "regola"}`
+                                        : ""}
+                                      {s && s.origine !== "default" && e?.fornitoreId ? " · " : ""}
+                                      {e?.fornitoreId ? "fornitore in anagrafica" : ""}
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+                            </td>
                           ) : (
                             <>
                               <td className="whitespace-nowrap">
                                 <span
                                   className={cn(
-                                    "text-[11px] font-semibold px-2 py-0.5 rounded-md",
                                     collegato(r) && "pill-ok",
                                     r.stato === "escluso" && "pill-off",
                                     daRivedere && "pill-wait",
@@ -829,17 +837,18 @@ export default function BancaView() {
                                 <button
                                   onClick={() => singolo(r)}
                                   disabled={!!busy}
-                                  className="btn btn-primary gap-1 text-xs px-2.5 disabled:opacity-50"
+                                  className="btn btn-primary btn-sm"
+                                  title={e?.candidatoId ? "Collega il movimento alla spesa scelta" : "Crea la spesa e collegala"}
                                 >
-                                  <Check className="w-3.5 h-3.5" /> {e?.candidatoId ? "Abbina" : "Crea spesa"}
+                                  <Check /> {e?.candidatoId ? "Abbina" : "Crea"}
                                 </button>
                                 <button
                                   onClick={() => azioneSingola(r, { azione: "escludi" }, "Movimento escluso")}
                                   disabled={!!busy}
-                                  className="p-1.5 text-gray-400 hover:text-gray-700 disabled:opacity-50"
+                                  className="btn btn-ghost btn-sm px-2"
                                   title="Escludi (non è una spesa)"
                                 >
-                                  <Ban className="w-4 h-4" />
+                                  <Ban />
                                 </button>
                               </div>
                             ) : collegato(r) ? (
@@ -852,25 +861,25 @@ export default function BancaView() {
                                   )
                                 }
                                 disabled={!!busy}
-                                className="inline-flex items-center gap-1 text-xs font-medium text-gray-600 border border-gray-200 px-2.5 py-1.5 rounded-lg hover:bg-gray-50 disabled:opacity-50"
+                                className="btn btn-secondary btn-sm"
                               >
-                                <Unlink className="w-3.5 h-3.5" /> Scollega
+                                <Unlink /> Scollega
                               </button>
                             ) : r.stato === "escluso" ? (
                               <button
                                 onClick={() => azioneSingola(r, { azione: "ripristina" }, "Movimento ripristinato")}
                                 disabled={!!busy}
-                                className="inline-flex items-center gap-1 text-xs font-medium text-gray-600 border border-gray-200 px-2.5 py-1.5 rounded-lg hover:bg-gray-50 disabled:opacity-50"
+                                className="btn btn-secondary btn-sm"
                               >
-                                <RotateCcw className="w-3.5 h-3.5" /> Ripristina
+                                <RotateCcw /> Ripristina
                               </button>
                             ) : (
                               <button
                                 onClick={() => azioneSingola(r, { azione: "escludi" }, "Movimento escluso")}
                                 disabled={!!busy}
-                                className="inline-flex items-center gap-1 text-xs font-medium text-gray-600 border border-gray-200 px-2.5 py-1.5 rounded-lg hover:bg-gray-50 disabled:opacity-50"
+                                className="btn btn-secondary btn-sm"
                               >
-                                <Ban className="w-3.5 h-3.5" /> Escludi
+                                <Ban /> Escludi
                               </button>
                             )}
                           </td>

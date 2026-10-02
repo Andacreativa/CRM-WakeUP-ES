@@ -100,7 +100,7 @@ export default function ImpostazioniPage() {
         <button
           onClick={salva}
           disabled={saving}
-          className="btn btn-primary .5 disabled:opacity-60"
+          className="btn btn-primary disabled:opacity-60"
         >
           <Save className="w-4 h-4" /> {saving ? "Salvataggio…" : "Salva"}
         </button>
@@ -318,7 +318,7 @@ export default function ImpostazioniPage() {
         <button
           onClick={salva}
           disabled={saving}
-          className="btn btn-primary .5 disabled:opacity-60"
+          className="btn btn-primary disabled:opacity-60"
         >
           <Save className="w-4 h-4" /> {saving ? "Salvataggio…" : "Salva impostazioni"}
         </button>

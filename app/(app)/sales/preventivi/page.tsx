@@ -502,12 +502,8 @@ export default function PreventiviPage() {
                               : "attesa";
                         quickStatus(p, next);
                       }}
-                      className="inline-flex items-center gap-1 text-xs font-medium px-3 py-1 rounded-full border transition-colors"
-                      style={{
-                        background: st.bg,
-                        color: st.text,
-                        borderColor: st.border,
-                      }}
+                      className={p.status === "accettato" ? "pill-ok" : p.status === "rifiutato" ? "pill-late" : "pill-wait"}
+                      title="Clicca per cambiare stato"
                     >
                       {p.status === "accettato" && (
                         <Check className="w-3 h-3" />
@@ -969,7 +965,7 @@ export default function PreventiviPage() {
             <div className="flex gap-3 pt-1 border-t border-gray-100">
               <button
                 onClick={() => setShowForm(false)}
-                className="btn btn-secondary flex-1 .5"
+                className="btn btn-secondary flex-1"
               >
                 Annulla
               </button>
@@ -1334,14 +1330,14 @@ function GeneraContrattoModal({
         <div className="flex gap-3 pt-2">
           <button
             onClick={onClose}
-            className="btn btn-secondary flex-1 .5"
+            className="btn btn-secondary flex-1"
           >
             Annulla
           </button>
           <button
             onClick={submit}
             disabled={saving}
-            className="btn btn-primary flex-1 .5 disabled:opacity-60"
+            className="btn btn-primary flex-1 disabled:opacity-60"
           >
             {saving ? "Generazione..." : "Genera e Scarica PDF"}
           </button>

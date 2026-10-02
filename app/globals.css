@@ -366,6 +366,95 @@
     height: 20px;
   }
 
+  /* Etichette: UNA sola forma per stati, categorie e tipi (22px, 11px,
+     angoli 6px). Stato = colore pieno (.pill-*), categoria/tipo = tinta
+     chiara (.tag-soft-*, .tag-neutral, .tag-brand). */
+  .tag,
+  .pill-ok,
+  .pill-wait,
+  .pill-partial,
+  .pill-late,
+  .pill-info,
+  .pill-off {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    height: 22px;
+    padding: 0 8px;
+    border-radius: 6px;
+    border: 1px solid transparent;
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1;
+    white-space: nowrap;
+    vertical-align: middle;
+    color: var(--text-2);
+  }
+  .tag svg,
+  .pill-ok svg,
+  .pill-wait svg,
+  .pill-partial svg,
+  .pill-late svg,
+  .pill-info svg,
+  .pill-off svg {
+    width: 12px;
+    height: 12px;
+    flex-shrink: 0;
+  }
+  .tag-neutral {
+    background: var(--bg-input);
+    color: var(--text-2);
+  }
+  .tag-outline {
+    background: #ffffff;
+    border-color: var(--border);
+    color: var(--text-3);
+  }
+  .tag-brand {
+    background: var(--brand-soft);
+    color: var(--brand-ink);
+  }
+  .tag-soft-ok {
+    background: color-mix(in oklab, var(--color-ok) 14%, white);
+    color: #15803d;
+  }
+  .tag-soft-warn {
+    background: color-mix(in oklab, var(--color-warn) 16%, white);
+    color: #b45309;
+  }
+  .tag-soft-bad {
+    background: color-mix(in oklab, var(--color-bad) 12%, white);
+    color: #b91c1c;
+  }
+  .tag-soft-info {
+    background: color-mix(in oklab, var(--color-info) 12%, white);
+    color: #1d4ed8;
+  }
+  .tag-soft-off {
+    background: var(--bg-input);
+    color: var(--text-3);
+  }
+  select.tag {
+    appearance: none;
+    padding-right: 20px;
+    cursor: pointer;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 6px center;
+  }
+
+  /* Select piccola dentro le tabelle */
+  .sel-sm {
+    height: 30px;
+    padding: 0 8px;
+    border-radius: 8px;
+    font-size: 12px;
+  }
+  /* Tabella a colonne fisse (larghezze nel colgroup): niente spezzature */
+  .tbl-fixed {
+    table-layout: fixed;
+  }
+
   /* Tabelle: righe bianche, solo hover, intestazione grigia uniforme */
   .tbl {
     width: 100%;

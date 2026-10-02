@@ -576,7 +576,7 @@ export default function RichiesteFattureView({
                         <div className="flex items-center gap-1">
                           <Link
                             href="/finance/fatture"
-                            className="pill-ok inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-1 rounded-md border"
+                            className="pill-ok"
                           >
                             <Check className="w-3 h-3" />
                             Emessa {r.fattura?.numero ? `N° ${r.fattura.numero}` : ""}
@@ -592,7 +592,7 @@ export default function RichiesteFattureView({
                       ) : r.emessa ? (
                         <button
                           onClick={() => toggle(r, "emessa")}
-                          className="pill-ok inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-1 rounded-md border"
+                          className="pill-ok"
                           title="Segnata emessa a mano: clicca per annullare"
                         >
                           <Check className="w-3 h-3" /> Emessa

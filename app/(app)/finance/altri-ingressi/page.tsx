@@ -237,11 +237,11 @@ export default function AltriIngressiPage() {
                     {r.descrizione && <div className="text-xs text-gray-500">{r.descrizione}</div>}
                   </td>
                   <td>
-                    <span className="text-[11px] font-semibold px-2 py-0.5 rounded-md bg-gray-100 text-gray-700">
+                    <span className="tag tag-neutral">
                       {CATEGORIA_INGRESSO_LABEL[categoriaDi(r)] ?? categoriaDi(r)}
                     </span>
                     {contabile && (
-                      <span className="ml-1 text-[10px] text-gray-500 bg-gray-50 border border-gray-200 px-1.5 py-0.5 rounded">
+                      <span className="tag tag-neutral ml-1">
                         solo contabile
                       </span>
                     )}

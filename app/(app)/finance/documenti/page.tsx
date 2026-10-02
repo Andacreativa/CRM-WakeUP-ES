@@ -104,7 +104,7 @@ export default function DocumentiPage() {
         </div>
         <button
           onClick={() => setShowUpload(true)}
-          className="btn btn-primary .5"
+          className="btn btn-primary"
         >
           <Upload className="w-4 h-4" /> Carica Documento
         </button>
@@ -152,7 +152,7 @@ export default function DocumentiPage() {
                   {d.nome}
                 </td>
                 <td>
-                  <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-brand/10 text-brand">
+                  <span className="tag tag-brand">
                     {d.categoria}
                   </span>
                 </td>
@@ -374,14 +374,14 @@ function UploadDocumentoModal({
         <div className="flex gap-3 pt-2">
           <button
             onClick={onClose}
-            className="btn btn-secondary flex-1 .5"
+            className="btn btn-secondary flex-1"
           >
             Annulla
           </button>
           <button
             onClick={submit}
             disabled={uploading || !file}
-            className="btn btn-primary flex-1 .5 disabled:opacity-60"
+            className="btn btn-primary flex-1 disabled:opacity-60"
           >
             {uploading ? "Caricamento..." : "Carica"}
           </button>

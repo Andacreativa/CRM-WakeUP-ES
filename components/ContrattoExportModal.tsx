@@ -413,7 +413,7 @@ export default function ContrattoExportModal({
         <div className="flex gap-3 pt-2 border-t border-gray-100">
           <button
             onClick={onClose}
-            className="btn btn-secondary flex-1 .5"
+            className="btn btn-secondary flex-1"
           >
             Annulla
           </button>

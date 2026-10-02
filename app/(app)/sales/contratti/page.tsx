@@ -51,7 +51,7 @@ interface Voce {
 const STATI = ["bozza", "inviato", "firmato"] as const;
 const STATO_COLORI: Record<string, { bg: string; text: string }> = {
   bozza: { bg: "#9ca3af", text: "#ffffff" },
-  inviato: { bg: "#f59e0b", text: "#ffffff" },
+  inviato: { bg: "#fef3c7", text: "#b45309" }, // in attesa di firma: giallo tenue come gli altri "in attesa"
   firmato: { bg: "#22c55e", text: "#ffffff" },
 };
 
@@ -232,7 +232,7 @@ export default function ContrattiPage() {
                   <td className="text-gray-900">
                     {nome}
                     {!c.cliente && (
-                      <span className="pill-wait ml-2 text-[10px] font-semibold px-1.5 py-0.5 rounded">
+                      <span className="pill-wait ml-2">
                         non collegato
                       </span>
                     )}
@@ -261,7 +261,7 @@ export default function ContrattiPage() {
                     <select
                       value={c.status}
                       onChange={(e) => updateStatus(c.id, e.target.value)}
-                      className="text-xs font-semibold px-2 py-1 rounded-full border-none outline-none cursor-pointer capitalize"
+                      className="tag cursor-pointer capitalize"
                       style={{ background: stato.bg, color: stato.text }}
                     >
                       {STATI.map((s) => (
@@ -708,7 +708,7 @@ function ContrattoFormModal({
         <div className="flex gap-3 pt-2">
           <button
             onClick={onClose}
-            className="btn btn-secondary flex-1 .5"
+            className="btn btn-secondary flex-1"
           >
             Annulla
           </button>

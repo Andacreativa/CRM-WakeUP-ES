@@ -142,17 +142,17 @@ export default function LeadDettaglioPage() {
             <select
               value={lead.stato}
               onChange={(e) => cambiaStato(e.target.value)}
-              className="text-xs font-semibold px-2.5 py-1 rounded-md border-0 outline-none cursor-pointer"
+              className="tag cursor-pointer"
               style={{ background: st.color, color: "#fff" }}
             >
               {STATI_LEAD.map((s) => (
                 <option key={s.value} value={s.value}>{s.label}</option>
               ))}
             </select>
-            <span className="text-[11px] font-semibold px-2 py-0.5 rounded-md bg-gray-100 text-gray-600">
+            <span className="tag tag-neutral">
               {QUALIFICHE_LEAD.find((q) => q.value === lead.qualifica)?.label}
             </span>
-            <span className="text-[11px] font-semibold px-2 py-0.5 rounded-md bg-gray-100 text-gray-600">
+            <span className="tag tag-neutral">
               priorità {PRIORITA_LEAD.find((p) => p.value === lead.priorita)?.label.toLowerCase()}
             </span>
           </div>
@@ -208,7 +208,7 @@ export default function LeadDettaglioPage() {
                       <span className="text-gray-900 truncate">{p.oggetto}</span>
                     </div>
                     <div className="flex items-center gap-3 shrink-0">
-                      <span className="text-[11px] font-semibold px-2 py-0.5 rounded-md bg-gray-100 text-gray-600 capitalize">{p.status}</span>
+                      <span className="tag tag-neutral capitalize">{p.status}</span>
                       <span className="font-semibold text-gray-900">{fmt(p.totale)}</span>
                     </div>
                   </div>
@@ -381,7 +381,7 @@ function Attivita({ lead, onChanged }: { lead: Lead; onChanged: () => void }) {
                   <span className="text-sm font-semibold text-gray-900">{a.oggetto ?? TIPI_ATTIVITA.find((t) => t.value === a.tipo)?.label}</span>
                   <span className="text-[11px] text-gray-400">{new Date(a.data).toLocaleString("it-IT", { dateStyle: "short", timeStyle: "short" })}</span>
                   {a.esito && (
-                    <span className={cn("text-[10px] font-semibold px-1.5 py-0.5 rounded", a.esito === "positivo" ? "pill-ok" : a.esito === "negativo" ? "pill-late" : "pill-off")}>
+                    <span className={cn("tag", a.esito === "positivo" ? "pill-ok" : a.esito === "negativo" ? "pill-late" : "pill-off")}>
                       {a.esito}
                     </span>
                   )}

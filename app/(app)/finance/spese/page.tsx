@@ -447,7 +447,7 @@ export default function SpesePage() {
                   </td>
                   <td>
                     <span
-                      className="inline-flex items-center text-xs font-semibold px-2.5 py-1 rounded-full"
+                      className="tag"
                       style={{
                         background: CATEGORIE_COLORI[s.categoria] || "#EDEDED",
                         color: CATEGORIA_TEXT,
@@ -671,14 +671,14 @@ export default function SpesePage() {
             <div className="flex gap-3 pt-2">
               <button
                 onClick={() => setShowForm(false)}
-                className="btn btn-secondary flex-1 .5"
+                className="btn btn-secondary flex-1"
               >
                 Annulla
               </button>
               <button
                 onClick={save}
                 disabled={uploading}
-                className="btn btn-primary flex-1 .5 disabled:opacity-60"
+                className="btn btn-primary flex-1 disabled:opacity-60"
               >
                 {editing ? "Salva" : "Aggiungi"}
               </button>

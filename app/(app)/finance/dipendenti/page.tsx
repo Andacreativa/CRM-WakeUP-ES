@@ -216,7 +216,7 @@ export default function DipendentiPage() {
           <SearchBox value={q} onChange={setQ} placeholder="Cerca persona…" className="w-56" />
           <button
             onClick={openNew}
-            className="btn btn-primary .5"
+            className="btn btn-primary"
           >
             <Plus className="w-4 h-4" /> Nuova persona
           </button>
@@ -294,16 +294,16 @@ export default function DipendentiPage() {
                   <span
                     className={`text-[11px] font-semibold px-2 py-0.5 rounded-md ${
                       d.tipo === "commerciale"
-                        ? "bg-brand/10 text-brand"
+                        ? "tag tag-brand"
                         : d.tipo === "socio_dipendente"
-                          ? "bg-info/10 text-info"
-                          : "bg-info/10 text-info"
+                          ? "tag tag-soft-info"
+                          : "tag tag-soft-ok"
                     }`}
                   >
                     {TIPO_LABEL[d.tipo] ?? d.tipo}
                   </span>
                   {!d.attivo && (
-                    <span className="ml-2 text-[10px] text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded">
+                    <span className="tag tag-neutral ml-2">
                       non attivo
                     </span>
                   )}
@@ -745,13 +745,13 @@ export default function DipendentiPage() {
             <div className="flex gap-3 pt-2">
               <button
                 onClick={() => setShowForm(false)}
-                className="btn btn-secondary flex-1 .5"
+                className="btn btn-secondary flex-1"
               >
                 Annulla
               </button>
               <button
                 onClick={save}
-                className="btn btn-primary flex-1 .5"
+                className="btn btn-primary flex-1"
               >
                 {editing ? "Salva" : "Aggiungi"}
               </button>

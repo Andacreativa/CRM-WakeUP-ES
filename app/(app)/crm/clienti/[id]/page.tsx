@@ -109,8 +109,8 @@ export default function ClienteDettaglioPage() {
         <div>
           <div className="flex items-center gap-2 flex-wrap">
             <h1 className="page-title">{c.nome}</h1>
-            <span className="text-[11px] font-semibold px-2 py-0.5 rounded-md bg-gray-100 text-gray-600">{c.paese}</span>
-            {c.tipoImposta && <span className="text-[11px] font-semibold px-2 py-0.5 rounded-md bg-brand/10 text-brand">{c.tipoImposta}</span>}
+            <span className="tag tag-neutral">{c.paese}</span>
+            {c.tipoImposta && <span className="tag tag-brand">{c.tipoImposta}</span>}
           </div>
           <p className="page-sub">
             {c.partitaIva ? `P.IVA ${c.partitaIva}` : "P.IVA non indicata"} · cliente dal {new Date(c.createdAt).toLocaleDateString("it-IT")}
@@ -196,7 +196,7 @@ export default function ClienteDettaglioPage() {
                         <td>{MESI[f.mese - 1]} {f.anno}</td>
                         <td className="text-gray-500">{f.scadenza ? new Date(f.scadenza).toLocaleDateString("it-IT") : "—"}</td>
                         <td>
-                          <span className={cn("text-[11px] font-semibold px-2 py-0.5 rounded-md", stato === "pagata" ? "pill-ok" : stato === "acconto" ? "pill-partial" : "pill-wait")}>{stato}</span>
+                          <span className={cn("tag", stato === "pagata" ? "pill-ok" : stato === "acconto" ? "pill-partial" : "pill-wait")}>{stato}</span>
                         </td>
                         <td className="font-semibold text-gray-900 text-right">{fmt(f.importo)}</td>
                       </tr>
@@ -223,7 +223,7 @@ export default function ClienteDettaglioPage() {
                       <span className="text-xs text-gray-400 ml-2">{MESI[r.mese - 1]} {r.anno}</span>
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
-                      <span className={cn("text-[11px] font-semibold px-2 py-0.5 rounded-md", r.fatturaId || r.emessa ? "pill-ok" : r.validazione === "ok" ? "pill-info" : "pill-wait")}>
+                      <span className={cn("tag", r.fatturaId || r.emessa ? "pill-ok" : r.validazione === "ok" ? "pill-info" : "pill-wait")}>
                         {r.fatturaId || r.emessa ? "emessa" : r.validazione === "ok" ? "da fare" : "da validare"}
                       </span>
                       <span className="font-semibold text-gray-900">{fmt(r.totale)}</span>
@@ -290,7 +290,7 @@ export default function ClienteDettaglioPage() {
                 return (
                   <Link key={l.id} href={`/crm/lead/${l.id}`} className="flex items-center justify-between text-sm hover:text-brand">
                     <span className="truncate">{l.codice ?? ""} {l.azienda ?? l.nome}</span>
-                    <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded" style={{ background: st.color, color: "#fff" }}>{st.label}</span>
+                    <span className="tag" style={{ background: st.color, color: "#fff" }}>{st.label}</span>
                   </Link>
                 );
               })}
@@ -375,7 +375,7 @@ function Referenti({
               <div className="min-w-0">
                 <span className="font-semibold text-gray-900">{r.nome}{r.cognome ? ` ${r.cognome}` : ""}</span>
                 {r.ruolo && <span className="text-gray-500"> · {r.ruolo}</span>}
-                {r.principale && <span className="pill-wait ml-2 text-[10px] font-semibold px-1.5 py-0.5 rounded">principale</span>}
+                {r.principale && <span className="pill-wait ml-2">principale</span>}
                 <div className="text-xs text-gray-500">{[r.email, r.telefono].filter(Boolean).join(" · ") || "—"}</div>
               </div>
               <div className="flex items-center gap-1 shrink-0">

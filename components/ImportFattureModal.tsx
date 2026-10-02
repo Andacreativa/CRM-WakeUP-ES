@@ -398,13 +398,13 @@ export default function ImportFattureModal({
             <div className="flex gap-3 pt-1">
               <button
                 onClick={reset}
-                className="btn btn-secondary flex-1 .5"
+                className="btn btn-secondary flex-1"
               >
                 Importa altro file
               </button>
               <button
                 onClick={close}
-                className="btn btn-primary flex-1 .5"
+                className="btn btn-primary flex-1"
               >
                 Chiudi
               </button>

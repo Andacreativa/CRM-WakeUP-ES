@@ -191,12 +191,12 @@ export default function ContattiPage() {
                 <td>
                   {c.cliente ? (
                     <Link href={`/crm/clienti/${c.cliente.id}`} className="inline-flex items-center gap-1.5 hover:text-brand">
-                      <span className="pill-ok text-[10px] font-semibold px-1.5 py-0.5 rounded">cliente</span>
+                      <span className="tag tag-soft-ok">cliente</span>
                       {c.cliente.nome}
                     </Link>
                   ) : c.lead ? (
                     <Link href={`/crm/lead/${c.lead.id}`} className="inline-flex items-center gap-1.5 hover:text-brand">
-                      <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-info/10 text-info">lead</span>
+                      <span className="tag tag-soft-info">lead</span>
                       {c.lead.azienda ?? c.lead.nome}
                     </Link>
                   ) : (
@@ -209,7 +209,7 @@ export default function ContattiPage() {
                   {c.clienteId && (
                     <button
                       onClick={() => !c.principale && setPrincipale(c)}
-                      className={cn("inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-md", c.principale ? "pill-wait" : "text-gray-400 hover:text-warn")}
+                      className={cn("tag", c.principale ? "pill-wait" : "text-gray-400 hover:text-warn")}
                       title={c.principale ? "Referente principale" : "Imposta come principale"}
                     >
                       <Star className="w-3 h-3" /> {c.principale ? "principale" : ""}

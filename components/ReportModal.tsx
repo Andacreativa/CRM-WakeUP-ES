@@ -755,20 +755,20 @@ export default function ReportModal({ open, onClose, initialAnno }: Props) {
         <div className="flex gap-3 pt-2">
           <button
             onClick={onClose}
-            className="btn btn-secondary flex-1 .5"
+            className="btn btn-secondary flex-1"
           >
             Chiudi
           </button>
           <button
             onClick={handleExportExcel}
-            className="btn btn-secondary flex-1 .5"
+            className="btn btn-secondary flex-1"
           >
             <FileSpreadsheet className="w-4 h-4 text-ok" />
             Esporta Excel
           </button>
           <button
             onClick={handleExportPDF}
-            className="btn btn-primary flex-1 .5"
+            className="btn btn-primary flex-1"
           >
             <Download className="w-4 h-4" />
             Esporta PDF
