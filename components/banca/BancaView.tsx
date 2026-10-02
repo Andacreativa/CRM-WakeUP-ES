@@ -205,14 +205,18 @@ export default function BancaView() {
   const kpi = useMemo(() => {
     const daRivedere = uscite.filter((r) => r.stato === "da_abbinare");
     const collegate = uscite.filter(collegato);
+    const entrateDaRivedere = entrate.filter((r) => r.stato === "da_abbinare");
+    const entrateCollegate = entrate.filter(collegato);
     const somma = (a: Movimento[]) => a.reduce((t, r) => t + Math.abs(r.importo), 0);
     return {
       daRivedere: daRivedere.length,
       daRivedereTot: somma(daRivedere),
       collegate: collegate.length,
       collegateTot: somma(collegate),
-      entrate: entrate.length,
-      entrateTot: somma(entrate),
+      entrateDaRivedere: entrateDaRivedere.length,
+      entrateDaRivedereTot: somma(entrateDaRivedere),
+      entrateCollegate: entrateCollegate.length,
+      entrateCollegateTot: somma(entrateCollegate),
       ultimo: importazioni[0] ?? null,
     };
   }, [uscite, entrate, importazioni]);
@@ -379,6 +383,9 @@ export default function BancaView() {
           <p className="page-sub">
             Estratto conto BBVA{kpi.ultimo?.conto ? ` · ${kpi.ultimo.conto}` : ""}
             {anno > 0 ? ` · ${anno}` : " · tutti gli anni"}
+            {kpi.ultimo
+              ? ` · ultimo estratto ${data(kpi.ultimo.createdAt)} (${data(kpi.ultimo.periodoDa)} – ${data(kpi.ultimo.periodoA)})`
+              : " · nessun estratto caricato"}
           </p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
@@ -410,6 +417,18 @@ export default function BancaView() {
       <KpiGrid cols={4}>
         {[
           {
+            label: "Entrate da abbinare",
+            value: String(kpi.entrateDaRivedere),
+            sub: fmt(kpi.entrateDaRivedereTot),
+            color: "#e8308a",
+          },
+          {
+            label: "Entrate abbinate",
+            value: String(kpi.entrateCollegate),
+            sub: fmt(kpi.entrateCollegateTot),
+            color: "#22c55e",
+          },
+          {
             label: "Uscite da rivedere",
             value: String(kpi.daRivedere),
             sub: fmt(kpi.daRivedereTot),
@@ -420,15 +439,6 @@ export default function BancaView() {
             value: String(kpi.collegate),
             sub: fmt(kpi.collegateTot),
             color: "#22c55e",
-          },
-          { label: "Entrate", value: String(kpi.entrate), sub: fmt(kpi.entrateTot), color: "#3b82f6" },
-          {
-            label: "Ultimo import",
-            value: kpi.ultimo ? data(kpi.ultimo.createdAt) : "—",
-            sub: kpi.ultimo
-              ? `${data(kpi.ultimo.periodoDa)} – ${data(kpi.ultimo.periodoA)}`
-              : "nessun estratto caricato",
-            color: "#374151",
           },
         ].map((k) => (
           <Kpi key={k.label} label={k.label} value={k.value} color={k.color} sub={k.sub} />
