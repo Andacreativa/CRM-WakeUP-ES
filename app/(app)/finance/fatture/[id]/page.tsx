@@ -37,6 +37,7 @@ import {
   dataIt,
   gestitaVf,
   correggibileVf,
+  sostituita,
   TIPI_RETTIFICA,
 } from "@/lib/fatture";
 import type { ImpostazioniFatture } from "@/lib/impostazioni";
@@ -342,6 +343,10 @@ export default function FatturaPage() {
             <span className="pill-off" title="Non è ancora una fattura: non ha numero e si può modificare o eliminare">
               <Pencil /> Bozza
             </span>
+          ) : stato === "annullata" && sostituita(f) ? (
+            <span className="pill-off" title="Sostituita da una rettificativa: resta nel registro, fuori dai totali">
+              <Receipt /> Rettificata{f.annullataIl ? ` il ${dataIt(f.annullataIl)}` : ""}
+            </span>
           ) : stato === "annullata" ? (
             <span className="pill-off">
               <Ban /> Annullata{f.annullataIl ? ` il ${dataIt(f.annullataIl)}` : ""}
@@ -364,7 +369,7 @@ export default function FatturaPage() {
           {gestita && <StatoVf stato={f.vfStato} />}
           {f.rettificaDi && (
             <Link href={`/finance/fatture/${f.rettificaDi.id}`} className="tag tag-brand hover:underline">
-              Rettifica di {f.rettificaDi.numero ?? "—"}
+              {f.tipoRettifica === "S" ? "Sostituisce" : "Rettifica di"} {f.rettificaDi.numero ?? "—"}
             </Link>
           )}
           {!f.richiesta && !f.rettificaDi && <span className="tag tag-soft-warn">Creata manualmente</span>}
@@ -448,7 +453,7 @@ export default function FatturaPage() {
             <Ban /> Annulla
           </button>
         )}
-        {f.annullata && !gestita && (
+        {f.annullata && !gestita && !sostituita(f) && (
           <button onClick={ripristina} className="btn btn-secondary">
             <RotateCcw /> Ripristina
           </button>
@@ -664,7 +669,9 @@ export default function FatturaPage() {
                 <Receipt className="w-4 h-4 text-brand shrink-0" />
                 <span className="flex-1 min-w-0">
                   Rettificativa {r.numero ?? "(bozza)"}
-                  <span className="block text-[11px] text-gray-500">{fmt(r.importo)}</span>
+                  <span className="block text-[11px] text-gray-500">
+                    {fmt(r.importo)} · {r.tipoRettifica === "S" ? "per sostituzione" : "per differenze"}
+                  </span>
                 </span>
                 <ArrowRight className="w-4 h-4 text-gray-400 shrink-0" />
               </Link>
@@ -733,8 +740,8 @@ export default function FatturaPage() {
           numero={numero}
           busy={busy}
           onClose={() => setRettifica(false)}
-          onConferma={async (tipo, totale) => {
-            const b = await azione("rettifica", { tipo, totale });
+          onConferma={async (tipo, modo) => {
+            const b = await azione("rettifica", { tipo, modo });
             if (!b) return;
             setRettifica(false);
             router.push(`/finance/fatture/${b.id}`);
@@ -839,7 +846,8 @@ function SchedaVf({
   );
 }
 
-// Scelta della rettificativa: storno totale o correzione parziale
+// Scelta della rettificativa: la rifaccio giusta (sostituzione), la storno
+// tutta o scrivo solo la differenza
 function RettificaModal({
   numero,
   busy,
@@ -849,9 +857,9 @@ function RettificaModal({
   numero: string;
   busy: boolean;
   onClose: () => void;
-  onConferma: (tipo: string, totale: boolean) => void;
+  onConferma: (tipo: string, modo: string) => void;
 }) {
-  const [totale, setTotale] = useState(true);
+  const [modo, setModo] = useState("sostituzione");
   const [tipo, setTipo] = useState("R1");
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
@@ -863,20 +871,33 @@ function RettificaModal({
         </p>
         <div className="space-y-2">
           {[
-            { v: true, t: "Storno totale", d: "Stesse righe col segno meno: la fattura torna a zero." },
-            { v: false, t: "Correzione parziale", d: "Scrivi tu la differenza (in più o in meno)." },
+            {
+              v: "sostituzione",
+              t: "La rifaccio giusta (sostituzione)",
+              d: "La rettificativa porta la fattura corretta per intero e prende il posto di questa.",
+            },
+            {
+              v: "storno",
+              t: "La storno tutta (differenze)",
+              d: "Stesse righe col segno meno: la fattura torna a zero.",
+            },
+            {
+              v: "parziale",
+              t: "Correggo solo una parte (differenze)",
+              d: "Scrivi tu la differenza, in più o in meno.",
+            },
           ].map((o) => (
             <label
-              key={String(o.v)}
+              key={o.v}
               className={cn(
                 "flex items-start gap-2.5 rounded-lg border px-3 py-2.5 cursor-pointer",
-                totale === o.v ? "border-brand bg-brand/5" : "border-gray-200",
+                modo === o.v ? "border-brand bg-brand/5" : "border-gray-200",
               )}
             >
               <input
                 type="radio"
-                checked={totale === o.v}
-                onChange={() => setTotale(o.v)}
+                checked={modo === o.v}
+                onChange={() => setModo(o.v)}
                 className="mt-1 accent-pink-600"
               />
               <span className="text-[13px] text-gray-900">
@@ -900,7 +921,7 @@ function RettificaModal({
           <button onClick={onClose} className="btn btn-secondary flex-1">
             Annulla
           </button>
-          <button onClick={() => onConferma(tipo, totale)} disabled={busy} className="btn btn-primary flex-1">
+          <button onClick={() => onConferma(tipo, modo)} disabled={busy} className="btn btn-primary flex-1">
             Prepara la bozza
           </button>
         </div>

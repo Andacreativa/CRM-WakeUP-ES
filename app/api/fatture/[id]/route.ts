@@ -30,7 +30,7 @@ export async function GET(
       },
       rettificaDi: { select: { id: true, numero: true, data: true } },
       rettifiche: {
-        select: { id: true, numero: true, stato: true, importo: true },
+        select: { id: true, numero: true, stato: true, importo: true, tipoRettifica: true, annullata: true },
         orderBy: { id: "asc" },
       },
       registriVerifactu: {
@@ -75,10 +75,22 @@ export async function PATCH(
     stage = "find-before";
     const before = await prisma.fattura.findUnique({
       where: { id: fatturaId },
-      include: { _count: { select: { acconti: true } } },
+      include: {
+        _count: { select: { acconti: true } },
+        rettifiche: { select: { stato: true, tipoRettifica: true, annullata: true, numero: true } },
+      },
     });
     if (!before) {
       return NextResponse.json({ error: "Not found" }, { status: 404 });
+    }
+    const sostituta = before.rettifiche.find(
+      (r) => r.stato === "emessa" && r.tipoRettifica === "S" && !r.annullata,
+    );
+    if (body.annullata === false && sostituta) {
+      return NextResponse.json(
+        { error: `La fattura è sostituita dalla rettificativa ${sostituta.numero}: non si ripristina.` },
+        { status: 409 },
+      );
     }
     // Una fattura con incassi non si annulla: prima si tolgono gli incassi
     if (body.annullata === true && (before.pagato || before._count.acconti > 0)) {
@@ -214,6 +226,20 @@ export async function PATCH(
     console.log(
       `[PATCH /api/fatture/${fatturaId}] update OK pagato=${fattura.pagato} commerciale=${fattura.commerciale}`,
     );
+
+    // Rettificativa per sostituzione annullata o ripristinata a mano: la
+    // fattura che sostituisce rientra nei totali o ne esce
+    if (
+      body.annullata !== undefined &&
+      before.stato === "emessa" &&
+      before.tipoRettifica === "S" &&
+      before.rettificaDiId
+    ) {
+      await prisma.fattura.update({
+        where: { id: before.rettificaDiId },
+        data: { annullata: !body.annullata, annullataIl: body.annullata ? null : new Date() },
+      });
+    }
 
     const dataChanged =
       before.importo !== fattura.importo ||

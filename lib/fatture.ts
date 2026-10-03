@@ -50,7 +50,9 @@ export interface Fattura {
   voci: string; // JSON, vedi leggiVoci
   causaIgic: string | null;
   tipoFattura: string; // F1 | R1…R4
+  tipoRettifica: string | null; // S (sostituzione) | I (differenze)
   rettificaDiId: number | null;
+  rettifiche?: RettificaMin[];
   vfStato: string | null;
   vfQr: string | null;
   acconti: Acconto[];
@@ -67,9 +69,22 @@ export interface FatturaDettaglio extends Fattura {
     email: string | null;
   } | null;
   rettificaDi: { id: number; numero: string | null; data: string | null } | null;
-  rettifiche: { id: number; numero: string | null; stato: string; importo: number }[];
+  rettifiche: RettificaMin[];
   registriVerifactu: RegistroVf[];
 }
+export interface RettificaMin {
+  id: number;
+  numero: string | null;
+  stato: string;
+  importo: number;
+  tipoRettifica: string | null;
+  annullata: boolean;
+}
+// Sostituita da una rettificativa emessa: resta nel registro, fuori dai totali
+export const sostituita = (f: { annullata?: boolean; rettifiche?: RettificaMin[] }) =>
+  !!f.annullata &&
+  !!f.rettifiche?.some((r) => r.stato === "emessa" && r.tipoRettifica === "S" && !r.annullata);
+
 // Un registro VeriFactu della fattura (emissione, correzione, annullamento)
 export interface RegistroVf {
   id: number;

@@ -26,6 +26,9 @@ export async function GET(request: Request) {
       cliente: true,
       acconti: { orderBy: { data: "desc" } },
       solleciti: { orderBy: { data: "desc" }, take: 1 },
+      rettifiche: {
+        select: { id: true, numero: true, stato: true, importo: true, tipoRettifica: true, annullata: true },
+      },
       _count: { select: { solleciti: true } },
     },
     orderBy: [

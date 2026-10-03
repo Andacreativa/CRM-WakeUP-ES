@@ -101,9 +101,17 @@ export async function creaRegistroAlta(
     numSerie: f.numero,
     dataFattura: dataRegistro(f.data),
     tipoFattura: f.tipoFattura as TipoFattura,
+    tipoRettifica: f.tipoFattura !== "F1" ? (f.tipoRettifica === "S" ? "S" : "I") : undefined,
     rettificate:
       f.tipoFattura !== "F1" && f.rettificaDi
         ? [{ numSerie: f.rettificaDi.numero!, dataFattura: dataRegistro(f.rettificaDi.data!) }]
+        : undefined,
+    rettificato:
+      f.tipoFattura !== "F1" && f.tipoRettifica === "S" && f.rettificaDi
+        ? {
+            base: f.rettificaDi.importo,
+            cuota: Math.round(f.rettificaDi.importo * (Number(f.rettificaDi.iva) || 0)) / 100,
+          }
         : undefined,
     descrizione: (f.descrizione || cfg.vfDescrizioneDefault || "").trim(),
     destinatario: destinatarioDa(f.cliente, PAESE_ISO[f.cliente.paese] ?? ""),
@@ -220,6 +228,13 @@ export async function creaRegistroAnulacion(
     where: { id: fatturaId },
     data: { vfStato: "in_coda", annullata: true, annullataIl: new Date() },
   });
+  // Annullata una rettificativa per sostituzione, la fattura che sostituiva torna valida
+  if (f.tipoRettifica === "S" && f.rettificaDiId) {
+    await tx.fattura.update({
+      where: { id: f.rettificaDiId },
+      data: { annullata: false, annullataIl: null },
+    });
+  }
   return riga;
 }
 

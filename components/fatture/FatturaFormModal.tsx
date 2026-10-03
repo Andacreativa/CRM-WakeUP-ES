@@ -345,8 +345,9 @@ export default function FatturaFormModal({
                 ))}
               </select>
               <p className="text-[11px] text-gray-400 mt-1">
-                Rettifica per differenze: le righe portano la differenza rispetto alla fattura corretta
-                (col segno meno per stornare).
+                {editing?.tipoRettifica === "S"
+                  ? "Rettifica per sostituzione: scrivi la fattura com'è giusta, per intero. All'emissione prende il posto di quella sbagliata, che resta nel registro come «Rettificata»."
+                  : "Rettifica per differenze: le righe portano la differenza rispetto alla fattura corretta (col segno meno per stornare)."}
               </p>
             </div>
           )}

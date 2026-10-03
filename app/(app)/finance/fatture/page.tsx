@@ -49,6 +49,7 @@ import {
   isScaduta,
   dataIt,
   gestitaVf,
+  sostituita,
 } from "@/lib/fatture";
 import { scaricaFatturaPDF, inviaFatturaMail } from "@/lib/fattura-pdf";
 
@@ -732,7 +733,11 @@ export default function FatturePage() {
                           className="pill-off"
                           title={`Annullata${f.annullataIl ? ` il ${dataIt(f.annullataIl)}` : ""}: resta nel registro, fuori dai totali`}
                         >
-                          <Ban /> Annullata
+                          {sostituita(f) ? "Rettificata" : (
+                            <>
+                              <Ban /> Annullata
+                            </>
+                          )}
                         </button>
                       );
                     }

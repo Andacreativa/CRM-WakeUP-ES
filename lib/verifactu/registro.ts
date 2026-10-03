@@ -46,8 +46,12 @@ export interface DatiAlta {
   numSerie: string;
   dataFattura: string; // DD-MM-AAAA
   tipoFattura: TipoFattura;
-  // Rettificativa per differenze: gli importi sono la differenza
+  // Rettificativa. S = per sostituzione: gli importi sono quelli giusti per
+  // intero e «rettificato» porta base e quota della fattura corretta.
+  // I = per differenze: gli importi sono la sola differenza.
+  tipoRettifica?: "S" | "I";
   rettificate?: { numSerie: string; dataFattura: string }[];
+  rettificato?: { base: number; cuota: number };
   descrizione: string;
   destinatario: Destinatario;
   claveRegimen: string; // lista L8B per l'IGIC: 01 = regime generale
@@ -169,6 +173,8 @@ export function erroriAlta(d: DatiAlta): string[] {
   if (d.aliquota > 0 && d.causa) e.push("Con un'aliquota non si indica una causa di esenzione.");
   if (d.tipoFattura !== "F1" && !d.rettificate?.length)
     e.push("La rettificativa deve indicare la fattura che corregge.");
+  if (d.tipoFattura !== "F1" && d.tipoRettifica === "S" && !d.rettificato)
+    e.push("La rettificativa per sostituzione deve portare gli importi della fattura che sostituisce.");
   return e;
 }
 
@@ -250,7 +256,7 @@ export function registroAlta(
   const rettifica =
     d.tipoFattura === "F1"
       ? ""
-      : el("TipoRectificativa", "I") +
+      : el("TipoRectificativa", d.tipoRettifica === "S" ? "S" : "I") +
         `<sum1:FacturasRectificadas>` +
         (d.rettificate ?? [])
           .map(
@@ -258,7 +264,10 @@ export function registroAlta(
               `<sum1:IDFacturaRectificada>${el("IDEmisorFactura", d.nifEmittente)}${el("NumSerieFactura", r.numSerie)}${el("FechaExpedicionFactura", r.dataFattura)}</sum1:IDFacturaRectificada>`,
           )
           .join("") +
-        `</sum1:FacturasRectificadas>`;
+        `</sum1:FacturasRectificadas>` +
+        (d.tipoRettifica === "S" && d.rettificato
+          ? `<sum1:ImporteRectificacion>${el("BaseRectificada", importo(d.rettificato.base))}${el("CuotaRectificada", importo(d.rettificato.cuota))}</sum1:ImporteRectificacion>`
+          : "");
 
   const xml =
     `<sum1:RegistroAlta>` +

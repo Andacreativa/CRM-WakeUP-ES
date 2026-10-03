@@ -29,6 +29,7 @@ const T = {
     rettificativa: "FATTURA RETTIFICATIVA",
     bozza: "BOZZA",
     rettifica: "Rettifica la fattura n. {numero} del {data}",
+    sostituisce: "Rettifica e sostituisce la fattura n. {numero} del {data}",
     numero: "N. fattura",
     data: "Data fattura",
     scadenza: "Scadenza",
@@ -51,6 +52,7 @@ const T = {
     rettificativa: "FACTURA RECTIFICATIVA",
     bozza: "BORRADOR",
     rettifica: "Rectifica la factura n.º {numero} de fecha {data}",
+    sostituisce: "Rectifica y sustituye la factura n.º {numero} de fecha {data}",
     numero: "Nº de factura",
     data: "Fecha factura",
     scadenza: "Fecha vencimiento",
@@ -73,6 +75,7 @@ const T = {
     rettificativa: "CORRECTIVE INVOICE",
     bozza: "DRAFT",
     rettifica: "Corrects invoice no. {numero} dated {data}",
+    sostituisce: "Corrects and replaces invoice no. {numero} dated {data}",
     numero: "Invoice no.",
     data: "Invoice date",
     scadenza: "Due date",
@@ -355,7 +358,10 @@ async function creaFatturaPDF(f: FatturaDettaglio, cfg: ImpostazioniFatture) {
     doc.setFont("helvetica", "italic");
     doc.setFontSize(8.5);
     doc.setTextColor(...GRAY);
-    const t = compilaTesto(L.rettifica, { numero: f.rettificaDi.numero, data: data(f.rettificaDi.data) });
+    const t = compilaTesto(f.tipoRettifica === "S" ? L.sostituisce : L.rettifica, {
+      numero: f.rettificaDi.numero,
+      data: data(f.rettificaDi.data),
+    });
     doc.text(doc.splitTextToSize(t, W - MR - xD) as string[], xD, yd - 1);
     yd += 6;
   }

@@ -25,7 +25,10 @@ export async function POST(
         await blocca(tx);
         const f = await tx.fattura.findUnique({
           where: { id: fatturaId },
-          include: { richiesta: { select: { id: true } } },
+          include: {
+            richiesta: { select: { id: true } },
+            rettificaDi: { select: { id: true, numero: true, pagato: true, _count: { select: { acconti: true } } } },
+          },
         });
         if (!f) throw new ErroreFattura(["Fattura non trovata."], 404);
         if (f.stato !== "bozza") throw new ErroreFattura(["La fattura è già emessa."], 409);
@@ -36,6 +39,12 @@ export async function POST(
         const data = f.data ?? oggi;
         if (data > oggi) throw new ErroreFattura(["La data di emissione non può essere futura."]);
         const rettifica = f.tipoFattura !== "F1";
+        const sostituisce = rettifica && f.tipoRettifica === "S" ? f.rettificaDi : null;
+        if (sostituisce && (sostituisce.pagato || sostituisce._count.acconti > 0))
+          throw new ErroreFattura(
+            [`La fattura ${sostituisce.numero} ha incassi o è segnata incassata: toglili prima di sostituirla.`],
+            409,
+          );
         // Con VeriFactu il numero lo assegna sempre il sistema
         const numero =
           (ambiente ? "" : body.numero?.trim()) ||
@@ -75,6 +84,13 @@ export async function POST(
           });
         }
         if (ambiente) await creaRegistroAlta(tx, fatturaId, cfg, ambiente);
+        // Sostituita: resta nel registro col suo numero, fuori da totali e scadenze
+        if (sostituisce) {
+          await tx.fattura.update({
+            where: { id: sostituisce.id },
+            data: { annullata: true, annullataIl: new Date() },
+          });
+        }
       },
       { timeout: 20_000, maxWait: 10_000 },
     );
