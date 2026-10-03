@@ -1,10 +1,5 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import {
-  applySplit,
-  deleteSplitForFattura,
-  getSplitType,
-} from "@/lib/finn-split";
 import { syncCommissioneFattura } from "@/lib/commissioni";
 
 // Scheda della singola fattura (pannello «Fattura N°» come in Northstar):
@@ -130,31 +125,11 @@ export async function PATCH(
       `[PATCH /api/fatture/${fatturaId}] update OK pagato=${fattura.pagato} commerciale=${fattura.commerciale}`,
     );
 
-    stage = "split-logic";
-    // Con un commerciale in anagrafica la ripartizione storica (testo libero)
-    // non si applica: vale la commissione calcolata sulla percentuale.
-    const beforeType = before.commercialeId ? null : getSplitType(before.commerciale);
-    const afterType = fattura.commercialeId ? null : getSplitType(fattura.commerciale);
-    const wasSplit = beforeType !== null && before.pagato;
-    const isSplit = afterType !== null && fattura.pagato;
-    const typeChanged = beforeType !== afterType;
     const dataChanged =
       before.importo !== fattura.importo ||
       before.mese !== fattura.mese ||
       before.anno !== fattura.anno ||
       before.clienteId !== fattura.clienteId;
-
-    if (wasSplit && !isSplit) {
-      stage = "delete-split";
-      await deleteSplitForFattura(prisma, fatturaId);
-    } else if (!wasSplit && isSplit) {
-      stage = "apply-split";
-      await applySplit(prisma, fattura, afterType);
-    } else if (wasSplit && isSplit && (dataChanged || typeChanged)) {
-      stage = "delete+apply-split";
-      await deleteSplitForFattura(prisma, fatturaId);
-      await applySplit(prisma, fattura, afterType);
-    }
 
     stage = "commissione";
     if (

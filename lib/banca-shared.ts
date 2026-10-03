@@ -56,6 +56,12 @@ export const REGOLE_BANCA_DEFAULT: RegolaBanca[] = [
     categoria: "Rimborsi",
     fornitore: "",
   },
+  // La carta virtuale …7737 è quella su cui si pagano le commissioni a Finn
+  {
+    pattern: "TARJETA VIRTUAL.*7737",
+    categoria: "Commissioni",
+    fornitore: "Finn Kalbhenn",
+  },
   {
     pattern: "ADEUDO MENSUAL DE TARJETA|TARJETA VIRTUAL|RECARGA|TRASPASO",
     categoria: "Carta Aziendale",
@@ -70,7 +76,7 @@ export const REGOLE_BANCA_DEFAULT: RegolaBanca[] = [
   { pattern: "RYANAIR|VUELING|EASYJET|RENFE|CABIFY", categoria: "Costi Aziendali", fornitore: "" },
   {
     pattern:
-      "GOOGLE|ANTHROPIC|OPENAI|IONOS|SQUARESPACE|SITEGROUND|ADOBE|NOTION|VERCEL|FIGMA|CANVA|MICROSOFT|ARTLIST|UDEMY",
+      "GOOGLE|ANTHROPIC|CLAUDE|OPENAI|CHATGPT|IONOS|SQUARESPACE|SITEGROUND|ADOBE|NOTION|VERCEL|FIGMA|CANVA|MICROSOFT|ARTLIST|UDEMY",
     categoria: "Software",
     fornitore: "",
   },
@@ -95,6 +101,9 @@ export interface CandidatoSpesa {
   registro: string | null; // "Stipendio · Lorenzo Vanghetti" se nasce dal registro
   stessoMese: boolean;
   punteggio: number;
+  // Più spese pagate con un solo movimento (es. 3 commissioni in una
+  // ricarica): id negativo, le spese vere sono in `ids`
+  ids?: number[];
 }
 export interface Suggerimento {
   categoria: string;

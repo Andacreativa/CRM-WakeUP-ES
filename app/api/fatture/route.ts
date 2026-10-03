@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { applySplit, getSplitType } from "@/lib/finn-split";
 import { syncCommissioneFattura } from "@/lib/commissioni";
 
 export async function GET(request: Request) {
@@ -69,14 +68,10 @@ export async function POST(request: Request) {
     include: { cliente: true },
   });
 
-  // Commerciale in anagrafica → commissione; altrimenti ripartizione storica
+  // Commerciale in anagrafica → commissione. Le quote soci per fattura
+  // (42,5 % a testa) non si fanno più: il dividendo non è per fattura.
   if (fattura.commercialeId) {
     await syncCommissioneFattura(prisma, fattura.id);
-  } else {
-    const splitType = getSplitType(fattura.commerciale);
-    if (splitType && fattura.pagato) {
-      await applySplit(prisma, fattura, splitType);
-    }
   }
 
   return NextResponse.json(fattura);

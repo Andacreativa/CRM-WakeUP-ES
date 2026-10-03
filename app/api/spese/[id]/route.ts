@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { fornitoreDellaSpesa } from "@/lib/fornitori";
+import { allineaRegistroSpesa } from "@/lib/registro";
 
 // Scheda della spesa: dati, fornitore in anagrafica, da dove nasce (registro
 // pagamenti, fattura) e movimento bancario collegato.
@@ -64,6 +65,7 @@ export async function PATCH(
       ...(body.importo !== undefined && { importo: parseFloat(body.importo) }),
     },
   });
+  await allineaRegistroSpesa(prisma, spesa.id);
   return NextResponse.json(spesa);
 }
 

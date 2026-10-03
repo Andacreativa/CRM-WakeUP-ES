@@ -5,7 +5,7 @@ import { INCLUDE_MOVIMENTO, centesimi, imparaBanca } from "@/lib/banca";
 type Ctx = { params: Promise<{ id: string }> };
 
 // POST { spesaIds: number[], forza?: boolean, impara?: boolean,
-//        registraCome?: "rimborsi" | "benefit", dipendenteId?: number }: collega
+//        registraCome?: "rimborsi" | "benefit" | "commissioni", dipendenteId?: number }: collega
 // il movimento (uscita) a una o più Spese già registrate. Senza `forza`
 // la somma delle spese deve coincidere con l'importo del movimento.
 export async function POST(request: Request, { params }: Ctx) {
@@ -62,7 +62,9 @@ export async function POST(request: Request, { params }: Ctx) {
     // Una spesa storica (es. "Soci" 500 €) che in realtà è un rimborso al socio:
     // entra nel registro pagamenti e cambia categoria, su richiesta esplicita.
     const registraCome =
-      body.registraCome === "rimborsi" || body.registraCome === "benefit" ? body.registraCome : null;
+      body.registraCome === "rimborsi" || body.registraCome === "benefit" || body.registraCome === "commissioni"
+        ? (body.registraCome as "rimborsi" | "benefit" | "commissioni")
+        : null;
     const dipendenteId = registraCome ? parseInt(body.dipendenteId, 10) || 0 : 0;
     if (registraCome && (!dipendenteId || spese.length !== 1 || spese[0].pagamentoMensile)) {
       return NextResponse.json(
@@ -86,7 +88,8 @@ export async function POST(request: Request, { params }: Ctx) {
             spesaId: sp.id,
           },
         });
-        const categoria = registraCome === "rimborsi" ? "Rimborsi" : "Benefit";
+        const categoria =
+          registraCome === "rimborsi" ? "Rimborsi" : registraCome === "benefit" ? "Benefit" : "Commissioni";
         if (sp.categoria !== categoria) {
           await tx.spesa.update({ where: { id: sp.id }, data: { categoria } });
         }

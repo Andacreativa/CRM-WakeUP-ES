@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { VOCE_DA_CATEGORIA } from "@/lib/registro";
 import { prisma } from "@/lib/prisma";
 import { CATEGORIE_SPESA, AZIENDE } from "@/lib/constants";
 import { INCLUDE_MOVIMENTO, imparaBanca, meseAnno } from "@/lib/banca";
@@ -38,9 +39,9 @@ export async function POST(request: Request, { params }: Ctx) {
     const anno = parseInt(body.anno, 10) || def.anno;
     const azienda = AZIENDE.includes(body.azienda) ? body.azienda : "Spagna";
     const dataIt = mov.dataContabile.toLocaleDateString("it-IT", { timeZone: "UTC" });
-    // Rimborsi e benefit a una persona in anagrafica entrano anche nel registro
-    const voceRegistro =
-      categoria === "Rimborsi" ? "rimborsi" : categoria === "Benefit" ? "benefit" : null;
+    // Rimborsi, benefit e commissioni a una persona in anagrafica entrano
+    // anche nel suo registro pagamenti
+    const voceRegistro = VOCE_DA_CATEGORIA[categoria] ?? null;
     const dipendenteId = voceRegistro ? parseInt(body.dipendenteId, 10) || 0 : 0;
     if (dipendenteId) {
       const d = await prisma.dipendente.findUnique({ where: { id: dipendenteId } });

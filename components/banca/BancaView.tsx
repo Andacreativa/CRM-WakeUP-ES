@@ -119,7 +119,8 @@ const editDaSuggerimento = (s: Suggerimento): Edit => ({
   candidatoId: s.candidati[0] && s.candidati[0].punteggio >= 50 ? s.candidati[0].id : 0,
   dipendenteId: s.dipendenteId,
 });
-const CON_REGISTRO = new Set(["Rimborsi", "Benefit"]);
+const CON_REGISTRO = new Set(["Rimborsi", "Benefit", "Commissioni"]);
+const VOCE_REGISTRO: Record<string, string> = { Rimborsi: "rimborsi", Benefit: "benefit", Commissioni: "commissioni" };
 
 
 function CategoriaBadge({ categoria }: { categoria: string }) {
@@ -251,17 +252,17 @@ export default function BancaView() {
     const e = edits[r.id];
     if (!e) return "Riga senza dati";
     const headers = { "Content-Type": "application/json" };
+    const scelto = e.candidatoId ? r.suggerimento?.candidati.find((c) => c.id === e.candidatoId) : undefined;
     const res = e.candidatoId
       ? await fetch(`/api/banca/movimenti/${r.id}/abbina`, {
           method: "POST",
           headers,
           body: JSON.stringify({
-            spesaIds: [e.candidatoId],
-            // spesa storica da registrare come rimborso/benefit della persona
-            ...(CON_REGISTRO.has(e.categoria) &&
-            e.dipendenteId &&
-            !r.suggerimento?.candidati.find((c) => c.id === e.candidatoId)?.registro
-              ? { registraCome: e.categoria === "Rimborsi" ? "rimborsi" : "benefit", dipendenteId: e.dipendenteId }
+            // più spese insieme (es. tre commissioni pagate con una ricarica)
+            spesaIds: scelto?.ids ?? [e.candidatoId],
+            // spesa storica da registrare come rimborso/benefit/commissione della persona
+            ...(CON_REGISTRO.has(e.categoria) && e.dipendenteId && scelto && !scelto.ids && !scelto.registro
+              ? { registraCome: VOCE_REGISTRO[e.categoria], dipendenteId: e.dipendenteId }
               : {}),
           }),
         })
@@ -718,8 +719,9 @@ export default function BancaView() {
                                   <option value={0}>Crea nuova spesa</option>
                                   {s!.candidati.map((c) => (
                                     <option key={c.id} value={c.id}>
-                                      Abbina a #{c.id} · {MESI[c.mese - 1].slice(0, 3)} {c.anno}
-                                      {c.stessoMese ? "" : " (altro mese)"} · {c.registro ?? c.fornitore}
+                                      {c.ids
+                                        ? `Abbina a ${c.ids.length} spese · ${c.registro ?? c.fornitore}`
+                                        : `Abbina a #${c.id} · ${MESI[c.mese - 1].slice(0, 3)} ${c.anno}${c.stessoMese ? "" : " (altro mese)"} · ${c.registro ?? c.fornitore}`}
                                     </option>
                                   ))}
                                 </select>

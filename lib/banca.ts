@@ -2,7 +2,6 @@ import { createHash } from "crypto";
 import * as XLSX from "xlsx";
 import type { Prisma, PrismaClient } from "@prisma/client";
 import { nomeCompleto } from "./dipendenti";
-import { applySplit, deleteSplitForFattura, getSplitType } from "./finn-split";
 import { syncCommissioneFattura } from "./commissioni";
 import {
   ESCLUDI,
@@ -360,6 +359,8 @@ export interface ContestoSuggerimenti {
   spese: SpesaCtx[];
   dipendenti: { id: number; nome: string; key: string }[];
   fornitori: { id: number; nome: string; key: string }[];
+  // commissioni già proposte a un movimento precedente: non si ripropongono
+  riservate?: Set<number>;
 }
 
 // Carica una volta sola ciò che serve per suggerire su molti movimenti:
@@ -405,22 +406,82 @@ const VOCE_LABEL: Record<string, string> = {
   commissioni: "Commissioni",
 };
 
+// Parole che non dicono COSA si rimborsa: se nel bonifico "REEMBOLSO…" a un
+// socio resta solo questo, è il rimborso spese al socio (registro); se resta
+// altro ("REEMBOLSO CLAUDE") è un costo aziendale pagato con la carta propria.
+const PAROLE_RIMBORSO = new Set([
+  "reembolso", "rembolso", "reembolsos", "rimborso", "rimborsi", "anticipo", "anticipos", "anticipi",
+  "de", "del", "la", "las", "los", "el", "di", "y", "e", "gastos", "gasto", "spese", "socio", "socios", "socia",
+  "enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "setiembre", "octubre",
+  "noviembre", "diciembre", "gennaio", "febbraio", "aprile", "maggio", "giugno", "luglio", "settembre", "ottobre",
+  "dicembre", "mes", "mese",
+]);
+const VOCI_REGISTRO = new Set(["Rimborsi", "Benefit", "Commissioni"]);
+const titolo = (s: string) => s.toLowerCase().replace(/(^|\s)\S/g, (c) => c.toUpperCase());
+
+// Sottoinsieme (dal più vecchio) di spese la cui somma è l'importo: prima
+// la singola, poi coppie, terne… fino a 5.
+function sommaSpese<T extends { importo: number }>(spese: T[], cents: number): T[] {
+  const n = Math.min(spese.length, 18);
+  const scegli = (k: number, da: number, acc: T[], somma: number): T[] | null => {
+    if (acc.length === k) return Math.abs(somma - cents) <= 1 ? acc : null;
+    for (let i = da; i < n; i++) {
+      const v = centesimi(spese[i].importo);
+      if (somma + v > cents + 1) continue;
+      const r = scegli(k, i + 1, [...acc, spese[i]], somma + v);
+      if (r) return r;
+    }
+    return null;
+  };
+  for (let k = 1; k <= 5; k++) {
+    const r = scegli(k, 0, [], 0);
+    if (r) return r;
+  }
+  return [];
+}
+
 export function suggerisci(m: MovimentoLike, ctx: ContestoSuggerimenti): Suggerimento {
   const testo = testoMovimento(m);
   const testoN = norm(testo);
   const { mese, anno } = meseAnno(m.dataContabile);
   const benefKey = chiaveMemoria(m.beneficiario);
 
-  // Persona citata nel movimento (nomine, rimborsi soci)
-  const persona = ctx.dipendenti.find((d) => d.key && testoN.includes(d.key)) ?? null;
-
   let categoria = CATEGORIA_DEFAULT;
   let fornitore = "";
+  let descrizione = pulisci(m.osservazioni) || pulisci(m.concetto);
   let origine: Suggerimento["origine"] = "default";
   let escludi = false;
   const mem = benefKey ? ctx.impostazioni.memoria[benefKey] : undefined;
   const regola = regolaPer(m, ctx.regole);
-  if (mem) {
+
+  // Persona citata nel movimento (nomine, rimborsi soci) o indicata dalla
+  // regola (la carta delle commissioni di Finn ha il suo nome come fornitore)
+  const persona =
+    ctx.dipendenti.find((d) => d.key && testoN.includes(d.key)) ??
+    (regola?.fornitore ? ctx.dipendenti.find((d) => d.key === norm(regola.fornitore)) : undefined) ??
+    null;
+
+  // Rimborso a un socio: generico = rimborso spese (registro della persona);
+  // con una specifica = costo aziendale anticipato con la carta propria.
+  const rimborso =
+    !!persona && /\b(REEMBOLSOS?|REMBOLSO|RIMBORS[OI]|ANTICIPOS?)\b/i.test(testo) && !/TARJETA/i.test(testo);
+  if (rimborso && persona) {
+    const nomePersona = new Set(norm(persona.nome).split(" "));
+    const specifica = norm(pulisci(m.osservazioni) || pulisci(m.concetto))
+      .split(" ")
+      .filter((w) => w.length > 1 && !/^\d+$/.test(w) && !PAROLE_RIMBORSO.has(w) && !nomePersona.has(w))
+      .join(" ");
+    origine = "regola";
+    if (!specifica) {
+      categoria = "Rimborsi";
+      fornitore = persona.nome;
+    } else {
+      const r = regolaPer({ ...m, concetto: specifica, beneficiario: null, osservazioni: null, codice: null }, ctx.regole);
+      categoria = r && r.categoria !== ESCLUDI && !VOCI_REGISTRO.has(r.categoria) ? r.categoria : "Costi Aziendali";
+      fornitore = (r && r.categoria !== ESCLUDI && r.fornitore) || titolo(specifica);
+      descrizione = `${titolo(specifica)} · pagata con la carta di ${persona.nome}`;
+    }
+  } else if (mem) {
     categoria = mem.categoria;
     fornitore = mem.fornitore;
     origine = "memoria";
@@ -435,8 +496,8 @@ export function suggerisci(m: MovimentoLike, ctx: ContestoSuggerimenti): Suggeri
   }
   if (!fornitore) {
     fornitore =
-      (!mascherato(m.beneficiario) ? pulisci(m.beneficiario) : "") ||
       persona?.nome ||
+      (!mascherato(m.beneficiario) ? pulisci(m.beneficiario) : "") ||
       pulisci(m.concetto);
   }
   const fornKey = norm(fornitore);
@@ -485,20 +546,70 @@ export function suggerisci(m: MovimentoLike, ctx: ContestoSuggerimenti): Suggeri
       punteggio: p,
     });
   }
+  // Commissioni di una persona: le commissioni nate dalle fatture incassate
+  // e non ancora pagate, anche di mesi prima e anche più d'una insieme
+  // (una ricarica può pagarne tre). Proposta certa se la somma torna.
+  if (categoria === "Commissioni" && persona) {
+    const aperte = ctx.spese
+      .filter(
+        (s) =>
+          !ctx.riservate?.has(s.id) &&
+          s.pagamentoMensile?.voce === "commissioni" &&
+          norm(nomeCompleto(s.pagamentoMensile.dipendente)) === persona.key,
+      )
+      .sort((a, b) => a.anno - b.anno || a.mese - b.mese || a.id - b.id);
+    const scelte = sommaSpese(aperte, cents);
+    if (scelte.length) {
+      for (const s of scelte) ctx.riservate?.add(s.id);
+      const voce = (s: (typeof scelte)[number]) =>
+        `${s.descrizione ?? s.fornitore} ${MESI_BREVI[s.mese - 1]} ${String(s.anno).slice(2)}`;
+      const proposta: CandidatoSpesa =
+        scelte.length === 1
+          ? {
+              id: scelte[0].id,
+              categoria: scelte[0].categoria,
+              fornitore: scelte[0].fornitore,
+              descrizione: voce(scelte[0]),
+              importo: scelte[0].importo,
+              mese: scelte[0].mese,
+              anno: scelte[0].anno,
+              registro: `Commissioni · ${persona.nome}`,
+              stessoMese: scelte[0].mese === mese && scelte[0].anno === anno,
+              punteggio: 90,
+            }
+          : {
+              id: -1,
+              ids: scelte.map((s) => s.id),
+              categoria: "Commissioni",
+              fornitore: persona.nome,
+              descrizione: `${scelte.length} commissioni: ${scelte.map(voce).join(", ")}`,
+              importo: scelte.reduce((t, s) => t + s.importo, 0),
+              mese: scelte[0].mese,
+              anno: scelte[0].anno,
+              registro: `Commissioni · ${persona.nome}`,
+              stessoMese: false,
+              punteggio: 90,
+            };
+      const resto = candidati.filter((c) => !(proposta.ids ?? [proposta.id]).includes(c.id));
+      candidati.splice(0, candidati.length, proposta, ...resto);
+    }
+  }
   candidati.sort((a, b) => b.punteggio - a.punteggio || a.id - b.id);
 
   return {
     categoria,
     fornitore,
     fornitoreId: fornitoreMatch?.id ?? null,
-    descrizione: pulisci(m.osservazioni) || pulisci(m.concetto),
+    descrizione,
     escludi,
     origine,
-    dipendenteId: persona?.id ?? null,
-    dipendenteNome: persona?.nome ?? null,
+    // la persona serve al registro solo per rimborsi, benefit e commissioni
+    dipendenteId: persona && VOCI_REGISTRO.has(categoria) ? persona.id : null,
+    dipendenteNome: persona && VOCI_REGISTRO.has(categoria) ? persona.nome : null,
     candidati: candidati.slice(0, 5),
   };
 }
+const MESI_BREVI = ["gen", "feb", "mar", "apr", "mag", "giu", "lug", "ago", "set", "ott", "nov", "dic"];
 
 // Include standard per le API dei movimenti
 export const INCLUDE_MOVIMENTO = {
@@ -716,8 +827,7 @@ function trovaCombinazione(fatture: FatturaCandidata[], cents: number): FatturaC
 }
 
 // ─── Effetti dell'incasso di una fattura (come il PATCH di /api/fatture) ──
-// Quando lo stato "pagato" cambia: ripartizione storica "anda" (solo senza
-// commerciale in anagrafica) e commissione del commerciale.
+// Quando lo stato "pagato" cambia: commissione del commerciale.
 export const NOTA_BANCA = "Incasso da banca";
 export const NOTA_GIA_INCASSATA = "fattura già segnata incassata a mano";
 export async function dopoCambioIncasso(prisma: PrismaClient, fatturaId: number, primaPagato: boolean) {
@@ -726,10 +836,5 @@ export async function dopoCambioIncasso(prisma: PrismaClient, fatturaId: number,
     include: { cliente: { select: { nome: true } } },
   });
   if (!f || f.pagato === primaPagato) return;
-  const tipo = f.commercialeId ? null : getSplitType(f.commerciale);
-  if (tipo) {
-    if (f.pagato) await applySplit(prisma, f, tipo);
-    else await deleteSplitForFattura(prisma, f.id);
-  }
   await syncCommissioneFattura(prisma, f.id);
 }

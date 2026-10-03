@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { allineaRegistroSpesa } from "@/lib/registro";
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -35,5 +36,7 @@ export async function POST(request: Request) {
       importo: parseFloat(body.importo),
     },
   });
+  // Rimborsi / benefit / commissioni a una persona → anche nel registro
+  await allineaRegistroSpesa(prisma, spesa.id);
   return NextResponse.json(spesa);
 }

@@ -64,8 +64,10 @@ export async function GET(request: Request) {
       const target = rows.filter((r) => r.importo < 0 && r.stato === "da_abbinare");
       if (target.length) {
         const anni = Array.from(new Set(target.map((r) => meseAnno(r.dataContabile).anno)));
-        const ctx = await caricaContestoSuggerimenti(prisma, anni);
-        for (const r of target) suggerimenti.set(r.id, suggerisci(r, ctx));
+        const ctx = { ...(await caricaContestoSuggerimenti(prisma, anni)), riservate: new Set<number>() };
+        // dal più vecchio: le commissioni pagate prima vanno ai movimenti prima
+        const perData = [...target].sort((a, b) => a.dataContabile.getTime() - b.dataContabile.getTime() || a.id - b.id);
+        for (const r of perData) suggerimenti.set(r.id, suggerisci(r, ctx));
       }
       // Entrate da rivedere (anche quelle assegnate solo in parte): proposte
       // di fatture da incassare o di altro ingresso.
