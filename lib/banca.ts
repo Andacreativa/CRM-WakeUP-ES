@@ -419,9 +419,21 @@ const PAROLE_RIMBORSO = new Set([
 const VOCI_REGISTRO = new Set(["Rimborsi", "Benefit", "Commissioni"]);
 const titolo = (s: string) => s.toLowerCase().replace(/(^|\s)\S/g, (c) => c.toUpperCase());
 
-// Sottoinsieme (dal più vecchio) di spese la cui somma è l'importo: prima
-// la singola, poi coppie, terne… fino a 5.
-function sommaSpese<T extends { importo: number }>(spese: T[], cents: number): T[] {
+// Spese (ordinate dalla più vecchia) la cui somma è l'importo. Una sola
+// spesa con l'importo esatto: la più recente non successiva al pagamento
+// (le più vecchie con lo stesso importo sono state pagate prima, magari da
+// movimenti non importati). Più spese insieme: coppie, terne… fino a 5,
+// dalle più vecchie.
+function sommaSpese<T extends { importo: number; anno: number; mese: number }>(
+  spese: T[],
+  cents: number,
+  periodo: number, // anno * 12 + mese del movimento
+): T[] {
+  const esatte = spese.filter((s) => Math.abs(centesimi(s.importo) - cents) <= 1);
+  if (esatte.length) {
+    const prima = esatte.filter((s) => s.anno * 12 + s.mese <= periodo);
+    return [prima.length ? prima[prima.length - 1] : esatte[0]];
+  }
   const n = Math.min(spese.length, 18);
   const scegli = (k: number, da: number, acc: T[], somma: number): T[] | null => {
     if (acc.length === k) return Math.abs(somma - cents) <= 1 ? acc : null;
@@ -433,7 +445,7 @@ function sommaSpese<T extends { importo: number }>(spese: T[], cents: number): T
     }
     return null;
   };
-  for (let k = 1; k <= 5; k++) {
+  for (let k = 2; k <= 5; k++) {
     const r = scegli(k, 0, [], 0);
     if (r) return r;
   }
@@ -558,7 +570,7 @@ export function suggerisci(m: MovimentoLike, ctx: ContestoSuggerimenti): Suggeri
           norm(nomeCompleto(s.pagamentoMensile.dipendente)) === persona.key,
       )
       .sort((a, b) => a.anno - b.anno || a.mese - b.mese || a.id - b.id);
-    const scelte = sommaSpese(aperte, cents);
+    const scelte = sommaSpese(aperte, cents, anno * 12 + mese);
     if (scelte.length) {
       for (const s of scelte) ctx.riservate?.add(s.id);
       const voce = (s: (typeof scelte)[number]) =>

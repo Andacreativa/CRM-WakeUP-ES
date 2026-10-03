@@ -197,7 +197,15 @@ if (!finn) {
     orderBy: [{ anno: "asc" }, { mese: "asc" }, { id: "asc" }],
   });
   const usate = new Set();
-  const somma = (lista, cents) => {
+  // stessa regola di lib/banca.ts (sommaSpese): una sola commissione con
+  // l'importo esatto = la più recente non successiva al pagamento; più
+  // commissioni insieme = dalle più vecchie
+  const somma = (lista, cents, periodo) => {
+    const esatte = lista.filter((s) => Math.abs(cent(s.importo) - cents) <= 1);
+    if (esatte.length) {
+      const prima = esatte.filter((s) => s.anno * 12 + s.mese <= periodo);
+      return [prima.length ? prima[prima.length - 1] : esatte[0]];
+    }
     const n = Math.min(lista.length, 18);
     const scegli = (k, da, acc, tot) => {
       if (acc.length === k) return Math.abs(tot - cents) <= 1 ? acc : null;
@@ -209,7 +217,7 @@ if (!finn) {
       }
       return null;
     };
-    for (let k = 1; k <= 5; k++) {
+    for (let k = 2; k <= 5; k++) {
       const r = scegli(k, 0, [], 0);
       if (r) return r;
     }
@@ -218,7 +226,7 @@ if (!finn) {
   let collegate = 0;
   for (const m of ricariche) {
     const libere = aperte.filter((s) => !usate.has(s.id));
-    const scelte = somma(libere, cent(m.importo));
+    const scelte = somma(libere, cent(m.importo), m.dataContabile.getUTCFullYear() * 12 + m.dataContabile.getUTCMonth() + 1);
     const data = m.dataContabile.toISOString().slice(0, 10);
     if (!scelte.length) {
       console.log(`  ${data} ${m.importo.toFixed(2)} € (${m.stato}): nessuna combinazione di commissioni aperte`);
