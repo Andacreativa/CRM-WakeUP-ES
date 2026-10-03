@@ -1,9 +1,12 @@
 import { fmt, MESI } from "./constants";
 import { compilaTesto, type ImpostazioniFatture } from "./impostazioni";
-import type { FatturaDettaglio } from "./fatture";
+import { leggiVoci, nonSoggetta, type FatturaDettaglio } from "./fatture";
 
 // PDF della singola fattura e messaggio email. I dati dell'emittente, la
 // lingua, il colore e i testi arrivano da Impostazioni › Fatture.
+// L'impostazione è quella delle fatture emesse finora con Billin: logo e
+// dati dell'azienda a sinistra, QR tributario a destra, Cliente e Factura
+// affiancati, tabella dei concetti, totali e metodi di pagamento.
 
 type Lingua = "it" | "es" | "en";
 type RGB = [number, number, number];
@@ -23,66 +26,90 @@ const MESI_L: Record<Lingua, string[]> = {
 const T = {
   it: {
     titolo: "FATTURA",
-    numero: "N°",
-    data: "Data",
+    rettificativa: "FATTURA RETTIFICATIVA",
+    bozza: "BOZZA",
+    rettifica: "Rettifica la fattura n. {numero} del {data}",
+    numero: "N. fattura",
+    data: "Data fattura",
     scadenza: "Scadenza",
-    emittente: "EMITTENTE",
     cliente: "CLIENTE",
-    piva: "P.IVA",
-    colonne: ["Descrizione", "Q.tà", "Prezzo", "Imposta", "Imponibile"],
+    colonne: ["Concetti", "Q.tà", "Prezzo unit.", "Imp.", "Totale"],
     servizi: "Servizi",
     imponibile: "Imponibile",
-    esente: "esente",
-    totale: "TOTALE",
-    pagamento: "PAGAMENTO",
-    metodo: "Metodo",
-    banca: "Banca",
-    note: "NOTE",
+    esente: "Esente",
+    nonSoggetta: "Non soggetta",
+    totale: "Totale",
+    pagamento: "Metodi di pagamento",
+    bonifico: "Bonifico bancario sul conto",
+    swift: "Codice SWIFT",
+    qr: "QR tributario",
+    prova: "Ambiente di prova AEAT — senza valore fiscale",
     locale: "it-IT",
   },
   es: {
     titolo: "FACTURA",
-    numero: "N.º",
-    data: "Fecha",
-    scadenza: "Vencimiento",
-    emittente: "EMISOR",
+    rettificativa: "FACTURA RECTIFICATIVA",
+    bozza: "BORRADOR",
+    rettifica: "Rectifica la factura n.º {numero} de fecha {data}",
+    numero: "Nº de factura",
+    data: "Fecha factura",
+    scadenza: "Fecha vencimiento",
     cliente: "CLIENTE",
-    piva: "NIF/CIF",
-    colonne: ["Descripción", "Cant.", "Precio", "Impuesto", "Base imponible"],
+    colonne: ["Conceptos", "Cant.", "Precio uni.", "Imp.", "Total"],
     servizi: "Servicios",
-    imponibile: "Base imponible",
-    esente: "exento",
-    totale: "TOTAL",
-    pagamento: "FORMA DE PAGO",
-    metodo: "Método",
-    banca: "Banco",
-    note: "NOTAS",
+    imponibile: "Base Imponible",
+    esente: "Exenta",
+    nonSoggetta: "No sujeta",
+    totale: "Total",
+    pagamento: "Métodos de pago",
+    bonifico: "Transferencia bancaria al número de cuenta",
+    swift: "Código SWIFT",
+    qr: "QR tributario",
+    prova: "Entorno de pruebas AEAT — sin validez fiscal",
     locale: "es-ES",
   },
   en: {
     titolo: "INVOICE",
-    numero: "No.",
-    data: "Date",
+    rettificativa: "CORRECTIVE INVOICE",
+    bozza: "DRAFT",
+    rettifica: "Corrects invoice no. {numero} dated {data}",
+    numero: "Invoice no.",
+    data: "Invoice date",
     scadenza: "Due date",
-    emittente: "FROM",
     cliente: "BILL TO",
-    piva: "VAT No.",
-    colonne: ["Description", "Qty", "Price", "Tax", "Net amount"],
+    colonne: ["Items", "Qty", "Unit price", "Tax", "Total"],
     servizi: "Services",
     imponibile: "Net amount",
-    esente: "exempt",
-    totale: "TOTAL",
-    pagamento: "PAYMENT",
-    metodo: "Method",
-    banca: "Bank",
-    note: "NOTES",
+    esente: "Exempt",
+    nonSoggetta: "Not subject",
+    totale: "Total",
+    pagamento: "Payment methods",
+    bonifico: "Bank transfer to account",
+    swift: "SWIFT code",
+    qr: "QR tributario",
+    prova: "AEAT test environment — no fiscal validity",
     locale: "en-GB",
   },
 };
 
-const METODO_L: Record<string, Record<Lingua, string>> = {
-  bonifico: { it: "Bonifico", es: "Transferencia bancaria", en: "Bank transfer" },
+// Il paese è salvato in italiano: sul PDF va nella lingua del documento
+const PAESI_L: Record<string, { es: string; en: string }> = {
+  Spagna: { es: "España", en: "Spain" },
+  Italia: { es: "Italia", en: "Italy" },
+  Francia: { es: "Francia", en: "France" },
+  Germania: { es: "Alemania", en: "Germany" },
+  Portogallo: { es: "Portugal", en: "Portugal" },
+  "Regno Unito": { es: "Reino Unido", en: "United Kingdom" },
+  Irlanda: { es: "Irlanda", en: "Ireland" },
+  "Paesi Bassi": { es: "Países Bajos", en: "Netherlands" },
+  Belgio: { es: "Bélgica", en: "Belgium" },
+  Lussemburgo: { es: "Luxemburgo", en: "Luxembourg" },
+  Austria: { es: "Austria", en: "Austria" },
+  Svizzera: { es: "Suiza", en: "Switzerland" },
+  "Stati Uniti": { es: "Estados Unidos", en: "United States" },
 };
+const paeseL = (paese: string | null | undefined, lingua: Lingua) =>
+  !paese || paese === "Altro" ? "" : lingua === "it" ? paese : (PAESI_L[paese]?.[lingua] ?? paese);
 
 export interface VoceFattura {
   descrizione: string;
@@ -93,9 +120,22 @@ export interface VoceFattura {
 
 const nomeImposta = (tipoIva: string) => (tipoIva.startsWith("igic") ? "IGIC" : "IVA");
 
-// Le voci si leggono dalla richiesta collegata quando i conti tornano con
-// l'importo della fattura; altrimenti la fattura è una riga sola.
+// Le righe sono quelle della fattura. Le fatture di prima non ne hanno: si
+// leggono dalla richiesta collegata quando i conti tornano con l'importo,
+// altrimenti la fattura è una riga sola.
 export function vociFattura(f: FatturaDettaglio, lingua: Lingua = "it"): VoceFattura[] {
+  const periodo = `${MESI_L[lingua][f.mese - 1] ?? ""} ${f.anno}`.trim();
+  const generica =
+    f.richiesta?.descrizione?.trim() || f.contratto?.oggetto?.trim() || T[lingua].servizi;
+  const proprie = leggiVoci(f.voci);
+  if (proprie.length) {
+    return proprie.map((v) => ({
+      descrizione: v.descrizione || `${generica} · ${periodo}`,
+      quantita: v.quantita,
+      prezzo: v.prezzo,
+      imponibile: Math.round(v.quantita * v.prezzo * 100) / 100,
+    }));
+  }
   if (f.richiesta) {
     try {
       const raw = JSON.parse(f.richiesta.voci || "[]") as { descrizione?: string; importo?: number }[];
@@ -115,14 +155,9 @@ export function vociFattura(f: FatturaDettaglio, lingua: Lingua = "it"): VoceFat
       /* voci non leggibili: riga unica */
     }
   }
-  const periodo = `${MESI_L[lingua][f.mese - 1] ?? ""} ${f.anno}`.trim();
-  const descrizione =
-    f.richiesta?.descrizione?.trim() ||
-    f.contratto?.oggetto?.trim() ||
-    T[lingua].servizi;
   return [
     {
-      descrizione: `${descrizione} · ${periodo}`,
+      descrizione: `${generica} · ${periodo}`,
       quantita: 1,
       prezzo: f.importo,
       imponibile: f.importo,
@@ -192,7 +227,7 @@ async function caricaLogoRifilato(
 }
 
 const nomeFilePDF = (f: { id: number; numero: string | null }) =>
-  `fattura_${(f.numero ?? String(f.id)).replace(/[^\w.-]+/g, "_")}.pdf`;
+  `fattura_${(f.numero ?? `bozza_${f.id}`).replace(/[^\w.-]+/g, "_")}.pdf`;
 
 export async function exportFatturaPDF(f: FatturaDettaglio, cfg: ImpostazioniFatture) {
   (await creaFatturaPDF(f, cfg)).save(nomeFilePDF(f));
@@ -207,191 +242,242 @@ async function creaFatturaPDF(f: FatturaDettaglio, cfg: ImpostazioniFatture) {
   const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
   const W = 210,
     H = 297,
-    ML = 16,
-    MR = 16;
+    ML = 15,
+    MR = 15;
   const ACCENT = hexToRgb(cfg.colore || "#e8308a");
-  const DARK: RGB = [17, 24, 39];
-  const GRAY: RGB = [107, 114, 128];
-  const LIGHT: RGB = [156, 163, 175];
-  const data = (d: string | null) => (d ? new Date(d).toLocaleDateString(L.locale) : "—");
+  const NAVY: RGB = [30, 41, 59];
+  const DARK: RGB = [40, 40, 40];
+  const GRAY: RGB = [85, 85, 85];
+  const FONDO: RGB = [242, 242, 242];
+  const TESTA: RGB = [158, 158, 158];
+  const data = (d: string | null) =>
+    d ? new Date(d).toLocaleDateString(L.locale, { day: "2-digit", month: "2-digit", year: "numeric" }) : "—";
+  const bozza = f.stato === "bozza";
+  const c = f.cliente;
 
-  // ── Testata: logo a sinistra, titolo e numero a destra ──────────────────
+  // ── Logo e azienda a sinistra ──────────────────────────────────────────
   const logo = cfg.logoUrl ? await caricaLogoRifilato(cfg.logoUrl) : null;
   if (logo) {
-    // Sta in un riquadro di 62×20 mm, senza deformarsi
-    const k = Math.min(62 / logo.width, 20 / logo.height);
-    doc.addImage(logo.dataUrl, "JPEG", ML, 16, logo.width * k, logo.height * k);
-  } else {
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(13);
-    doc.setTextColor(...DARK);
-    doc.text(cfg.ragioneSociale, ML, 24);
+    // Sta in un riquadro di 34×12 mm, senza deformarsi
+    const k = Math.min(34 / logo.width, 12 / logo.height);
+    doc.addImage(logo.dataUrl, "JPEG", ML + 2, 24, logo.width * k, logo.height * k);
   }
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(22);
-  doc.setTextColor(...ACCENT);
-  doc.text(L.titolo, W - MR, 22, { align: "right" });
   doc.setFontSize(11);
   doc.setTextColor(...DARK);
-  doc.text(`${L.numero} ${f.numero ?? "—"}`, W - MR, 29, { align: "right" });
+  let y = 48;
+  doc.text(cfg.ragioneSociale, ML, y);
   doc.setFont("helvetica", "normal");
-  doc.setFontSize(9);
+  doc.setFontSize(10);
   doc.setTextColor(...GRAY);
-  doc.text(`${L.data}: ${data(f.data)}`, W - MR, 35, { align: "right" });
-  if (f.scadenza) doc.text(`${L.scadenza}: ${data(f.scadenza)}`, W - MR, 40, { align: "right" });
-
-  doc.setDrawColor(...ACCENT);
-  doc.setLineWidth(0.6);
-  doc.line(ML, 46, W - MR, 46);
-
-  // ── Emittente e cliente ────────────────────────────────────────────────
-  const blocco = (x: number, titolo: string, nome: string, righe: (string | null | undefined)[]) => {
-    let y = 56;
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(7.5);
-    doc.setTextColor(...ACCENT);
-    doc.text(titolo, x, y);
-    y += 6;
-    doc.setFontSize(10.5);
-    doc.setTextColor(...DARK);
-    const nomeRighe = doc.splitTextToSize(nome, 84) as string[];
-    doc.text(nomeRighe, x, y);
-    y += nomeRighe.length * 4.8 + 0.6;
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(9);
-    doc.setTextColor(...GRAY);
-    for (const r of righe) {
-      if (!r) continue;
-      const parti = doc.splitTextToSize(r, 84) as string[];
-      doc.text(parti, x, y);
-      y += parti.length * 4.4;
-    }
-    return y;
-  };
-  const c = f.cliente;
-  const y1 = blocco(ML, L.emittente, cfg.ragioneSociale, [
-    cfg.nif ? `NIF ${cfg.nif}` : null,
+  for (const r of [
+    cfg.nif,
     cfg.indirizzo,
-    [cfg.cap, cfg.citta, cfg.provincia ? `(${cfg.provincia})` : ""].filter(Boolean).join(" "),
-    cfg.email,
-    cfg.telefono,
-  ]);
-  const y2 = blocco(W / 2 + 4, L.cliente, c?.nome ?? "—", [
-    c?.partitaIva ? `${L.piva} ${c.partitaIva}` : null,
-    c?.via,
-    [c?.cap, c?.citta, c?.provincia ? `(${c.provincia})` : ""].filter(Boolean).join(" "),
-    c?.paese,
-    c?.email,
-  ]);
+    [[cfg.cap, cfg.citta].filter(Boolean).join(" "), cfg.provincia, paeseL(cfg.paese, lingua)]
+      .filter(Boolean)
+      .join(", "),
+  ]) {
+    if (!r) continue;
+    y += 4.6;
+    doc.text(r, ML, y);
+  }
 
-  // ── Voci ───────────────────────────────────────────────────────────────
+  // ── QR tributario a destra (30×30 mm, dicitura sopra e sotto) ──────────
+  // Solo per le fatture trasmesse da qui: quelle registrate a mano hanno il
+  // loro PDF ufficiale altrove.
+  if (f.vfQr && !bozza) {
+    const { default: QRCode } = await import("qrcode");
+    const png = await QRCode.toDataURL(f.vfQr, { errorCorrectionLevel: "M", margin: 0, scale: 8 });
+    const lato = 30,
+      qx = W - MR - lato;
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(9.5);
+    doc.setTextColor(...DARK);
+    doc.text(L.qr, qx + lato / 2, 22.5, { align: "center" });
+    doc.addImage(png, "PNG", qx, 25, lato, lato);
+    doc.text("VERI*FACTU", qx + lato / 2, 60, { align: "center" });
+    if (f.vfQr.includes("prewww")) {
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(8);
+      doc.setTextColor(200, 30, 30);
+      doc.text(L.prova, W - MR, 14, { align: "right" });
+    }
+  }
+
+  // ── Cliente e Factura affiancati ───────────────────────────────────────
+  const xD = 121;
+  const rett = f.tipoFattura !== "F1";
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(13);
+  doc.setTextColor(...NAVY);
+  doc.text(L.cliente, ML, 76);
+  doc.text(rett ? L.rettificativa : L.titolo, xD, 76);
+  if (bozza) {
+    doc.setTextColor(...ACCENT);
+    doc.text(L.bozza, W - MR, 76, { align: "right" });
+  }
+
+  doc.setFontSize(10.5);
+  doc.setTextColor(...DARK);
+  let yc = 84.5;
+  const nome = doc.splitTextToSize(c?.nome ?? "—", xD - ML - 8) as string[];
+  doc.text(nome, ML, yc);
+  yc += nome.length * 4.8 - 0.4;
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(10);
+  doc.setTextColor(...GRAY);
+  for (const r of [
+    c?.partitaIva,
+    c?.via,
+    [[c?.cap, c?.citta].filter(Boolean).join(" "), c?.provincia, paeseL(c?.paese, lingua)]
+      .filter(Boolean)
+      .join(", "),
+  ]) {
+    if (!r) continue;
+    const parti = doc.splitTextToSize(r, xD - ML - 8) as string[];
+    doc.text(parti, ML, yc);
+    yc += parti.length * 4.5;
+  }
+
+  let yd = 84.5;
+  const rigaDato = (etichetta: string, valore: string, forte = false) => {
+    doc.setFont("helvetica", forte ? "bold" : "normal");
+    doc.setFontSize(10.5);
+    doc.setTextColor(...(forte ? DARK : GRAY));
+    doc.text(etichetta, xD, yd);
+    doc.text(valore, W - MR, yd, { align: "right" });
+    yd += 6.8;
+  };
+  rigaDato(L.numero, f.numero ?? "—", true);
+  rigaDato(L.data, data(f.data));
+  if (f.scadenza) rigaDato(L.scadenza, data(f.scadenza));
+  if (rett && f.rettificaDi?.numero) {
+    doc.setFont("helvetica", "italic");
+    doc.setFontSize(8.5);
+    doc.setTextColor(...GRAY);
+    const t = compilaTesto(L.rettifica, { numero: f.rettificaDi.numero, data: data(f.rettificaDi.data) });
+    doc.text(doc.splitTextToSize(t, W - MR - xD) as string[], xD, yd - 1);
+    yd += 6;
+  }
+
+  // ── Descrizione dell'operazione ────────────────────────────────────────
+  y = Math.max(yc, yd) + 6;
+  const descr = (f.descrizione || cfg.vfDescrizioneDefault || "").trim();
+  if (descr) {
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(10);
+    doc.setTextColor(...DARK);
+    const righe = doc.splitTextToSize(descr, W - ML - MR) as string[];
+    doc.text(righe, ML, y);
+    y += righe.length * 4.6 + 3;
+  }
+
+  // ── Concetti: testata grigia, corpo su fondo chiaro ────────────────────
   const imposta = nomeImposta(f.tipoIva);
-  const etichettaImposta = f.iva > 0 ? `${imposta} ${f.iva}%` : `${imposta} ${L.esente}`;
+  const zero = !(f.iva > 0);
+  const etichettaZero = nonSoggetta(f.causaIgic) ? L.nonSoggetta : L.esente;
+  const num = (n: number) => n.toLocaleString("it-IT", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   const voci = vociFattura(f, lingua);
+  const tot = totaliFattura(f);
+  // Il fondo chiaro arriva fino ai totali, come un foglio unico
+  const yTotali = 226;
   autoTable(doc, {
     head: [L.colonne],
     body: voci.map((v) => [
       v.descrizione,
-      String(v.quantita),
+      num(v.quantita),
       fmt(v.prezzo),
-      f.iva > 0 ? `${f.iva}%` : "0%",
+      zero ? etichettaZero : `${f.iva} %`,
       fmt(v.imponibile),
     ]),
-    startY: Math.max(y1, y2) + 8,
-    styles: { fontSize: 9, cellPadding: 3.2, textColor: [55, 65, 81] },
-    headStyles: { fillColor: [249, 250, 251], textColor: GRAY, fontStyle: "bold", fontSize: 7.5 },
+    startY: y,
+    styles: { fontSize: 9.5, cellPadding: { top: 3.4, bottom: 3.4, left: 2.6, right: 2.6 }, textColor: DARK },
+    headStyles: { fillColor: TESTA, textColor: [255, 255, 255], fontStyle: "normal", fontSize: 8.5 },
+    bodyStyles: { fillColor: FONDO },
     columnStyles: {
       0: { cellWidth: "auto" },
-      1: { cellWidth: 16, halign: "right" },
-      2: { cellWidth: 28, halign: "right" },
-      3: { cellWidth: 22, halign: "right" },
-      4: { cellWidth: 32, halign: "right" },
+      1: { cellWidth: 14, halign: "right" },
+      2: { cellWidth: 27, halign: "right" },
+      3: { cellWidth: 24, halign: "left" },
+      4: { cellWidth: 28, halign: "right" },
     },
     didParseCell: (d) => {
-      if (d.section === "head" && d.column.index > 0) d.cell.styles.halign = "right";
+      if (d.section === "head" && (d.column.index === 1 || d.column.index === 2 || d.column.index === 4))
+        d.cell.styles.halign = "right";
     },
     theme: "plain",
-    margin: { left: ML, right: MR },
+    margin: { left: ML, right: MR, bottom: H - yTotali + 6 },
   });
-  let y = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY;
-  doc.setDrawColor(229, 231, 235);
-  doc.setLineWidth(0.2);
-  doc.line(ML, y, W - MR, y);
+  const finale = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY;
+  if (doc.getNumberOfPages() === 1 && finale < yTotali - 6) {
+    doc.setFillColor(...FONDO);
+    doc.rect(ML, finale, W - ML - MR, yTotali - 6 - finale, "F");
+  }
+  doc.setPage(doc.getNumberOfPages());
 
   // ── Totali ─────────────────────────────────────────────────────────────
-  const tot = totaliFattura(f);
-  const xL = W - MR - 72;
-  const riga = (label: string, valore: string) => {
-    y += 6.5;
+  const xT = xD;
+  y = Math.max(yTotali, doc.getNumberOfPages() > 1 ? finale + 10 : 0) + 4;
+  const rigaTot = (etichetta: string, valore: string) => {
     doc.setFont("helvetica", "normal");
-    doc.setFontSize(9.5);
-    doc.setTextColor(...GRAY);
-    doc.text(label, xL, y);
+    doc.setFontSize(10);
+    doc.setTextColor(...DARK);
+    doc.text(etichetta, xT + 3, y);
     doc.text(valore, W - MR, y, { align: "right" });
+    y += 7.2;
   };
-  y += 2;
-  riga(L.imponibile, fmt(tot.imponibile));
-  riga(etichettaImposta, fmt(tot.imposta));
-  y += 4;
-  doc.setDrawColor(...ACCENT);
-  doc.setLineWidth(0.5);
-  doc.line(xL, y, W - MR, y);
-  y += 7;
+  const conImposta = zero ? `${imposta} ${etichettaZero}` : `${imposta} ${f.iva} %`;
+  rigaTot(`${L.imponibile} ${conImposta}`, fmt(tot.imponibile));
+  rigaTot(conImposta, fmt(tot.imposta));
+  doc.setFillColor(...FONDO);
+  doc.rect(xT, y - 2, W - MR - xT, 10, "F");
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(12);
-  doc.setTextColor(...ACCENT);
-  doc.text(L.totale, xL, y);
-  doc.text(fmt(tot.totale), W - MR, y, { align: "right" });
+  doc.setFontSize(11);
+  doc.setTextColor(...DARK);
+  doc.text(L.totale, xT + 3, y + 4.6);
+  doc.text(fmt(tot.totale), W - MR, y + 4.6, { align: "right" });
+  y += 16;
 
-  // ── Esenzione, pagamento, note ─────────────────────────────────────────
-  y += 14;
-  if (!(f.iva > 0) && cfg.testoEsenzione) {
+  // ── Dicitura di esenzione (testo delle Impostazioni) ───────────────────
+  if (zero && cfg.testoEsenzione.trim() && !nonSoggetta(f.causaIgic)) {
     doc.setFont("helvetica", "italic");
     doc.setFontSize(8.5);
     doc.setTextColor(...GRAY);
-    const righe = doc.splitTextToSize(cfg.testoEsenzione, W - ML - MR) as string[];
-    doc.text(righe, ML, y);
-    y += righe.length * 4.2 + 6;
-  }
-  const sezione = (titolo: string) => {
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(7.5);
-    doc.setTextColor(...ACCENT);
-    doc.text(titolo, ML, y);
-    y += 5.5;
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(9);
-    doc.setTextColor(55, 65, 81);
-  };
-  const metodoRaw = (f.metodo || cfg.metodoPagamentoDefault || "").trim();
-  const metodo = METODO_L[metodoRaw.toLowerCase()]?.[lingua] ?? metodoRaw;
-  sezione(L.pagamento);
-  for (const r of [
-    metodo ? `${L.metodo}: ${metodo}` : null,
-    cfg.banca ? `${L.banca}: ${cfg.banca}` : null,
-    cfg.iban ? `IBAN: ${cfg.iban}` : null,
-    cfg.bic ? `BIC/SWIFT: ${cfg.bic}` : null,
-    f.scadenza ? `${L.scadenza}: ${data(f.scadenza)}` : null,
-  ]) {
-    if (!r) continue;
-    doc.text(r, ML, y);
-    y += 4.6;
-  }
-  if (cfg.noteDefault.trim()) {
-    y += 5;
-    sezione(L.note);
-    const righe = doc.splitTextToSize(cfg.noteDefault.trim(), W - ML - MR) as string[];
-    doc.text(righe, ML, y);
+    doc.text(doc.splitTextToSize(cfg.testoEsenzione.trim(), W - ML - MR) as string[], ML, y - 4);
   }
 
-  // ── Piè di pagina ──────────────────────────────────────────────────────
-  const pie =
-    cfg.piePagina.trim() ||
-    [cfg.ragioneSociale, cfg.nif ? `NIF ${cfg.nif}` : "", cfg.email].filter(Boolean).join(" · ");
+  // ── Metodi di pagamento ────────────────────────────────────────────────
+  const iban = cfg.iban.replace(/\s+/g, "").replace(/(.{4})/g, "$1 ").trim();
+  const righePag = [
+    cfg.iban ? `${L.bonifico} ${iban}${cfg.bic ? ` / ${L.swift}: ${cfg.bic}` : ""}` : "",
+    cfg.noteDefault.trim(),
+  ].filter(Boolean);
+  const testoPag = righePag.flatMap((r) => doc.splitTextToSize(r, W - ML - MR - 5) as string[]);
+  const hPag = 8 + testoPag.length * 4;
+  doc.setFillColor(...FONDO);
+  doc.rect(ML, y, W - ML - MR, hPag, "F");
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(10);
+  doc.setTextColor(...DARK);
+  doc.text(L.pagamento, ML + 2.5, y + 5);
   doc.setFont("helvetica", "normal");
-  doc.setFontSize(7.5);
-  doc.setTextColor(...LIGHT);
-  doc.text(doc.splitTextToSize(pie, W - ML - MR) as string[], W / 2, H - 12, { align: "center" });
+  doc.setFontSize(8.5);
+  doc.setTextColor(...GRAY);
+  doc.text(testoPag, ML + 2.5, y + 9);
+
+  // ── Piè di pagina: testo libero e numero di pagina ─────────────────────
+  const pagine = doc.getNumberOfPages();
+  for (let p = 1; p <= pagine; p++) {
+    doc.setPage(p);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(7.5);
+    doc.setTextColor(150, 150, 150);
+    if (cfg.piePagina.trim())
+      doc.text(doc.splitTextToSize(cfg.piePagina.trim(), W - ML - MR - 20) as string[], ML, H - 10);
+    doc.setFontSize(9);
+    doc.setTextColor(...DARK);
+    doc.text(`${p} / ${pagine}`, W - MR, H - 10, { align: "right" });
+  }
 
   return doc;
 }
