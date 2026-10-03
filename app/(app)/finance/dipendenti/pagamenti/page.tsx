@@ -3,6 +3,7 @@
 import SearchBox from "@/components/SearchBox";
 import { matchQ } from "@/lib/utils";
 import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { Check, ChevronLeft, ChevronRight, Plus, Trash2, X, Zap } from "lucide-react";
 import { fmt, MESI } from "@/lib/constants";
 import { useAnno } from "@/lib/anno-context";
@@ -60,6 +61,8 @@ export default function PagamentiPage() {
     voce: Voce;
     esistente: Pagamento | null;
   } | null>(null);
+  // Dettaglio di una cella con più righe (rimborsi, commissioni)
+  const [dettaglio, setDettaglio] = useState<{ persona: Persona; voce: Voce } | null>(null);
 
   // Segue l'anno scelto nella topbar
   useEffect(() => {
@@ -250,63 +253,35 @@ export default function PagamentiPage() {
                       }
                       const righe = cella(p, v);
                       const somma = righe.reduce((s, x) => s + x.importo, 0);
-                      if (VOCI[v].auto) {
+                      if (VOCI[v].auto || VOCI[v].multiplo) {
+                        // Più righe nel mese (commissioni dalle fatture, rimborsi):
+                        // in tabella solo il totale, il dettaglio si apre col clic
+                        const unita = VOCI[v].auto
+                          ? `fattur${righe.length === 1 ? "a" : "e"}`
+                          : `rimbors${righe.length === 1 ? "o" : "i"}`;
                         return (
                           <td key={v} className="text-right">
                             {righe.length ? (
-                              <div
-                                title={righe
-                                  .map(
-                                    (r) =>
-                                      `${r.fattura?.numero ?? "fattura"} ${r.fattura?.cliente?.nome ?? ""}: ${fmt(r.importo)}`,
-                                  )
-                                  .join("\n")}
+                              <button
+                                onClick={() => setDettaglio({ persona: p, voce: v })}
+                                className="group inline-flex flex-col items-end"
+                                title="Apri il dettaglio"
                               >
-                                <div className="tbl-primary">{fmt(somma)}</div>
-                                <div className="text-[10px] text-gray-400">
-                                  {righe.length} fattur{righe.length === 1 ? "a" : "e"}
-                                </div>
-                              </div>
-                            ) : (
+                                <span className="text-sm font-semibold text-gray-900 group-hover:text-brand">{fmt(somma)}</span>
+                                <span className="text-[10px] text-gray-400 group-hover:text-gray-600">
+                                  {righe.length} {unita}
+                                </span>
+                              </button>
+                            ) : VOCI[v].auto ? (
                               <span className="tbl-muted">nessuna</span>
-                            )}
-                          </td>
-                        );
-                      }
-                      if (VOCI[v].multiplo) {
-                        // Rimborsi: più righe nel mese, ognuna con data e descrizione
-                        return (
-                          <td key={v} className="text-right">
-                            <div className="inline-flex flex-col items-end gap-1">
-                              {righe.map((r) => (
-                                <button
-                                  key={r.id}
-                                  onClick={() => setModal({ persona: p, voce: v, esistente: r })}
-                                  className="inline-flex items-center gap-1.5 text-xs text-gray-700 hover:text-brand"
-                                  title={r.note ?? "Modifica o elimina"}
-                                >
-                                  <span className="text-[10px] text-gray-400 tabular-nums">
-                                    {r.data
-                                      ? new Date(r.data).toLocaleDateString("it-IT", { day: "2-digit", month: "2-digit" })
-                                      : ""}
-                                  </span>
-                                  <span className="max-w-[140px] truncate text-gray-500">{r.note ?? "rimborso"}</span>
-                                  <span className="font-semibold">{fmt(r.importo)}</span>
-                                </button>
-                              ))}
-                              {righe.length > 1 && (
-                                <div className="text-sm font-semibold text-gray-900 border-t border-gray-200 pt-1">
-                                  {fmt(somma)}
-                                </div>
-                              )}
+                            ) : (
                               <button
                                 onClick={() => setModal({ persona: p, voce: v, esistente: null })}
                                 className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-1 rounded-md border border-dashed border-gray-300 text-gray-500 hover:border-brand/40 hover:text-brand whitespace-nowrap"
                               >
-                                <Plus className="w-3 h-3" />
-                                {righe.length ? "aggiungi" : "rimborso"}
+                                <Plus className="w-3 h-3" /> registra
                               </button>
-                            </div>
+                            )}
                           </td>
                         );
                       }
@@ -372,6 +347,20 @@ export default function PagamentiPage() {
         </div>
       </div>
 
+      {dettaglio && (
+        <DettaglioVoceModal
+          anno={anno}
+          mese={mese}
+          persona={dettaglio.persona}
+          voce={dettaglio.voce}
+          righe={cella(dettaglio.persona, dettaglio.voce)}
+          onClose={() => setDettaglio(null)}
+          onApri={(r) => {
+            setDettaglio(null);
+            setModal({ persona: dettaglio.persona, voce: dettaglio.voce, esistente: r });
+          }}
+        />
+      )}
       {modal && (
         <PagamentoModal
           anno={anno}
@@ -387,6 +376,91 @@ export default function PagamentiPage() {
           }}
         />
       )}
+    </div>
+  );
+}
+
+// Dettaglio di una cella con più righe: rimborsi (si aprono per modificarli,
+// "Aggiungi rimborso") o commissioni (nascono dalle fatture incassate).
+function DettaglioVoceModal({
+  anno,
+  mese,
+  persona,
+  voce,
+  righe,
+  onClose,
+  onApri,
+}: {
+  anno: number;
+  mese: number;
+  persona: Persona;
+  voce: Voce;
+  righe: Pagamento[];
+  onClose: () => void;
+  onApri: (r: Pagamento | null) => void;
+}) {
+  const auto = !!VOCI[voce].auto;
+  const totale = righe.reduce((s, r) => s + r.importo, 0);
+  return (
+    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4" onClick={onClose}>
+      <div className="glass-modal rounded-2xl w-full max-w-md p-6 space-y-4" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-bold text-gray-900">
+            {VOCI[voce].label} · {MESI[mese - 1]} {anno}
+          </h2>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-700">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+        <p className="text-sm text-gray-600">{nomeCompleto(persona)}</p>
+        <div className="divide-y divide-gray-100 -mx-2">
+          {righe.map((r) => {
+            const quando = r.data
+              ? new Date(r.data).toLocaleDateString("it-IT", { day: "2-digit", month: "2-digit", year: "2-digit" })
+              : "";
+            const testo = auto
+              ? `${r.fattura?.numero ?? "fattura"}${r.fattura?.cliente ? ` · ${r.fattura.cliente.nome}` : ""}`
+              : (r.note ?? "rimborso");
+            const riga = (
+              <>
+                <span className="text-[11px] text-gray-400 tabular-nums w-16 shrink-0">{quando}</span>
+                <span className="flex-1 min-w-0 truncate text-gray-700">{testo}</span>
+                <span className="font-semibold text-gray-900 tabular-nums">{fmt(r.importo)}</span>
+              </>
+            );
+            return auto && r.fattura ? (
+              <Link
+                key={r.id}
+                href={`/finance/fatture/${r.fattura.id}`}
+                className="flex items-center gap-3 px-2 py-2 text-sm rounded-lg hover:bg-brand/10"
+                title="Apri la fattura"
+              >
+                {riga}
+              </Link>
+            ) : (
+              <button
+                key={r.id}
+                onClick={() => !auto && onApri(r)}
+                className="w-full flex items-center gap-3 px-2 py-2 text-sm rounded-lg hover:bg-brand/10 text-left"
+                title={auto ? undefined : "Modifica o elimina"}
+              >
+                {riga}
+              </button>
+            );
+          })}
+        </div>
+        <div className="flex items-center justify-between border-t border-gray-200 pt-3">
+          <span className="text-sm text-gray-500">Totale</span>
+          <span className="text-base font-bold text-gray-900">{fmt(totale)}</span>
+        </div>
+        {auto ? (
+          <p className="text-xs text-gray-400">Le commissioni nascono dalle fatture incassate: si modificano dalla fattura.</p>
+        ) : (
+          <button onClick={() => onApri(null)} className="btn btn-secondary w-full">
+            <Plus className="w-4 h-4" /> Aggiungi rimborso
+          </button>
+        )}
+      </div>
     </div>
   );
 }
