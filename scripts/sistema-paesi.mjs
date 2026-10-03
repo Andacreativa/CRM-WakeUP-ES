@@ -24,6 +24,13 @@ const CODICE = {
 };
 const PAESE_DI = Object.fromEntries(Object.entries(CODICE).filter(([, c]) => c).map(([p, c]) => [c, p]));
 
+// Correzioni confermate dall'utente (2026-10-03) per chi non ha P.IVA:
+// erano segnati Spagna solo perché non passavano da SMH.
+const CORREZIONI = {
+  cliente: { "Judo Azzanese": "Italia", "Abitare Cattai": "Italia" },
+  fornitore: {},
+};
+
 const pulita = (v) => String(v ?? "").toUpperCase().replace(/[\s.\-/]/g, "");
 
 // Paese dalla P.IVA/NIF: prima i formati nazionali senza prefisso, poi il
@@ -70,14 +77,15 @@ async function sistema(tabella, righe) {
   const modifiche = [];
   const senzaIndizi = [];
   for (const r of righe) {
-    const daPiva = paeseDaPiva(r.partitaIva);
-    const daNome = daPiva ? null : paeseDaNome(r.nome);
-    const paese = daPiva ?? daNome ?? r.paese;
+    const corretto = CORREZIONI[tabella][r.nome.trim()] ?? null;
+    const daPiva = corretto ? null : paeseDaPiva(r.partitaIva);
+    const daNome = corretto || daPiva ? null : paeseDaNome(r.nome);
+    const paese = corretto ?? daPiva ?? daNome ?? r.paese;
     const data = {};
     const perche = [];
     if (paese !== r.paese) {
       data.paese = paese;
-      perche.push(`paese ${r.paese} → ${paese} (${daPiva ? "da P.IVA/NIF" : "dal nome"})`);
+      perche.push(`paese ${r.paese} → ${paese} (${corretto ? "confermato dall'utente" : daPiva ? "da P.IVA/NIF" : "dal nome"})`);
     }
     if (conPiva) {
       const p = conPrefisso(r.partitaIva, paese);
@@ -87,7 +95,7 @@ async function sistema(tabella, righe) {
       }
     }
     if (perche.length) modifiche.push({ r, data, perche });
-    else if (!daPiva && !daNome && !r.partitaIva) senzaIndizi.push(r);
+    else if (!corretto && !daPiva && !daNome && !r.partitaIva) senzaIndizi.push(r);
   }
   console.log(`── ${tabella}: ${modifiche.length} da sistemare`);
   for (const m of modifiche) console.log(`  #${m.r.id} ${m.r.nome}: ${m.perche.join(" · ")}`);
