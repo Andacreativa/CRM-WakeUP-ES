@@ -767,10 +767,14 @@ export function suggerisciEntrata(m: MovimentoLike, ctx: ContestoEntrate): Sugge
       p += 40;
       motivi.push("residuo");
     }
-    if (diffMesi >= 0 && diffMesi <= 2) {
+    // Fattura emessa dopo il bonifico: quasi mai è il suo incasso (es. 22/09
+    // Jorbis 1.200 → F202687 di settembre, non F202694 del 01/10)
+    const emessa = f.data ? f.data.getTime() : Date.UTC(f.anno, f.mese - 1, 1);
+    const dopo = emessa > m.dataContabile.getTime();
+    if (!dopo && diffMesi >= 0 && diffMesi <= 2) {
       p += 10;
       motivi.push("mese");
-    } else if (diffMesi < -1) p -= 25; // pagata ben prima di essere emessa: improbabile
+    } else if (dopo) p -= 40;
     else if (diffMesi > 6) p -= 10;
     if (f.pagato && !motivi.includes("numero citato")) p -= 10; // meglio le aperte
     if (p <= 0) continue;
