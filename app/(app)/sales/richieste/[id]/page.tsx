@@ -384,7 +384,13 @@ export default function RichiestaPage() {
           }}
           onDone={(f) => {
             setCrea(false);
-            notify(`Fattura ${f.numero} creata e collegata.`, "ok", f.id ? `/finance/fatture/${f.id}` : undefined);
+            notify(
+              f.numero
+                ? `Fattura ${f.numero} creata e collegata.`
+                : "Bozza di fattura creata: si emette dal suo pannello.",
+              "ok",
+              f.id ? `/finance/fatture/${f.id}` : undefined,
+            );
             load();
           }}
         />

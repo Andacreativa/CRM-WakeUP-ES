@@ -408,7 +408,11 @@ export default function RichiesteFattureView() {
           }}
           onDone={(f) => {
             setCreaFattura(null);
-            notify(`Fattura ${f.numero} creata e collegata`);
+            notify(
+              f.numero
+                ? `Fattura ${f.numero} creata e collegata`
+                : "Bozza di fattura creata: si emette dal suo pannello",
+            );
             load();
           }}
         />

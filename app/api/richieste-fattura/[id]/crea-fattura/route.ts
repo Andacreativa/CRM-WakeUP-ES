@@ -1,11 +1,12 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { RICHIESTA_INCLUDE, serializzaRichiesta } from "@/lib/richieste";
-import { prossimoNumeroFattura } from "@/lib/impostazioni";
+import { RICHIESTA_INCLUDE, parseVoci, serializzaRichiesta } from "@/lib/richieste";
+import { getImpostazioniFatture, prossimoNumeroFattura } from "@/lib/impostazioni";
 
 // Converte la richiesta in una fattura vera (registro Fatture) e la collega.
 // Richiede la validazione. I dati della fattura (numero, data, scadenza,
-// metodo) arrivano dal form precompilato.
+// metodo) arrivano dal form precompilato. Con VeriFactu acceso nasce una
+// bozza: numero e registro arrivano quando la si emette dal suo pannello.
 export async function POST(
   request: Request,
   { params }: { params: Promise<{ id: string }> },
@@ -39,13 +40,26 @@ export async function POST(
     }
 
     const dataFattura = body.data ? new Date(body.data) : new Date();
+    const cfg = await getImpostazioniFatture(prisma);
+    const bozza = cfg.vfModo !== "spento";
+    // Le righe della richiesta diventano le righe della fattura, se i conti tornano
+    const righe = parseVoci(r.voci);
+    const voci =
+      righe.length && Math.abs(righe.reduce((s, v) => s + v.importo, 0) - r.imponibile) < 0.01
+        ? righe.map((v) => ({ descrizione: v.descrizione, quantita: 1, prezzo: v.importo }))
+        : [];
     const result = await prisma.$transaction(async (tx) => {
-      const numero =
-        body.numero?.trim() || (await prossimoNumeroFattura(tx, r.anno));
+      const numero = bozza
+        ? null
+        : body.numero?.trim() || (await prossimoNumeroFattura(tx, r.anno, cfg));
       const fattura = await tx.fattura.create({
         data: {
           numero,
           data: dataFattura,
+          stato: bozza ? "bozza" : "emessa",
+          emessaIl: bozza ? null : new Date(),
+          descrizione: r.descrizione?.trim() || null,
+          voci: JSON.stringify(voci),
           clienteId: r.clienteId,
           contrattoId: r.contrattoId,
           azienda: r.azienda,
@@ -64,7 +78,9 @@ export async function POST(
       });
       const richiesta = await tx.richiestaFattura.update({
         where: { id: richiestaId },
-        data: { fatturaId: fattura.id, emessa: true, emessaIl: dataFattura },
+        data: bozza
+          ? { fatturaId: fattura.id }
+          : { fatturaId: fattura.id, emessa: true, emessaIl: dataFattura },
         include: RICHIESTA_INCLUDE,
       });
       return { fattura, richiesta };

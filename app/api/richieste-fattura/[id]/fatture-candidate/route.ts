@@ -17,6 +17,7 @@ export async function GET(
     where: {
       origine: { not: "sales" },
       annullata: false,
+      stato: "emessa",
       richiesta: null,
       ...(r.clienteId ? { clienteId: r.clienteId } : { anno: r.anno }),
     },

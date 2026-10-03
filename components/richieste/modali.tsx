@@ -35,6 +35,25 @@ export function CreaFatturaModal({
   const [metodo, setMetodo] = useState("");
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  // Con VeriFactu acceso nasce una bozza: il numero arriva all'emissione
+  const [bozza, setBozza] = useState(false);
+
+  // Scadenza e modo dalle Impostazioni fatture
+  useEffect(() => {
+    fetch("/api/impostazioni/fatture")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((c) => {
+        if (!c) return;
+        setBozza(c.vfModo !== "spento");
+        const giorni = Number(c.giorniScadenza);
+        if (giorni > 0) {
+          const d = new Date();
+          d.setDate(d.getDate() + giorni);
+          setScadenza(toISODate(d));
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   const submit = async () => {
     setBusy(true);
@@ -60,7 +79,7 @@ export function CreaFatturaModal({
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
       <div className="glass-modal rounded-2xl w-full max-w-md p-6 space-y-4">
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-bold text-gray-900">Crea fattura</h2>
+          <h2 className="text-lg font-bold text-gray-900">{bozza ? "Prepara la fattura" : "Crea fattura"}</h2>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-700">
             <X className="w-5 h-5" />
           </button>
@@ -75,15 +94,17 @@ export function CreaFatturaModal({
           </div>
         </div>
         <div className="grid grid-cols-2 gap-3">
-          <div className="col-span-2">
-            <label className={labelCls}>Numero fattura</label>
-            <input
-              value={numero}
-              onChange={(e) => setNumero(e.target.value)}
-              className={inputCls}
-              placeholder="automatico (F2026…)"
-            />
-          </div>
+          {!bozza && (
+            <div className="col-span-2">
+              <label className={labelCls}>Numero fattura</label>
+              <input
+                value={numero}
+                onChange={(e) => setNumero(e.target.value)}
+                className={inputCls}
+                placeholder="automatico (F2026…)"
+              />
+            </div>
+          )}
           <div>
             <label className={labelCls}>Data</label>
             <input type="date" value={data} onChange={(e) => setData(e.target.value)} className={inputCls} />
@@ -113,8 +134,9 @@ export function CreaFatturaModal({
           </div>
         )}
         <p className="text-xs text-gray-400">
-          La fattura viene creata nel registro Fatture con origine finance e collegata a questa
-          richiesta. Potrai completarla da lì.
+          {bozza
+            ? "Nasce una bozza collegata a questa richiesta, con le sue righe. Il numero e l'invio all'AEAT arrivano quando la emetti dal suo pannello."
+            : "La fattura viene creata nel registro Fatture con origine finance e collegata a questa richiesta. Potrai completarla da lì."}
         </p>
         <div className="flex items-center justify-end gap-2">
           <button
@@ -132,7 +154,7 @@ export function CreaFatturaModal({
             disabled={busy}
             className="btn btn-primary disabled:opacity-60"
           >
-            {busy ? "Creazione…" : "Crea fattura"}
+            {busy ? "Creazione…" : bozza ? "Crea la bozza" : "Crea fattura"}
           </button>
         </div>
       </div>

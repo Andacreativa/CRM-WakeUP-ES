@@ -29,7 +29,7 @@ export async function GET(
         },
       },
       fatture: {
-        where: { annullata: false },
+        where: { annullata: false, stato: "emessa" },
         orderBy: [{ anno: "desc" }, { mese: "desc" }, { id: "desc" }],
         select: {
           id: true,

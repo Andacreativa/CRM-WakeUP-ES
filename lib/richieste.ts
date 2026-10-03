@@ -90,6 +90,7 @@ export const RICHIESTA_INCLUDE = {
       pagato: true,
       importo: true,
       data: true,
+      stato: true,
       acconti: { select: { importo: true } },
     },
   },
@@ -104,9 +105,10 @@ export type StatoRichiesta = "da_validare" | "da_fare" | "emessa" | "incassata";
 // Stato effettivo: se c'è una fattura collegata, emessa e incassata si
 // leggono da lì; altrimenti valgono i flag manuali (come Northstar).
 export function serializzaRichiesta(r: RichiestaConRelazioni) {
-  const emessaEff = !!r.fatturaId || r.emessa;
+  // Una bozza collegata non è ancora una fattura: conta dall'emissione
+  const emessaEff = r.fattura ? r.fattura.stato === "emessa" : r.emessa;
   let incassataEff = r.incassata;
-  if (r.fattura) {
+  if (r.fattura && emessaEff) {
     const acconti = r.fattura.acconti.reduce((s, a) => s + a.importo, 0);
     incassataEff =
       r.fattura.pagato || (acconti > 0 && acconti >= r.fattura.importo);

@@ -38,6 +38,7 @@ import {
 import { PageSizeSelect, PageNav } from "@/components/Pagination";
 import ImportFattureModal from "@/components/ImportFattureModal";
 import FatturaFormModal from "@/components/fatture/FatturaFormModal";
+import StatoVf from "@/components/fatture/StatoVf";
 import RowMenu from "@/components/RowMenu";
 import Spunta from "@/components/Spunta";
 import {
@@ -47,6 +48,7 @@ import {
   statoCalcolato,
   isScaduta,
   dataIt,
+  gestitaVf,
 } from "@/lib/fatture";
 import { scaricaFatturaPDF, inviaFatturaMail } from "@/lib/fattura-pdf";
 
@@ -62,9 +64,10 @@ const numeroKey = (n: string | null): number => {
   return digits ? parseInt(digits, 10) : -Infinity;
 };
 
-// Sotto-tab della pagina (come "Fatture emesse" di Northstar). Bozze e
-// proforma arrivano con la creazione fatture: per ora sono segnaposto.
-// Le fatture da emettere stanno solo in Sales › Richieste fattura.
+// Sotto-tab della pagina (come "Fatture emesse" di Northstar). Le bozze
+// sono fatture senza numero, da completare ed emettere; le proforma sono
+// ancora un segnaposto. Le fatture da emettere stanno solo in Sales ›
+// Richieste fattura.
 type TabFatture = "emesse" | "bozze" | "proforma";
 const TAB_VALIDE: TabFatture[] = ["emesse", "bozze", "proforma"];
 
@@ -76,6 +79,7 @@ type FiltroPagato = "tutti" | "pagato" | "attesa";
 export default function FatturePage() {
   const router = useRouter();
   const [fatture, setFatture] = useState<Fattura[]>([]);
+  const [bozze, setBozze] = useState<Fattura[]>([]);
   const [clienti, setClienti] = useState<Cliente[]>([]);
   const [commerciali, setCommerciali] = useState<
     { id: number; nome: string; cognome: string | null; percentualeCommissione: number }[]
@@ -197,11 +201,13 @@ export default function FatturePage() {
   const load = async () => {
     const params = new URLSearchParams({ annullate: "1" });
     if (anno > 0) params.set("anno", String(anno));
-    const [f, c] = await Promise.all([
+    const [f, b, c] = await Promise.all([
       (await fetch(`/api/fatture?${params}`)).json() as Promise<unknown>,
+      (await fetch("/api/fatture?bozze=1")).json() as Promise<unknown>,
       (await fetch("/api/clienti")).json() as Promise<unknown>,
     ]);
     setFatture(Array.isArray(f) ? (f as Fattura[]) : []);
+    setBozze(Array.isArray(b) ? (b as Fattura[]) : []);
     setClienti(Array.isArray(c) ? (c as Cliente[]) : []);
   };
   useEffect(() => {
@@ -258,6 +264,16 @@ export default function FatturePage() {
       alert("Non sono riuscito a creare il PDF della fattura.");
     }
   };
+  // Registro in coda: si riprova l'invio all'AEAT
+  const inviaAeat = async () => {
+    const r = await fetch("/api/verifactu/coda", { method: "POST" })
+      .then((x) => x.json())
+      .catch(() => ({ error: "Invio non riuscito" }));
+    const problema = r.errore ?? r.error;
+    if (problema) alert(`Il registro resta in coda: ${problema}.`);
+    else if (r.attesa > 0 && !r.inviati) alert(`L'AEAT chiede di aspettare ancora ${r.attesa} secondi fra un invio e l'altro.`);
+    load();
+  };
   const inviaMail = async (f: Fattura) => {
     try {
       const dataInvio = await inviaFatturaMail(f.id);
@@ -283,7 +299,13 @@ export default function FatturePage() {
         return false;
       return true;
     })
-    .sort((a, b) => numeroKey(b.numero) - numeroKey(a.numero));
+    // Per data, poi per numero: l'ordine regge anche con «tutti gli anni»
+    // (F20261 non finisce più sotto le fatture 2025)
+    .sort(
+      (a, b) =>
+        (b.data ? new Date(b.data).getTime() : 0) - (a.data ? new Date(a.data).getTime() : 0) ||
+        numeroKey(b.numero) - numeroKey(a.numero),
+    );
 
   const clienteFiltrato = filtroClienteId
     ? (clienti.find((c) => c.id === filtroClienteId) ?? null)
@@ -437,24 +459,27 @@ export default function FatturePage() {
         <div>
           <h1 className="page-title">Fatture</h1>
           <p className="page-sub">
-            Fatture attive create a mano o dalle richieste. Bozze e proforma arrivano con la
-            creazione fatture.
+            Fatture emesse e bozze da completare: una bozza non ha numero finché non la emetti.
           </p>
         </div>
-        {tab === "emesse" && (
+        {tab !== "proforma" && (
           <div className="flex items-center gap-3 flex-wrap">
-            <PageSizeSelect pageSize={pageSize} onChange={filtra(setPageSize)} />
-            <ExportButton
-              active={exportMode}
-              onClick={() => (exportMode ? esciExport() : setExportMode(true))}
-              title="Scegli le fatture e scaricale in Excel o PDF"
-            />
-            <button
-              onClick={() => setShowImport(true)}
-              className="btn btn-secondary"
-            >
-              <Upload className="w-4 h-4 text-brand" /> Importa Fatture
-            </button>
+            {tab === "emesse" && (
+              <>
+                <PageSizeSelect pageSize={pageSize} onChange={filtra(setPageSize)} />
+                <ExportButton
+                  active={exportMode}
+                  onClick={() => (exportMode ? esciExport() : setExportMode(true))}
+                  title="Scegli le fatture e scaricale in Excel o PDF"
+                />
+                <button
+                  onClick={() => setShowImport(true)}
+                  className="btn btn-secondary"
+                >
+                  <Upload className="w-4 h-4 text-brand" /> Importa Fatture
+                </button>
+              </>
+            )}
             <button
               onClick={() => setShowForm(true)}
               className="btn btn-primary"
@@ -471,7 +496,7 @@ export default function FatturePage() {
         onChange={(v) => vaiTab(v)}
         options={[
           { val: "emesse", label: "Emesse" },
-          { val: "bozze", label: "Bozze" },
+          { val: "bozze", label: bozze.length ? `Bozze (${bozze.length})` : "Bozze" },
           { val: "proforma", label: "Proforma" },
         ]}
       />
@@ -660,6 +685,11 @@ export default function FatturePage() {
                   >
                     {f.numero ?? "senza numero"}
                   </Link>
+                  {f.tipoFattura !== "F1" && (
+                    <span className="tag tag-brand ml-1.5" title="Fattura rettificativa">
+                      Rett.
+                    </span>
+                  )}
                 </td>
                 <td className="whitespace-nowrap">{dataIt(f.data)}</td>
                 <td className="font-medium text-gray-900">
@@ -755,15 +785,20 @@ export default function FatturePage() {
                   })()}
                 </td>
                 <td className="text-center" onClick={(e) => e.stopPropagation()}>
-                  <Spunta
-                    on={f.presentata}
-                    onClick={() => togglePresentata(f)}
-                    title={
-                      f.presentata
-                        ? `Presentata${f.presentataIl ? ` il ${dataIt(f.presentataIl)}` : ""}: clicca per annullare`
-                        : "Non presentata: clicca per segnarla come presentata"
-                    }
-                  />
+                  {/* Trasmessa da qui: lo stato vero. Registrata a mano: la spunta */}
+                  {gestitaVf(f) ? (
+                    <StatoVf stato={f.vfStato} />
+                  ) : (
+                    <Spunta
+                      on={f.presentata}
+                      onClick={() => togglePresentata(f)}
+                      title={
+                        f.presentata
+                          ? `Presentata${f.presentataIl ? ` il ${dataIt(f.presentataIl)}` : ""}: clicca per annullare`
+                          : "Non presentata: clicca per segnarla come presentata"
+                      }
+                    />
+                  )}
                 </td>
                 <td onClick={(e) => e.stopPropagation()}>
                   <div className="flex items-center gap-1 justify-end">
@@ -783,15 +818,29 @@ export default function FatturePage() {
                     <RowMenu title="Azioni sulla fattura">
                       {(chiudi) => (
                         <>
-                          {/* Spento finché non c'è il collegamento a VeriFactu */}
-                          <span
-                            className="menu-item spenta"
-                            title="Si accende con il collegamento a VeriFactu"
-                          >
-                            <Send /> Presenta
-                          </span>
+                          {/* Si accende solo se il registro aspetta di partire */}
+                          {f.vfStato === "in_coda" ? (
+                            <button
+                              className="menu-item"
+                              title="Riprova l'invio del registro all'AEAT"
+                              onClick={() => {
+                                chiudi();
+                                inviaAeat();
+                              }}
+                            >
+                              <Send /> Presenta
+                            </button>
+                          ) : (
+                            <span className="menu-item spenta">
+                              <Send /> Presenta
+                            </span>
+                          )}
                           <div className="menu-nota">
-                            Collegamento a VeriFactu non ancora attivo.
+                            {f.vfStato === "in_coda"
+                              ? "Il registro è in coda per l'AEAT."
+                              : gestitaVf(f)
+                                ? "Già trasmessa: correzioni dal pannello."
+                                : "Registrata a mano: non parte da qui."}
                           </div>
                           <div className="menu-sep" />
                           {f.cliente?.email ? (
@@ -892,16 +941,65 @@ export default function FatturePage() {
         </>
       )}
 
-      {(tab === "bozze" || tab === "proforma") && (
-        <div className="glass-card rounded-2xl p-12 text-center text-sm text-gray-400">
-          {tab === "bozze" ? (
+      {tab === "bozze" &&
+        (bozze.length === 0 ? (
+          <div className="glass-card rounded-2xl p-12 text-center text-sm text-gray-400">
             <PencilLine className="w-10 h-10 mx-auto mb-2 text-gray-400" />
-          ) : (
-            <FileText className="w-10 h-10 mx-auto mb-2 text-gray-400" />
-          )}
-          {tab === "bozze"
-            ? "Le bozze di fattura arrivano con la creazione fatture (prossimo piano)."
-            : "Le proforma arrivano con la creazione fatture (prossimo piano)."}
+            Nessuna bozza. Una fattura salvata con «Salva bozza» resta qui finché non la emetti.
+          </div>
+        ) : (
+          <div className="glass-card rounded-2xl overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="tbl min-w-[720px]">
+                <thead>
+                  <tr>
+                    <th>Cliente</th>
+                    <th>Descrizione</th>
+                    <th>Data</th>
+                    <th>Scadenza</th>
+                    <th className="text-right">Importo</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {bozze.map((b) => (
+                    <tr
+                      key={b.id}
+                      className="cursor-pointer"
+                      onClick={() => router.push(`/finance/fatture/${b.id}`)}
+                      title="Apri la bozza"
+                    >
+                      <td className="font-medium">
+                        <Link
+                          href={`/finance/fatture/${b.id}`}
+                          onClick={(e) => e.stopPropagation()}
+                          className="text-brand hover:underline"
+                        >
+                          {b.cliente?.nome ?? "(senza cliente)"}
+                        </Link>
+                        {b.tipoFattura !== "F1" && (
+                          <span className="tag tag-brand ml-1.5" title="Bozza di fattura rettificativa">
+                            Rett.
+                          </span>
+                        )}
+                      </td>
+                      <td className="text-gray-500">{b.descrizione || "—"}</td>
+                      <td className="whitespace-nowrap">{dataIt(b.data)}</td>
+                      <td className="whitespace-nowrap text-gray-500">{dataIt(b.scadenza)}</td>
+                      <td className="font-semibold text-right whitespace-nowrap text-gray-900">
+                        {fmt(b.importo)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        ))}
+
+      {tab === "proforma" && (
+        <div className="glass-card rounded-2xl p-12 text-center text-sm text-gray-400">
+          <FileText className="w-10 h-10 mx-auto mb-2 text-gray-400" />
+          Le proforma non ci sono ancora.
         </div>
       )}
 
@@ -911,9 +1009,13 @@ export default function FatturePage() {
           clienti={clienti}
           commerciali={commerciali}
           onClose={() => setShowForm(false)}
-          onSaved={() => {
+          onSaved={(f) => {
             setShowForm(false);
             load();
+            // Una bozza si ritrova nella sua linguetta; una emessa con
+            // VeriFactu si apre, per vedere com'è andato l'invio
+            if (f.stato === "bozza") vaiTab("bozze");
+            else if (f.vfStato) router.push(`/finance/fatture/${f.id}`);
           }}
         />
       )}

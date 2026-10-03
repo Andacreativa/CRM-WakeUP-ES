@@ -14,7 +14,7 @@ export async function GET(request: Request) {
   const clienti = await prisma.cliente.findMany({
     include: {
       fatture: {
-        where: { origine: { not: "sales" }, annullata: false },
+        where: { origine: { not: "sales" }, annullata: false, stato: "emessa" },
         select: {
           importo: true,
           pagato: true,

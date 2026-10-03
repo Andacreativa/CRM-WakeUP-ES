@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Save } from "lucide-react";
 import type { ImpostazioniFatture } from "@/lib/impostazioni";
+import { CAUSE_ZERO } from "@/lib/fatture";
 import { cn } from "@/lib/utils";
 
 const inputCls =
@@ -16,12 +17,18 @@ export default function ImpostazioniPage() {
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState<{ text: string; ok: boolean } | null>(null);
   const [anteprima, setAnteprima] = useState<string>("");
+  // Stato dell'invio all'AEAT: certificato presente, registri in coda
+  const [vf, setVf] = useState<{ certificato: boolean; inCoda: number; errore: string | null } | null>(null);
 
   useEffect(() => {
     fetch("/api/impostazioni/fatture")
       .then((r) => r.json())
       .then((d) => setCfg(d))
       .catch(() => setMsg({ text: "Impossibile caricare le impostazioni", ok: false }));
+    fetch("/api/verifactu/coda")
+      .then((r) => r.json())
+      .then(setVf)
+      .catch(() => {});
   }, []);
 
   const set = (k: Campo, v: string | number | boolean) =>
@@ -192,7 +199,11 @@ export default function ImpostazioniPage() {
               className={inputCls}
             />
           </div>
-          <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer md:col-span-2">
+          <div>
+            <Testo cfg={cfg} set={set} k="numeroPrefissoRettifica" label="Prefisso rettificative" placeholder="R" />
+            <p className="text-[11px] text-gray-400 mt-1">Serie a parte, stesso formato</p>
+          </div>
+          <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer md:col-span-3">
             <input
               type="checkbox"
               checked={cfg.resetAnnuale}
@@ -205,6 +216,109 @@ export default function ImpostazioniPage() {
             <span className="font-mono font-bold text-gray-900">{anteprima || "…"}</span>
           </div>
         </div>
+      </Sezione>
+
+      <Sezione
+        titolo="VeriFactu"
+        sotto="Emissione delle fatture da questa app con invio del registro all'Agencia Tributaria"
+      >
+        <div>
+          <label className={labelCls}>Invio all&apos;AEAT</label>
+          <div className="flex gap-2 max-w-xl">
+            {[
+              { value: "spento", label: "Spento" },
+              { value: "prova", label: "Prova" },
+              { value: "produzione", label: "Produzione" },
+            ].map((o) => {
+              const active = cfg.vfModo === o.value;
+              return (
+                <button
+                  key={o.value}
+                  type="button"
+                  onClick={() => {
+                    if (
+                      o.value === "produzione" &&
+                      !active &&
+                      !confirm(
+                        "Produzione = le fatture emesse da qui partono davvero per l'Agencia Tributaria. Da accendere solo quando si lascia l'altro programma. Continuare?",
+                      )
+                    )
+                      return;
+                    set("vfModo", o.value);
+                  }}
+                  className="flex-1 text-sm py-2 rounded-lg border font-semibold transition-all"
+                  style={
+                    active
+                      ? { background: "#e8308a", color: "#fff", borderColor: "#e8308a" }
+                      : { background: "#fff", borderColor: "#e5e7eb", color: "#9ca3af" }
+                  }
+                >
+                  {o.label}
+                </button>
+              );
+            })}
+          </div>
+          <p className="text-[11px] text-gray-500 mt-1.5 leading-snug max-w-2xl">
+            {cfg.vfModo === "spento"
+              ? "Le fatture si registrano a mano, con il numero dell'altro programma: da qui non parte niente."
+              : cfg.vfModo === "prova"
+                ? "Le fatture emesse da qui vanno all'ambiente di prova dell'AEAT: nessun valore fiscale, serve a provare tutto il giro."
+                : "Le fatture emesse da qui sono trasmesse all'AEAT e valgono a tutti gli effetti."}
+          </p>
+          {vf && (
+            <p className="text-[11px] mt-1.5">
+              <span className={vf.certificato ? "text-ok" : "text-warn"}>
+                Certificato dell&apos;azienda: {vf.certificato ? "configurato" : "non configurato"}
+              </span>
+              {vf.inCoda > 0 && <span className="text-warn"> · {vf.inCoda} registri in coda</span>}
+              {vf.errore && vf.certificato && <span className="text-bad"> · {vf.errore}</span>}
+            </p>
+          )}
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div className="md:col-span-2">
+            <Testo
+              cfg={cfg}
+              set={set}
+              k="vfDescrizioneDefault"
+              label="Descrizione dell'operazione proposta"
+              placeholder="Servicios de Publicidad"
+            />
+          </div>
+          {(
+            [
+              ["vfCausaSpagna", "Fattura a 0 % a un cliente spagnolo"],
+              ["vfCausaEstero", "Fattura a 0 % a un cliente estero"],
+            ] as const
+          ).map(([k, label]) => (
+            <div key={k}>
+              <label className={labelCls}>{label}</label>
+              <select value={cfg[k]} onChange={(e) => set(k, e.target.value)} className={inputCls}>
+                <option value="">— si sceglie ogni volta —</option>
+                {CAUSE_ZERO.map((c) => (
+                  <option key={c.value} value={c.value}>
+                    {c.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          ))}
+        </div>
+        <p className="text-[11px] text-gray-500 leading-snug max-w-2xl">
+          A 0 % l&apos;AEAT vuole sapere se l&apos;operazione è esente (e per quale articolo) o non
+          soggetta: è una scelta fiscale, da confermare con il commercialista.
+        </p>
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+          <Testo cfg={cfg} set={set} k="vfNombreSistema" label="Nome del programma" />
+          <Testo cfg={cfg} set={set} k="vfIdSistema" label="Codice (2 car.)" />
+          <Testo cfg={cfg} set={set} k="vfVersion" label="Versione" />
+          <Testo cfg={cfg} set={set} k="vfNumeroInstalacion" label="Installazione" />
+          <Testo cfg={cfg} set={set} k="vfClaveRegimen" label="Regime IGIC" placeholder="01" />
+        </div>
+        <p className="text-[11px] text-gray-400 leading-snug">
+          Questi dati viaggiano in ogni registro e identificano il programma: vanno fissati prima della
+          partenza e poi non si cambiano senza motivo.
+        </p>
       </Sezione>
 
       <Sezione titolo="PDF" sotto="Aspetto dei documenti">
