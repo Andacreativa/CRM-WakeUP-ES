@@ -3,7 +3,8 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Plus, Trash2, Unlink, X } from "lucide-react";
-import { fmt, MESI, CANALI, canaleLabel } from "@/lib/constants";
+import { fmt, MESI } from "@/lib/constants";
+import ClienteSelect from "@/components/crm/ClienteSelect";
 import { cn } from "@/lib/utils";
 import {
   type ClienteMin,
@@ -23,7 +24,8 @@ const formDa = (r: Richiesta | null, anno: number) => {
     nomeCliente: r?.nomeCliente ?? "",
     contrattoId: r?.contrattoId ? String(r.contrattoId) : "",
     responsabile: r?.responsabile ?? "",
-    azienda: r?.azienda ?? CANALI[0],
+    // il canale non si chiede più: le richieste sono sempre dirette
+    azienda: r?.azienda ?? "Spagna",
     aziendaNota: r?.aziendaNota ?? "",
     voci: r
       ? voci.length
@@ -73,7 +75,7 @@ export default function RichiestaFormModal({
 
   useEffect(() => {
     if (!clientiProp)
-      fetch("/api/clienti")
+      fetch("/api/clienti?min=1")
         .then((r) => r.json())
         .then((c) =>
           setClienti(
@@ -104,6 +106,10 @@ export default function RichiestaFormModal({
         importo: parseFloat(String(v.importo).replace(",", ".")) || 0,
       }))
       .filter((v) => v.descrizione || v.importo);
+    if (!form.clienteId) {
+      setErr("Scegli il cliente dall'anagrafica, oppure crealo con «+ Nuovo»");
+      return;
+    }
     if (!voci.length || imponibileForm <= 0) {
       setErr("Inserisci almeno una voce con importo");
       return;
@@ -112,8 +118,8 @@ export default function RichiestaFormModal({
     setErr(null);
     try {
       const payload = {
-        clienteId: form.clienteId || null,
-        nomeCliente: form.clienteId ? null : form.nomeCliente,
+        clienteId: form.clienteId,
+        nomeCliente: null,
         contrattoId: form.contrattoId || null,
         responsabile: form.responsabile,
         azienda: form.azienda,
@@ -194,50 +200,38 @@ export default function RichiestaFormModal({
         )}
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          <div>
-            <label className={labelCls}>Cliente</label>
-            <select
+          <div className="md:col-span-2">
+            <label className={labelCls}>Cliente *</label>
+            {!form.clienteId && form.nomeCliente && (
+              <p className="text-xs rounded-lg px-3 py-2 mb-2 border bg-warn/10 border-warn/30 text-warn">
+                «{form.nomeCliente}» non è in anagrafica: sceglilo dalla lista o crealo con «+ Nuovo».
+              </p>
+            )}
+            <ClienteSelect
               value={form.clienteId}
-              onChange={(e) => setForm((f) => ({ ...f, clienteId: e.target.value }))}
+              onChange={(id) => setForm((f) => ({ ...f, clienteId: id, contrattoId: "" }))}
+              clienti={clienti}
+              nomeIniziale={form.nomeCliente || undefined}
+            />
+          </div>
+          <div>
+            <label className={labelCls}>Contratto (opzionale)</label>
+            <select
+              value={form.contrattoId}
+              onChange={(e) => setForm((f) => ({ ...f, contrattoId: e.target.value }))}
               className={inputCls}
+              disabled={!form.clienteId}
             >
-              <option value="">— nome libero —</option>
-              {clienti.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.nome}
-                </option>
-              ))}
+              <option value="">— nessuno —</option>
+              {contratti
+                .filter((c) => String(c.clienteId) === form.clienteId)
+                .map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.numero} · {c.oggetto}
+                  </option>
+                ))}
             </select>
           </div>
-          {!form.clienteId ? (
-            <div>
-              <label className={labelCls}>Nome cliente (non in anagrafica)</label>
-              <input
-                value={form.nomeCliente}
-                onChange={(e) => setForm((f) => ({ ...f, nomeCliente: e.target.value }))}
-                className={inputCls}
-                placeholder="Es. Studio Rossi"
-              />
-            </div>
-          ) : (
-            <div>
-              <label className={labelCls}>Contratto (opzionale)</label>
-              <select
-                value={form.contrattoId}
-                onChange={(e) => setForm((f) => ({ ...f, contrattoId: e.target.value }))}
-                className={inputCls}
-              >
-                <option value="">— nessuno —</option>
-                {contratti
-                  .filter((c) => String(c.clienteId) === form.clienteId)
-                  .map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.numero} · {c.oggetto}
-                    </option>
-                  ))}
-              </select>
-            </div>
-          )}
           <div>
             <label className={labelCls}>Responsabile commerciale</label>
             <input
@@ -246,29 +240,6 @@ export default function RichiestaFormModal({
               className={inputCls}
               placeholder="Chi segue il cliente"
             />
-          </div>
-          <div>
-            <label className={labelCls}>Canale</label>
-            <div className="flex gap-2">
-              {CANALI.map((a) => {
-                const active = form.azienda === a;
-                return (
-                  <button
-                    key={a}
-                    type="button"
-                    onClick={() => setForm((f) => ({ ...f, azienda: a }))}
-                    className="flex-1 text-sm py-2 rounded-lg border font-semibold transition-all"
-                    style={
-                      active
-                        ? { background: "#e8308a", color: "#fff", borderColor: "#e8308a" }
-                        : { background: "#fff", borderColor: "#e5e7eb", color: "#9ca3af" }
-                    }
-                  >
-                    {canaleLabel(a)}
-                  </button>
-                );
-              })}
-            </div>
           </div>
         </div>
 

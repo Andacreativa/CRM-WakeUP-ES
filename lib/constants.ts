@@ -33,23 +33,6 @@ export const CATEGORIE_SPESA = [
 
 export const AZIENDE = ["Spagna", "Italia", "Altro"];
 
-// Canale di fatturazione. Il campo `azienda` dei record resta com'è
-// (Spagna = fattura diretta di Anda, Italia = fatturata tramite Social
-// Media House); nell'interfaccia si chiama "canale" e "Altro" non si usa più.
-export const CANALI: string[] = ["Spagna", "Italia"];
-export const CANALE_LABEL: Record<string, string> = {
-  Spagna: "Diretta",
-  Italia: "Tramite SMH",
-  Altro: "Altro",
-};
-export const canaleLabel = (
-  azienda: string | null | undefined,
-  nota?: string | null,
-): string => {
-  if (azienda === "Altro" && nota) return nota;
-  return CANALE_LABEL[azienda ?? ""] ?? azienda ?? "";
-};
-
 // Categorie degli altri ingressi (entrate non da fattura)
 export const CATEGORIE_INGRESSO: { value: string; label: string }[] = [
   { value: "cashback", label: "Cashback" },
@@ -71,15 +54,61 @@ export const AZIENDA_COLORI: Record<
   Altro: { bg: "#f8f9fc", text: "#64748b", border: "#e2e8f0" },
 };
 
-export const PAESI = [
-  "Italia",
-  "Spagna",
-  "Francia",
-  "Germania",
-  "Portogallo",
-  "Regno Unito",
-  "Altro",
-];
+// Paese = sede della controparte (cliente, fornitore, lead). Il codice è
+// il prefisso della partita IVA europea (IT, ES…): scegliendo il paese nei
+// form il campo P.IVA/NIF lo prende da solo.
+export const PAESI_CODICE: Record<string, string> = {
+  Italia: "IT",
+  Spagna: "ES",
+  Francia: "FR",
+  Germania: "DE",
+  Portogallo: "PT",
+  "Regno Unito": "GB",
+  Irlanda: "IE",
+  "Paesi Bassi": "NL",
+  Belgio: "BE",
+  Lussemburgo: "LU",
+  Austria: "AT",
+  // fuori dal sistema IVA europeo: nessun prefisso
+  Svizzera: "",
+  "Stati Uniti": "",
+  Altro: "",
+};
+export const PAESI = Object.keys(PAESI_CODICE);
+
+// Paese per i filtri a chip: Italia, Spagna, il resto in "Altri"
+export const paeseGruppo = (p: string | null | undefined) =>
+  p === "Italia" || p === "Spagna" ? p : "Altri";
+
+// Prefisso della P.IVA al cambio di paese: vuoto → solo il codice;
+// prefisso del paese di prima → sostituito; numero senza prefisso → il
+// codice va davanti. Fuori dall'UE senza codice (Altro) si toglie solo
+// il prefisso vecchio. Non tocca un numero che ha già il prefisso giusto.
+export function prefissaPiva(
+  piva: string | null | undefined,
+  paese: string,
+  paesePrima?: string | null,
+): string {
+  const codice = PAESI_CODICE[paese] ?? "";
+  const prima = paesePrima ? (PAESI_CODICE[paesePrima] ?? "") : "";
+  const v = String(piva ?? "").trim();
+  const codici = Object.values(PAESI_CODICE).filter(Boolean);
+  if (!v || codici.includes(v.toUpperCase())) return codice;
+  if (codice && v.toUpperCase().startsWith(codice)) return v;
+  const resto = prima && v.toUpperCase().startsWith(prima) ? v.slice(prima.length) : v;
+  return codice + resto;
+}
+
+// Prefisso ripetuto: nel campo c'è già "IT" e si incolla "IT0123…"
+export const unisciPrefisso = (piva: string) => piva.replace(/^([A-Za-z]{2})\1(?=[A-Za-z0-9]{8})/, "$1");
+
+// P.IVA da salvare: senza spazi, in maiuscolo; il solo prefisso ("IT")
+// lasciato dal form vale come campo vuoto.
+export function pulisciPiva(piva: unknown): string | null {
+  const v = unisciPrefisso(String(piva ?? "").replace(/\s+/g, "").toUpperCase());
+  if (!v || /^[A-Z]{0,2}$/.test(v)) return null;
+  return v;
+}
 
 // Palette pastello per i badge categoria. Colori morbidi da usare come sfondo
 // solido con testo scuro (vedi CATEGORIA_TEXT).

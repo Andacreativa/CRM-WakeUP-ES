@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { DragEvent } from "react";
 import { Check, Loader2, Search, X } from "lucide-react";
-import { fmt, CATEGORIE_INGRESSO, canaleLabel } from "@/lib/constants";
+import { fmt, CATEGORIE_INGRESSO } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 import type { SuggerimentoEntrata } from "@/lib/banca-shared";
 
@@ -466,7 +466,7 @@ export default function BoardEntrate({ anno, onChange }: { anno: number; onChang
                           </div>
                           <div className="flex items-center justify-between mt-1 gap-2">
                             <span className="text-[11px] text-gray-500 truncate">
-                              {dt(f.data)} · {canaleLabel(f.azienda)}
+                              {dt(f.data)}
                               {f.incassatoFuori > 0.5 && !f.manuale ? ` · incassato fuori banca ${fmt(f.incassatoFuori)}` : ""}
                             </span>
                             <span className="flex items-center gap-1.5 shrink-0">

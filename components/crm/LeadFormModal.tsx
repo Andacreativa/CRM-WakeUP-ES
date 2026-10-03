@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { X } from "lucide-react";
-import { PAESI } from "@/lib/constants";
+import { PAESI, prefissaPiva, unisciPrefisso } from "@/lib/constants";
 import {
   FONTI_LEAD,
   PRIORITA_LEAD,
@@ -52,7 +52,7 @@ const vuoto = () => ({
   priorita: "media",
   paese: "Italia",
   citta: "",
-  partitaIva: "",
+  partitaIva: "IT",
   sitoWeb: "",
   settore: "",
   prossimaAzione: "",
@@ -205,20 +205,27 @@ export default function LeadFormModal({
             </div>
           </div>
           <div>
-            <label className={labelCls}>Paese</label>
-            <select value={form.paese} onChange={(e) => set("paese", e.target.value)} className={inputCls}>
+            <label className={labelCls}>Paese (sede)</label>
+            <select
+              value={form.paese}
+              onChange={(e) => {
+                const p = e.target.value;
+                setForm((f) => ({ ...f, paese: p, partitaIva: prefissaPiva(f.partitaIva, p, f.paese) }));
+              }}
+              className={inputCls}
+            >
               {PAESI.map((p) => (
                 <option key={p} value={p}>{p}</option>
               ))}
             </select>
           </div>
           <div>
-            <label className={labelCls}>Città</label>
-            <input value={form.citta} onChange={(e) => set("citta", e.target.value)} className={inputCls} />
+            <label className={labelCls}>P.IVA / NIF</label>
+            <input value={form.partitaIva} onChange={(e) => set("partitaIva", unisciPrefisso(e.target.value))} className={inputCls} />
           </div>
           <div>
-            <label className={labelCls}>P.IVA / NIF</label>
-            <input value={form.partitaIva} onChange={(e) => set("partitaIva", e.target.value)} className={inputCls} />
+            <label className={labelCls}>Città</label>
+            <input value={form.citta} onChange={(e) => set("citta", e.target.value)} className={inputCls} />
           </div>
           <div>
             <label className={labelCls}>Settore</label>

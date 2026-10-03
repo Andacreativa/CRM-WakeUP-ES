@@ -1,4 +1,4 @@
-import { fmt, canaleLabel } from "./constants";
+import { fmt } from "./constants";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 export interface VocePreventivoData {
@@ -242,7 +242,6 @@ export function fattureToExcel(
     return {
       Cliente: f.cliente?.nome ?? "",
       Paese: f.cliente?.paese ?? "",
-      Canale: canaleLabel(f.azienda),
       Mese: MESI[f.mese - 1],
       Anno: f.anno,
       Importo: f.importo,
@@ -268,7 +267,6 @@ export function fattureToPDF(
   const cols = [
     "Cliente",
     "Paese",
-    "Canale",
     "Mese",
     "Importo",
     "Residuo",
@@ -288,7 +286,6 @@ export function fattureToPDF(
     return [
       f.cliente?.nome ?? "",
       f.cliente?.paese ?? "",
-      canaleLabel(f.azienda),
       MESI[f.mese - 1],
       fmt(f.importo),
       accRicevuto > 0 && !isPagato ? fmt(residuo) : "—",

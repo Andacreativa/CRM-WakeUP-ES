@@ -20,6 +20,9 @@ model Cliente {
   iban         String?
   tipoImposta  String?   @default("IGIC Exenta")
   note         String?
+  // Cliente portato da Social Media House: le sue fatture entrano nel
+  // Rapporto SMH (ritenuta e fattura diretta a SMH per il compenso mensile).
+  smh          Boolean   @default(false)
   createdAt    DateTime    @default(now())
   fatture      Fattura[]
   contratti    Contratto[]

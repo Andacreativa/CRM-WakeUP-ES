@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Plus, Trash2, X } from "lucide-react";
 import { fmt } from "@/lib/constants";
+import ClienteSelect from "@/components/crm/ClienteSelect";
 import {
   type ClienteAnag,
   type Contratto,
@@ -208,18 +209,17 @@ export default function ContrattoFormModal({
             <label className="text-xs font-medium text-gray-600 block mb-1">
               Cliente (anagrafica)
             </label>
-            <select
-              value={clienteId ?? ""}
-              onChange={(e) => setClienteId(parseInt(e.target.value) || null)}
-              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30"
-            >
-              <option value="">— manuale (nome libero sotto) —</option>
-              {clienti.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.nome}
-                </option>
-              ))}
-            </select>
+            <ClienteSelect
+              value={clienteId ? String(clienteId) : ""}
+              onChange={(id, nuovo) => {
+                // il cliente appena creato ha già l'indirizzo: entra nella lista
+                if (nuovo && !clienti.some((c) => c.id === nuovo.id))
+                  setClienti((cs) => [...cs, nuovo as unknown as ClienteAnag]);
+                setClienteId(parseInt(id) || null);
+              }}
+              clienti={clienti}
+              placeholder="— manuale (nome libero sotto) —"
+            />
             {cliente && (
               <p className="text-[11px] text-gray-500 mt-1">
                 {[cliente.via, cliente.cap, cliente.citta]

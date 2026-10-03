@@ -42,7 +42,7 @@ const fetchJson = async <T,>(url: string): Promise<T[]> => {
 };
 
 interface FatturaRow {
-  azienda: string;
+  cliente: { paese: string } | null;
   importo: number;
   pagato: boolean;
   mese: number;
@@ -91,8 +91,10 @@ export default function ReportModal({ open, onClose, initialAnno }: Props) {
       });
 
       // Entrate detail
-      const fattItalia = fatture.filter((f) => f.azienda === "Italia");
-      const fattSpagna = fatture.filter((f) => f.azienda === "Spagna");
+      // Fatture divise per paese del cliente (sede)
+      const fattItalia = fatture.filter((f) => f.cliente?.paese === "Italia");
+      const fattSpagna = fatture.filter((f) => f.cliente?.paese === "Spagna");
+      const fattAltri = fatture.filter((f) => f.cliente?.paese !== "Italia" && f.cliente?.paese !== "Spagna");
       const sumF = (arr: FatturaRow[]) => ({
         totale: r2(arr.reduce((s, f) => s + f.importo, 0)),
         pagate: r2(
@@ -104,6 +106,7 @@ export default function ReportModal({ open, onClose, initialAnno }: Props) {
       });
       const it = sumF(fattItalia);
       const sp = sumF(fattSpagna);
+      const al = sumF(fattAltri);
 
       // Dipendenti: stipendi + seguridad social (IRPF registrato a mano in Spese quando pagato)
       const totaleDipendenti = r2(
@@ -141,7 +144,7 @@ export default function ReportModal({ open, onClose, initialAnno }: Props) {
         entrate: [
           {
             id: uid(),
-            label: "Fatture tramite SMH",
+            label: "Fatture clienti Italia",
             totale: it.totale,
             pagate: it.pagate,
             nonPagate: it.nonPagate,
@@ -149,12 +152,24 @@ export default function ReportModal({ open, onClose, initialAnno }: Props) {
           },
           {
             id: uid(),
-            label: "Fatture dirette",
+            label: "Fatture clienti Spagna",
             totale: sp.totale,
             pagate: sp.pagate,
             nonPagate: sp.nonPagate,
             removable: false,
           },
+          ...(al.totale > 0
+            ? [
+                {
+                  id: uid(),
+                  label: "Fatture clienti altri paesi",
+                  totale: al.totale,
+                  pagate: al.pagate,
+                  nonPagate: al.nonPagate,
+                  removable: false,
+                },
+              ]
+            : []),
         ],
         uscite: [
           {

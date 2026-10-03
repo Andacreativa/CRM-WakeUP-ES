@@ -14,7 +14,7 @@ import {
   Send,
   Phone,
 } from "lucide-react";
-import { fmt, MESI, AZIENDE } from "@/lib/constants";
+import { fmt, MESI, paeseGruppo } from "@/lib/constants";
 import { exportPDF } from "@/lib/export";
 import { useAnno } from "@/lib/anno-context";
 import { compilaTesto, type ImpostazioniFatture } from "@/lib/impostazioni";
@@ -63,7 +63,7 @@ export default function ScadenzePage() {
   const { anno } = useAnno();
   const [fatture, setFatture] = useState<Fattura[]>([]);
   const [cfg, setCfg] = useState<ImpostazioniFatture | null>(null);
-  const [filtroAzienda, setFiltroAzienda] = useState("");
+  const [filtroPaese, setFiltroPaese] = useState("");
   const [filtroCliente, setFiltroCliente] = useState("");
   const [q, setQ] = useState("");
   const [filtroStato, setFiltroStato] = useState<"tutte" | Stato>("tutte");
@@ -75,11 +75,10 @@ export default function ScadenzePage() {
   const load = useCallback(async () => {
     const params = new URLSearchParams();
     if (anno > 0) params.set("anno", String(anno));
-    if (filtroAzienda) params.set("azienda", filtroAzienda);
     const data = await (await fetch(`/api/fatture?${params}`)).json();
     const arr: Fattura[] = Array.isArray(data) ? data : [];
     setFatture(arr.filter((f) => !f?.pagato && f?.scadenza));
-  }, [anno, filtroAzienda]);
+  }, [anno]);
   useEffect(() => {
     load();
   }, [load]);
@@ -108,6 +107,7 @@ export default function ScadenzePage() {
     .filter((f) => {
       if (filtroStato === "tutte" ? f.stato === "ok" : f.stato !== filtroStato) return false;
       if (filtroCliente && f.cliente?.nome !== filtroCliente) return false;
+      if (filtroPaese && paeseGruppo(f.cliente?.paese) !== filtroPaese) return false;
       if (!matchQ(q, f.numero, f.cliente?.nome)) return false;
       return true;
     })
@@ -242,12 +242,13 @@ export default function ScadenzePage() {
         <div className="flex items-center gap-2 flex-wrap">
           <SearchBox value={q} onChange={setQ} placeholder="Cerca cliente, numero…" className="w-64" />
           <select
-            value={filtroAzienda}
-            onChange={(e) => setFiltroAzienda(e.target.value)}
+            value={filtroPaese}
+            onChange={(e) => setFiltroPaese(e.target.value)}
             className="sel"
+            title="Paese del cliente (sede)"
           >
-            <option value="">Tutte le aziende</option>
-            {AZIENDE.map((a) => (
+            <option value="">Tutti i paesi</option>
+            {["Italia", "Spagna", "Altri"].map((a) => (
               <option key={a} value={a}>{a}</option>
             ))}
           </select>

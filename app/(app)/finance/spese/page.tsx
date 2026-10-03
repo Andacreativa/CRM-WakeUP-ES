@@ -253,11 +253,10 @@ export default function SpesePage() {
   const handlePDFExport = (rows: Spesa[] = filtered) =>
     exportPDF(
       `Spese ${annoLabel}`,
-      ["Fornitore", "Categoria", "Azienda", "Mese", "Importo", "Descrizione"],
+      ["Fornitore", "Categoria", "Mese", "Importo", "Descrizione"],
       rows.map((s) => [
         s.fornitore,
         s.categoria,
-        s.azienda,
         MESI[s.mese - 1],
         fmt(s.importo),
         s.descrizione || "",

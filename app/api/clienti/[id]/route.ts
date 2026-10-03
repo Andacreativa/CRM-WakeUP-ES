@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { pulisciPiva } from "@/lib/constants";
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -74,7 +75,8 @@ export async function PATCH(request: Request, { params }: Ctx) {
       ...(body.paese !== undefined && { paese: body.paese }),
       ...(body.email !== undefined && { email: body.email || null }),
       ...(body.telefono !== undefined && { telefono: body.telefono || null }),
-      ...(body.partitaIva !== undefined && { partitaIva: body.partitaIva || null }),
+      ...(body.partitaIva !== undefined && { partitaIva: pulisciPiva(body.partitaIva) }),
+      ...(body.smh !== undefined && { smh: body.smh === true }),
       ...(body.via !== undefined && { via: body.via || null }),
       ...(body.cap !== undefined && { cap: body.cap || null }),
       ...(body.citta !== undefined && { citta: body.citta || null }),

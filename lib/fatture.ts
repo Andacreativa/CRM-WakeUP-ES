@@ -11,6 +11,7 @@ export interface ClienteFattura {
   cap?: string | null;
   citta?: string | null;
   provincia?: string | null;
+  smh?: boolean;
 }
 export interface Acconto {
   id: number;

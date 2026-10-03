@@ -1,7 +1,16 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { pulisciPiva } from "@/lib/constants";
 
-export async function GET() {
+export async function GET(request: Request) {
+  // ?min=1: solo i campi per tendine e controllo doppioni
+  if (new URL(request.url).searchParams.get("min")) {
+    const min = await prisma.cliente.findMany({
+      select: { id: true, nome: true, paese: true, partitaIva: true, email: true, smh: true },
+      orderBy: { nome: "asc" },
+    });
+    return NextResponse.json(min);
+  }
   const clienti = await prisma.cliente.findMany({
     include: {
       fatture: {
@@ -33,7 +42,8 @@ export async function POST(request: Request) {
       paese: body.paese || "Italia",
       email: body.email || null,
       telefono: body.telefono || null,
-      partitaIva: body.partitaIva || null,
+      partitaIva: pulisciPiva(body.partitaIva),
+      smh: body.smh === true,
       via: body.via || null,
       cap: body.cap || null,
       citta: body.citta || null,

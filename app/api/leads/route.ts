@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import { pulisciPiva } from "@/lib/constants";
 import { LEAD_INCLUDE, STATI_APERTI, isStatoLead, nextCodiceLead } from "@/lib/lead";
 
 // ?stato= ?q= ?fonte= ?responsabile= ?aperti=1
@@ -76,7 +77,7 @@ export async function POST(request: Request) {
           priorita: ["bassa", "media", "alta"].includes(body.priorita) ? body.priorita : "media",
           paese: body.paese?.trim() || null,
           citta: body.citta?.trim() || null,
-          partitaIva: body.partitaIva?.trim() || null,
+          partitaIva: pulisciPiva(body.partitaIva),
           sitoWeb: body.sitoWeb?.trim() || null,
           settore: body.settore?.trim() || null,
           prossimaAzione: body.prossimaAzione?.trim() || null,

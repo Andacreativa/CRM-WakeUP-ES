@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { fmt, MESI, CANALI, canaleLabel } from "@/lib/constants";
+import { fmt, MESI } from "@/lib/constants";
 import type { Fattura } from "@/lib/fatture";
+import ClienteSelect from "@/components/crm/ClienteSelect";
 
 // Form unico della fattura: Nuova, Modifica e Duplica (nuova precompilata
 // con i dati di un'altra). Usato dalla lista e dal pannello della fattura.
@@ -34,7 +35,8 @@ const formDa = (f: Fattura | null | undefined, anno: number) => ({
   numero: f?.numero || "",
   data: f?.data ? f.data.slice(0, 10) : f ? "" : oggiISO(),
   clienteId: f?.clienteId != null ? String(f.clienteId) : "",
-  azienda: f?.azienda ?? CANALI[0],
+  // storico del vecchio canale: le nuove sono sempre dirette, il paese è del cliente
+  azienda: f?.azienda ?? "Spagna",
   aziendaNota: f?.aziendaNota || "",
   commerciale: f?.commerciale || "",
   commercialeId: f?.commercialeId ? String(f.commercialeId) : "",
@@ -85,7 +87,7 @@ export default function FatturaFormModal({
 
   useEffect(() => {
     if (!clientiProp)
-      fetch("/api/clienti")
+      fetch("/api/clienti?min=1")
         .then((r) => r.json())
         .then((d) => setClienti(Array.isArray(d) ? d : []))
         .catch(() => {});
@@ -185,41 +187,13 @@ export default function FatturaFormModal({
             </div>
           </div>
           <div>
-            <label className={labelCls}>Canale *</label>
-            <div className="flex gap-2">
-              {CANALI.map((a) => {
-                const active = form.azienda === a;
-                return (
-                  <button
-                    key={a}
-                    onClick={() => setForm((f) => ({ ...f, azienda: a, aziendaNota: "" }))}
-                    className="flex-1 text-sm py-2 rounded-lg border font-semibold transition-all"
-                    style={
-                      active
-                        ? { background: "#e8308a", color: "#fff", borderColor: "#e8308a" }
-                        : { background: "#fff", borderColor: "#e5e7eb", color: "#9ca3af" }
-                    }
-                  >
-                    {canaleLabel(a)}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-          <div>
             <label className={labelCls}>Cliente *</label>
-            <select
+            <ClienteSelect
               value={form.clienteId}
-              onChange={(e) => setForm((f) => ({ ...f, clienteId: e.target.value }))}
-              className={inputCls}
-            >
-              <option value="">Seleziona cliente...</option>
-              {clienti.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.nome}
-                </option>
-              ))}
-            </select>
+              onChange={(id) => setForm((f) => ({ ...f, clienteId: id }))}
+              clienti={clienti}
+              placeholder="Seleziona cliente..."
+            />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>

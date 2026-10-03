@@ -24,7 +24,7 @@ import {
   MailOpen,
   ExternalLink,
 } from "lucide-react";
-import { fmt, MESI, CANALI, canaleLabel } from "@/lib/constants";
+import { fmt, MESI, paeseGruppo } from "@/lib/constants";
 import { matchQ } from "@/lib/utils";
 import { useAnno } from "@/lib/anno-context";
 import {
@@ -86,7 +86,7 @@ export default function FatturePage() {
   const [filtroClienteId, setFiltroClienteId] = useState<number>(0);
   const [filtroPagato, setFiltroPagato] = useState<FiltroPagato>("tutti");
   const { anno } = useAnno();
-  const [azienda, setAzienda] = useState("");
+  const [paese, setPaese] = useState("");
   const [pageSize, setPageSize] = useState(10);
   const [page, setPage] = useState(1);
   const [showImport, setShowImport] = useState(false);
@@ -117,7 +117,7 @@ export default function FatturePage() {
       setFiltroMese(s.filtroMese ?? 0);
       setFiltroClienteId(s.filtroClienteId ?? 0);
       setFiltroPagato(s.filtroPagato ?? "tutti");
-      setAzienda(s.azienda ?? "");
+      setPaese(s.paese ?? "");
       setPageSize(s.pageSize ?? 10);
       setPage(s.page ?? 1);
     } catch {
@@ -128,7 +128,7 @@ export default function FatturePage() {
     try {
       sessionStorage.setItem(
         CHIAVE_LISTA,
-        JSON.stringify({ q, filtroMese, filtroClienteId, filtroPagato, azienda, pageSize, page }),
+        JSON.stringify({ q, filtroMese, filtroClienteId, filtroPagato, paese, pageSize, page }),
       );
     } catch {
       /* sessionStorage non disponibile */
@@ -197,7 +197,6 @@ export default function FatturePage() {
   const load = async () => {
     const params = new URLSearchParams({ annullate: "1" });
     if (anno > 0) params.set("anno", String(anno));
-    if (azienda) params.set("azienda", azienda);
     const [f, c] = await Promise.all([
       (await fetch(`/api/fatture?${params}`)).json() as Promise<unknown>,
       (await fetch("/api/clienti")).json() as Promise<unknown>,
@@ -207,7 +206,7 @@ export default function FatturePage() {
   };
   useEffect(() => {
     load();
-  }, [anno, azienda]);
+  }, [anno]);
 
   const patchRiga = (id: number, patch: Partial<Fattura>) =>
     setFatture((prev) => prev.map((x) => (x.id === id ? { ...x, ...patch } : x)));
@@ -272,6 +271,7 @@ export default function FatturePage() {
     .filter((f) => {
       if (filtroMese && f.mese !== filtroMese) return false;
       if (filtroClienteId && f.clienteId !== filtroClienteId) return false;
+      if (paese && paeseGruppo(f.cliente?.paese) !== paese) return false;
       if (!matchQ(q, f.numero, f.cliente?.nome, f.aziendaNota)) return false;
       const stato = statoCalcolato(f);
       if (filtroPagato === "pagato" && stato !== "pagato") return false;
@@ -289,11 +289,11 @@ export default function FatturePage() {
     ? (clienti.find((c) => c.id === filtroClienteId) ?? null)
     : null;
 
-  // Cambio anno/azienda = dataset diverso: la selezione precedente non ha più senso
+  // Cambio anno = dataset diverso: la selezione precedente non ha più senso
   useEffect(() => {
     setSelectedIds(new Set());
     setLastClickedId(null);
-  }, [anno, azienda]);
+  }, [anno]);
 
   const paged = filtered.slice((page - 1) * pageSize, page * pageSize);
 
@@ -349,13 +349,13 @@ export default function FatturePage() {
   };
 
   const runExportPDF = (list: Fattura[]) => {
-    const aziendaLabel = azienda ? canaleLabel(azienda) : "Tutti i canali";
+    const paeseLabel = paese ? `Clienti ${paese === "Altri" ? "di altri paesi" : paese}` : "Tutti i clienti";
     const annoStr = anno > 0 ? String(anno) : "tutti gli anni";
     const annoFile = anno > 0 ? String(anno) : "tutti";
     const parziale = list.length !== attive.length;
     const base = clienteFiltrato
-      ? `Fatture ${annoStr} — ${aziendaLabel} · ${clienteFiltrato.nome}`
-      : `Fatture ${annoStr} — ${aziendaLabel}`;
+      ? `Fatture ${annoStr} — ${paeseLabel} · ${clienteFiltrato.nome}`
+      : `Fatture ${annoStr} — ${paeseLabel}`;
     const titolo = parziale ? `${base} · selezione (${list.length})` : base;
     const slug = clienteFiltrato
       ? `_${clienteFiltrato.nome.replace(/\s+/g, "")}`
@@ -394,7 +394,14 @@ export default function FatturePage() {
     });
   };
 
-  const runRapportoSmh = async (list: Fattura[], formato: "pdf" | "xlsx") => {
+  // Rapporto SMH: delle fatture scelte contano solo quelle ai clienti SMH
+  // (spunta sulla scheda cliente)
+  const runRapportoSmh = async (scelte: Fattura[], formato: "pdf" | "xlsx") => {
+    const list = scelte.filter((f) => f.cliente?.smh);
+    if (!list.length) {
+      alert("Nessuna fattura a clienti SMH tra quelle scelte. Segna i clienti SMH dalla loro scheda (Modifica › Cliente SMH).");
+      return;
+    }
     const annoStr = anno > 0 ? String(anno) : "tutti gli anni";
     const periodo = filtroMese > 0 ? `${MESI[filtroMese - 1]} ${annoStr}` : annoStr;
     const dati = rapportoSmh(list, MESI, {
@@ -527,14 +534,15 @@ export default function FatturePage() {
           )}
         </div>
         <select
-          value={azienda}
-          onChange={(e) => filtra(setAzienda)(e.target.value)}
+          value={paese}
+          onChange={(e) => filtra(setPaese)(e.target.value)}
           className="sel"
+          title="Paese del cliente (sede)"
         >
-          <option value="">Tutti i canali</option>
-          {CANALI.map((a) => (
-            <option key={a} value={a}>
-              {canaleLabel(a)}
+          <option value="">Tutti i paesi</option>
+          {["Italia", "Spagna", "Altri"].map((p) => (
+            <option key={p} value={p}>
+              {p}
             </option>
           ))}
         </select>
@@ -579,7 +587,7 @@ export default function FatturePage() {
               <th>Numero</th>
               <th>Data</th>
               <th>Cliente</th>
-              <th>Canale</th>
+              <th>Paese</th>
               <th>Scadenza</th>
               <th className="text-right">Importo</th>
               <th className="text-center">Stato</th>
@@ -656,15 +664,11 @@ export default function FatturePage() {
                 <td className="whitespace-nowrap">{dataIt(f.data)}</td>
                 <td className="font-medium text-gray-900">
                   {f.cliente?.nome ?? "—"}
-                  <span className="ml-1 text-xs text-gray-400">
-                    {f.cliente?.paese ?? ""}
-                  </span>
+                  {f.cliente?.smh && (
+                    <span className="tag tag-neutral ml-1.5" title="Cliente portato da Social Media House">SMH</span>
+                  )}
                 </td>
-                <td>
-                  <span className="text-xs font-medium text-gray-500 whitespace-nowrap">
-                    {canaleLabel(f.azienda, f.aziendaNota)}
-                  </span>
-                </td>
+                <td className="whitespace-nowrap text-gray-500">{f.cliente?.paese ?? "—"}</td>
                 <td>
                   {f.scadenza ? (
                     <span

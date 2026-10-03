@@ -62,9 +62,11 @@ interface Props {
   value: AddressValue;
   onChange: (v: AddressValue) => void;
   inputClass?: string;
+  // Il paese si sceglie già nel form (vicino alla P.IVA): qui non si ripete
+  senzaPaese?: boolean;
 }
 
-export default function AddressFields({ value, onChange, inputClass }: Props) {
+export default function AddressFields({ value, onChange, inputClass, senzaPaese }: Props) {
   const [loading, setLoading] = useState(false);
   const cls =
     inputClass ??
@@ -128,26 +130,28 @@ export default function AddressFields({ value, onChange, inputClass }: Props) {
           className={cls}
         />
       </div>
-      <div>
-        <label className="text-xs font-medium text-gray-600 block mb-1">
-          Stato
-        </label>
-        <select
-          value={value.paese}
-          onChange={(e) => {
-            const newPaese = e.target.value;
-            onChange({ ...value, paese: newPaese });
-            if (value.cap) fetchCap(value.cap, newPaese);
-          }}
-          className={cls}
-        >
-          {PAESI.map((p) => (
-            <option key={p} value={p}>
-              {p}
-            </option>
-          ))}
-        </select>
-      </div>
+      {!senzaPaese && (
+        <div>
+          <label className="text-xs font-medium text-gray-600 block mb-1">
+            Stato
+          </label>
+          <select
+            value={value.paese}
+            onChange={(e) => {
+              const newPaese = e.target.value;
+              onChange({ ...value, paese: newPaese });
+              if (value.cap) fetchCap(value.cap, newPaese);
+            }}
+            className={cls}
+          >
+            {PAESI.map((p) => (
+              <option key={p} value={p}>
+                {p}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
       <div>
         <label className="text-xs font-medium text-gray-600 block mb-1">
           Città

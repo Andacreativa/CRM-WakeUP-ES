@@ -19,7 +19,7 @@ import {
   Unlink,
   X,
 } from "lucide-react";
-import { fmt, MESI, canaleLabel } from "@/lib/constants";
+import { fmt, MESI } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 import { dataIt } from "@/lib/fatture";
 import RichiestaFormModal from "@/components/richieste/RichiestaFormModal";
@@ -139,7 +139,7 @@ export default function RichiestaPage() {
             {r.dataInvio ? ` · invio previsto il ${dataIt(r.dataInvio)}` : ""}
           </span>
           {pillStato}
-          <span className="tag tag-neutral">{canaleLabel(r.azienda, r.aziendaNota)}</span>
+          {r.cliente?.paese && <span className="tag tag-neutral">{r.cliente.paese}</span>}
           {r.serieTotale && (
             <span className="tag tag-neutral" title={ricorrenzaLabel(r.ricorrenza)}>
               {r.serieIndice}/{r.serieTotale} · {ricorrenzaLabel(r.ricorrenza).toLowerCase()}
@@ -235,8 +235,8 @@ export default function RichiestaPage() {
               <div className="v">
                 {r.responsabile || <span className="text-warn text-xs">da assegnare</span>}
               </div>
-              <div className="k">Canale</div>
-              <div className="v">{canaleLabel(r.azienda, r.aziendaNota)}</div>
+              <div className="k">Paese</div>
+              <div className="v">{r.cliente?.paese ?? "—"}</div>
             </div>
           </section>
 

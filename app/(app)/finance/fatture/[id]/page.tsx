@@ -24,7 +24,7 @@ import {
   Wallet,
   X,
 } from "lucide-react";
-import { fmt, MESI, canaleLabel } from "@/lib/constants";
+import { fmt, MESI } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 import {
   type FatturaDettaglio,
@@ -229,7 +229,8 @@ export default function FatturaPage() {
               <X /> In attesa
             </span>
           )}
-          <span className="tag tag-neutral">{canaleLabel(f.azienda, f.aziendaNota)}</span>
+          {f.cliente?.paese && <span className="tag tag-neutral">{f.cliente.paese}</span>}
+          {f.cliente?.smh && <span className="tag tag-neutral" title="Cliente portato da Social Media House">SMH</span>}
           {!f.richiesta && <span className="tag tag-soft-warn">Creata manualmente</span>}
         </div>
       </div>

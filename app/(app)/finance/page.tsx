@@ -27,7 +27,7 @@ import {
   AlertTriangle,
 } from "lucide-react";
 import Link from "next/link";
-import { fmt, MESI, CATEGORIE_COLORI_CHART, canaleLabel } from "@/lib/constants";
+import { fmt, MESI, CATEGORIE_COLORI_CHART } from "@/lib/constants";
 import FiltriBar from "@/components/FiltriBar";
 import { useAnno } from "@/lib/anno-context";
 
@@ -52,7 +52,7 @@ interface DashboardData {
     pagato: boolean;
     mese: number;
     azienda: string;
-    cliente: { nome: string };
+    cliente: { nome: string; paese: string } | null;
   }[];
   scadenzeAlert: {
     id: number;
@@ -390,7 +390,7 @@ export default function Dashboard() {
                       {f.cliente?.nome ?? "—"}
                     </p>
                     <p className="text-xs text-gray-400">
-                      {MESI[f.mese - 1] ?? ""} · {canaleLabel(f.azienda)}
+                      {MESI[f.mese - 1] ?? ""}{f.cliente?.paese ? ` · ${f.cliente.paese}` : ""}
                     </p>
                   </div>
                   <div className="text-right">
