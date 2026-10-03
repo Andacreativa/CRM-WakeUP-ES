@@ -12,13 +12,10 @@ import {
   CheckCircle2,
   Clock,
   Download,
-  ExternalLink,
-  Pencil,
   Plus,
-  Trash2,
   XCircle,
 } from "lucide-react";
-import { fmt } from "@/lib/constants";
+import { fmt, paeseGruppo } from "@/lib/constants";
 import { PageSizeSelect, PageNav } from "@/components/Pagination";
 import ClienteFormModal, { type ClienteBase } from "@/components/crm/ClienteFormModal";
 import SearchBox from "@/components/SearchBox";
@@ -75,7 +72,6 @@ const stats = (c: Cliente) => {
 const selectCls =
   "sel";
 
-const paeseDi = (c: Cliente) => (["Italia", "Spagna"].includes(c.paese) ? c.paese : "Altri");
 
 export default function ClientiPage() {
   const router = useRouter();
@@ -84,6 +80,7 @@ export default function ClientiPage() {
   const [exportMode, setExportMode] = useState(false);
   const [paese, setPaese] = useState("");
   const [stato, setStato] = useState<"" | "attivi" | "inattivi">("");
+  const [soloSmh, setSoloSmh] = useState(false);
   const [ordine, setOrdine] = useState<Ordine>("nome");
   const [disc, setDisc] = useState(false);
   const [page, setPage] = useState(1);
@@ -110,7 +107,8 @@ export default function ClientiPage() {
   const filtered = useMemo(() => {
     const rows = righe.filter(
       ({ c, s }) =>
-        (!paese || paeseDi(c) === paese) &&
+        (!paese || paeseGruppo(c.paese) === paese) &&
+        (!soloSmh || c.smh) &&
         (!stato || (stato === "attivi" ? s.attivo : !s.attivo)) &&
         matchQ(q, c.nome, c.email, c.partitaIva, c.citta, c.telefono),
     );
@@ -128,7 +126,7 @@ export default function ClientiPage() {
       }
     });
     return rows;
-  }, [righe, q, paese, stato, ordine, disc]);
+  }, [righe, q, paese, stato, soloSmh, ordine, disc]);
   const paged = filtered.slice((page - 1) * pageSize, page * pageSize);
 
   const tot = useMemo(() => {
@@ -143,11 +141,12 @@ export default function ClientiPage() {
     return { attivi, inattivi: righe.length - attivi, daIncassare, fatturato };
   }, [righe]);
 
-  const filtriAttivi = [q.trim(), paese, stato].filter(Boolean).length;
+  const filtriAttivi = [q.trim(), paese, stato, soloSmh].filter(Boolean).length;
   const azzera = () => {
     setQ("");
     setPaese("");
     setStato("");
+    setSoloSmh(false);
     setPage(1);
   };
 
@@ -161,11 +160,6 @@ export default function ClientiPage() {
   const freccia = (col: Ordine) =>
     ordine === col && disc ? <ArrowDown className="w-3 h-3" /> : <ArrowUp className="w-3 h-3" />;
 
-  const del = async (c: Cliente) => {
-    if (!confirm(`Eliminare ${c.nome}? Le fatture restano ma perdono il collegamento.`)) return;
-    await fetch(`/api/clienti/${c.id}`, { method: "DELETE" });
-    load();
-  };
 
   const esportaCsv = () => {
     const esc = (v: unknown) => `"${String(v ?? "").replace(/"/g, '""')}"`;
@@ -276,6 +270,12 @@ export default function ClientiPage() {
               </button>
             ))}
           </div>
+          <div className="chip-row">
+            <span className="chip-label">Canale</span>
+            <button onClick={() => conReset(setSoloSmh)(!soloSmh)} className={cn("chip", soloSmh && "active")} title="Clienti portati da Social Media House">
+              Clienti SMH
+            </button>
+          </div>
         </div>
       </div>
 
@@ -322,7 +322,6 @@ export default function ClientiPage() {
                   <th className={cn(thCls, "text-right th-sort", ordine === "daIncassare" && "active")} onClick={() => ordina("daIncassare")}>
                     Da incassare {freccia("daIncassare")}
                   </th>
-                  <th className={thCls} />
                 </tr>
               </thead>
               <tbody>
@@ -336,7 +335,14 @@ export default function ClientiPage() {
                       {new Date(c.createdAt).toLocaleDateString("it-IT", { day: "2-digit", month: "2-digit", year: "2-digit" })}
                     </td>
                     <td>
-                      <div className="tbl-primary">{c.nome}</div>
+                      <Link
+                        href={`/crm/clienti/${c.id}`}
+                        onClick={(e) => e.stopPropagation()}
+                        className="font-medium text-brand hover:underline"
+                      >
+                        {c.nome}
+                      </Link>
+                      {c.smh && <span className="tag tag-neutral ml-1.5" title="Cliente portato da Social Media House">SMH</span>}
                       <div className="text-[11px] text-gray-400 truncate max-w-[260px]">
                         {c.partitaIva ?? "P.IVA mancante"}
                         {c.tipoImposta ? ` · ${c.tipoImposta}` : ""}
@@ -365,19 +371,6 @@ export default function ClientiPage() {
                     <td className={cn("px-4 py-3 text-sm text-right tabular-nums", s.daIncassare > 0 ? "text-warn font-semibold" : "text-gray-400")}>
                       {fmt(s.daIncassare)}
                     </td>
-                    <td onClick={(e) => e.stopPropagation()}>
-                      <div className="flex items-center gap-1 justify-end">
-                        <Link href={`/crm/clienti/${c.id}`} className="p-1.5 text-gray-400 hover:text-brand" title="Apri scheda">
-                          <ExternalLink className="w-4 h-4" />
-                        </Link>
-                        <button onClick={() => setForm({ open: true, cliente: c })} className="p-1.5 text-gray-400 hover:text-gray-700" title="Modifica">
-                          <Pencil className="w-4 h-4" />
-                        </button>
-                        <button onClick={() => del(c)} className="p-1.5 text-gray-400 hover:text-bad" title="Elimina">
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -393,8 +386,7 @@ export default function ClientiPage() {
           onClose={() => setForm({ open: false, cliente: null })}
           onSaved={(c) => {
             setForm({ open: false, cliente: null });
-            if (!form.cliente) router.push(`/crm/clienti/${c.id}`);
-            else load();
+            router.push(`/crm/clienti/${c.id}`);
           }}
         />
       )}

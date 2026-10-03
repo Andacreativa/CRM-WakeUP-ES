@@ -13,6 +13,8 @@ interface Props {
   onClose: () => void;
   title: string;
   fields: CopyField[];
+  // bottoni della scheda (es. Modifica, Elimina), in fondo
+  azioni?: React.ReactNode;
 }
 
 export default function CopyFieldsModal({
@@ -20,6 +22,7 @@ export default function CopyFieldsModal({
   onClose,
   title,
   fields,
+  azioni,
 }: Props) {
   const [copied, setCopied] = useState<string | null>(null);
 
@@ -67,6 +70,7 @@ export default function CopyFieldsModal({
             <X className="w-4 h-4" />
           </button>
         </div>
+        {azioni && <div className="flex items-center gap-2">{azioni}</div>}
 
         {visibleFields.length === 0 ? (
           <p className="text-xs text-gray-400 py-4 text-center">

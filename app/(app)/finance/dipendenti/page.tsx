@@ -197,9 +197,10 @@ export default function DipendentiPage() {
         "Eliminare questo dipendente? Verranno cancellate anche le spese collegate.",
       )
     )
-      return;
+      return false;
     await fetch(`/api/dipendenti/${id}`, { method: "DELETE" });
     load();
+    return true;
   };
 
   return (
@@ -236,7 +237,6 @@ export default function DipendentiPage() {
                 ["IRPF", "text-right"],
                 ["Benefit", "text-right"],
                 ["Commissione", "text-right"],
-                ["", ""],
               ].map(([h, al], i) => (
                 <th
                   key={i}
@@ -251,7 +251,7 @@ export default function DipendentiPage() {
             {dipendenti.length === 0 && (
               <tr>
                 <td
-                  colSpan={8}
+                  colSpan={7}
                   className="text-center text-gray-400 py-12 text-sm"
                 >
                   Nessuna persona. Aggiungi la prima con il pulsante in alto.
@@ -262,17 +262,14 @@ export default function DipendentiPage() {
               <Fragment key={g.tipo}>
                 <tr>
                   <td
-                    colSpan={8}
+                    colSpan={7}
                     className="px-4 pt-4 pb-1 text-gray-400 bg-white"
                   >
                     {g.label}
                   </td>
                 </tr>
                 {g.persone.map((d) => (
-              <tr
-                key={d.id}
-                className="border-b border-gray-50 hover:bg-gray-50 transition-colors"
-              >
+              <tr key={d.id} className="cursor-pointer" onClick={() => setInfoDip(d)}>
                 <td className="font-medium text-gray-900">
                   <div className="flex items-center gap-3">
                     <Avatar
@@ -281,13 +278,10 @@ export default function DipendentiPage() {
                       fotoPath={d.fotoPath}
                       size={36}
                     />
-                    <button
-                      onClick={() => setInfoDip(d)}
-                      className="text-left hover:text-brand hover:underline transition-colors cursor-pointer"
-                    >
+                    <span className="text-brand hover:underline">
                       {d.nome}
                       {d.cognome ? ` ${d.cognome}` : ""}
-                    </button>
+                    </span>
                   </div>
                 </td>
                 <td>
@@ -335,22 +329,6 @@ export default function DipendentiPage() {
                   {d.tipo === "commerciale"
                     ? `${(d.percentualeCommissione ?? 0).toFixed(1).replace(".", ",")}%`
                     : "—"}
-                </td>
-                <td>
-                  <div className="flex items-center gap-2 justify-end">
-                    <button
-                      onClick={() => openEdit(d)}
-                      className="p-1.5 rounded-lg text-gray-400 hover:text-brand hover:bg-brand/10 transition-colors"
-                    >
-                      <Pencil className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={() => del(d.id)}
-                      className="p-1.5 rounded-lg text-gray-400 hover:text-bad hover:bg-bad/10 transition-colors"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
                 </td>
               </tr>
                 ))}
@@ -770,6 +748,30 @@ export default function DipendentiPage() {
             : ""
         }
         fields={infoDip ? dipendenteFields(infoDip) : []}
+        azioni={
+          infoDip && (
+            <>
+              <button
+                onClick={() => {
+                  const d = infoDip;
+                  setInfoDip(null);
+                  openEdit(d);
+                }}
+                className="btn btn-secondary flex-1"
+              >
+                <Pencil className="w-4 h-4" /> Modifica
+              </button>
+              <button
+                onClick={async () => {
+                  if (await del(infoDip.id)) setInfoDip(null);
+                }}
+                className="btn btn-secondary flex-1 text-bad hover:text-bad"
+              >
+                <Trash2 className="w-4 h-4" /> Elimina
+              </button>
+            </>
+          )
+        }
       />
     </div>
   );

@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { ArrowLeft, Pencil, Trash2, Copy, Check, Receipt, AlertTriangle, X, Star } from "lucide-react";
+import { ArrowLeft, Pencil, Trash2, Copy, Check, Receipt, AlertTriangle } from "lucide-react";
 import { fmt, MESI } from "@/lib/constants";
 import { STATO_LEAD } from "@/lib/lead";
 import ClienteFormModal, { type ClienteBase } from "@/components/crm/ClienteFormModal";
@@ -101,32 +101,32 @@ export default function ClienteDettaglioPage() {
 
   return (
     <div className="space-y-5">
-      <Link href="/crm/clienti" className="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-900">
-        <ArrowLeft className="w-4 h-4" /> Clienti
-      </Link>
-
-      <div className="flex items-start justify-between flex-wrap gap-3">
-        <div>
-          <div className="flex items-center gap-2 flex-wrap">
-            <h1 className="page-title">{c.nome}</h1>
-            <span className="tag tag-neutral">{c.paese}</span>
-            {c.tipoImposta && <span className="tag tag-brand">{c.tipoImposta}</span>}
-          </div>
-          <p className="page-sub">
-            {c.partitaIva ? `P.IVA ${c.partitaIva}` : "P.IVA non indicata"} · cliente dal {new Date(c.createdAt).toLocaleDateString("it-IT")}
-          </p>
-        </div>
+      <div>
         <div className="flex items-center gap-2 flex-wrap">
-          <Link href="/sales/richieste" className="btn btn-secondary">
-            <Receipt className="w-4 h-4" /> Richiesta fattura
-          </Link>
-          <button onClick={() => setEdit(true)} className="btn btn-primary">
-            <Pencil className="w-4 h-4" /> Modifica
-          </button>
-          <button onClick={del} className="p-2 rounded-xl text-gray-500 hover:text-bad hover:bg-bad/10" title="Elimina">
-            <Trash2 className="w-4 h-4" />
-          </button>
+          <h1 className="page-title">{c.nome}</h1>
+          <span className="tag tag-neutral">{c.paese}</span>
+          {c.smh && <span className="tag tag-neutral" title="Cliente portato da Social Media House">SMH</span>}
+          {c.tipoImposta && <span className="tag tag-brand">{c.tipoImposta}</span>}
         </div>
+        <p className="page-sub">
+          {c.partitaIva ? `P.IVA ${c.partitaIva}` : "P.IVA non indicata"} · cliente dal {new Date(c.createdAt).toLocaleDateString("it-IT")}
+        </p>
+      </div>
+
+      {/* Azioni */}
+      <div className="flex items-center gap-2 flex-wrap">
+        <button onClick={() => (window.history.length > 1 ? router.back() : router.push("/crm/clienti"))} className="btn btn-secondary">
+          <ArrowLeft /> Indietro
+        </button>
+        <button onClick={() => setEdit(true)} className="btn btn-secondary">
+          <Pencil /> Modifica
+        </button>
+        <button onClick={del} className="btn btn-secondary text-bad hover:text-bad">
+          <Trash2 /> Elimina
+        </button>
+        <Link href="/sales/richieste" className="btn btn-primary">
+          <Receipt /> Richiesta fattura
+        </Link>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
@@ -192,7 +192,9 @@ export default function ClienteDettaglioPage() {
                     const stato = f.pagato || acc >= f.importo ? "pagata" : acc > 0 ? "acconto" : "da incassare";
                     return (
                       <tr key={f.id}>
-                        <td className="text-xs font-mono">{f.numero ?? "—"}</td>
+                        <td className="text-xs font-mono">
+                          <Link href={`/finance/fatture/${f.id}`} className="text-brand hover:underline">{f.numero ?? "senza numero"}</Link>
+                        </td>
                         <td>{MESI[f.mese - 1]} {f.anno}</td>
                         <td className="text-gray-500">{f.scadenza ? new Date(f.scadenza).toLocaleDateString("it-IT") : "—"}</td>
                         <td>
@@ -335,19 +337,6 @@ function Referenti({
     setOpen(false);
     onChanged();
   };
-  const principale = async (id: number) => {
-    await fetch(`/api/contatti/${id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ principale: true }),
-    });
-    onChanged();
-  };
-  const del = async (id: number, nome: string) => {
-    if (!confirm(`Eliminare il referente ${nome}?`)) return;
-    await fetch(`/api/contatti/${id}`, { method: "DELETE" });
-    onChanged();
-  };
   return (
     <section className="glass-card rounded-2xl p-5 space-y-3">
       <div className="flex items-center justify-between">
@@ -371,20 +360,12 @@ function Referenti({
       ) : (
         <div className="divide-y divide-gray-50">
           {contatti.map((r) => (
-            <div key={r.id} className="flex items-center justify-between py-2 text-sm gap-3">
-              <div className="min-w-0">
-                <span className="font-semibold text-gray-900">{r.nome}{r.cognome ? ` ${r.cognome}` : ""}</span>
-                {r.ruolo && <span className="text-gray-500"> · {r.ruolo}</span>}
-                {r.principale && <span className="pill-wait ml-2">principale</span>}
-                <div className="text-xs text-gray-500">{[r.email, r.telefono].filter(Boolean).join(" · ") || "—"}</div>
-              </div>
-              <div className="flex items-center gap-1 shrink-0">
-                {!r.principale && (
-                  <button onClick={() => principale(r.id)} className="p-1.5 text-gray-400 hover:text-warn" title="Imposta principale"><Star className="w-4 h-4" /></button>
-                )}
-                <button onClick={() => del(r.id, r.nome)} className="p-1.5 text-gray-400 hover:text-bad" title="Elimina"><X className="w-4 h-4" /></button>
-              </div>
-            </div>
+            <Link key={r.id} href={`/crm/contatti/${r.id}`} className="block py-2 text-sm -mx-2 px-2 rounded-lg hover:bg-brand/10">
+              <span className="font-medium text-brand">{r.nome}{r.cognome ? ` ${r.cognome}` : ""}</span>
+              {r.ruolo && <span className="text-gray-500"> · {r.ruolo}</span>}
+              {r.principale && <span className="pill-wait ml-2">principale</span>}
+              <div className="text-xs text-gray-500">{[r.email, r.telefono].filter(Boolean).join(" · ") || "—"}</div>
+            </Link>
           ))}
         </div>
       )}

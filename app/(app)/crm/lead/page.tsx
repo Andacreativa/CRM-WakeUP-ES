@@ -5,7 +5,8 @@ import { Kpi, KpiGrid } from "@/components/Kpi";
 import SearchBox from "@/components/SearchBox";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { Plus, Trash2, ExternalLink } from "lucide-react";
+import { Plus } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { fmt } from "@/lib/constants";
 import { FONTI_LEAD, STATI_LEAD, STATO_LEAD } from "@/lib/lead";
 import LeadFormModal, { type LeadFormValues } from "@/components/crm/LeadFormModal";
@@ -25,6 +26,7 @@ const selectCls =
   "sel";
 
 export default function LeadPage() {
+  const router = useRouter();
   const [leads, setLeads] = useState<Lead[]>([]);
   const [stato, setStato] = useState("");
   const [q, setQ] = useState("");
@@ -74,11 +76,6 @@ export default function LeadPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ stato: nuovo }),
     });
-    load();
-  };
-  const del = async (l: Lead) => {
-    if (!confirm(`Eliminare il lead ${l.azienda ?? l.nome}?`)) return;
-    await fetch(`/api/leads/${l.id}`, { method: "DELETE" });
     load();
   };
 
@@ -140,7 +137,7 @@ export default function LeadPage() {
           <table className="tbl min-w-[960px]">
             <thead>
               <tr>
-                {["Data", "Azienda", "Contatto", "Fonte", "Responsabile", "Città", "Stato", "Valore", "Prossima azione", ""].map((h) => (
+                {["Data", "Azienda", "Contatto", "Fonte", "Responsabile", "Città", "Stato", "Valore", "Prossima azione"].map((h) => (
                   <th
                     key={h}
                     className={cn(
@@ -156,7 +153,7 @@ export default function LeadPage() {
             <tbody>
               {paged.length === 0 && (
                 <tr>
-                  <td colSpan={10} className="text-center text-gray-400 py-12">Nessun lead</td>
+                  <td colSpan={9} className="text-center text-gray-400 py-12">Nessun lead</td>
                 </tr>
               )}
               {paged.map((l) => {
@@ -165,12 +162,12 @@ export default function LeadPage() {
                 const paData = l.prossimaAzioneData ?? l.attivita[0]?.prossimaAzioneData;
                 const scaduta = paData ? new Date(paData).getTime() < Date.now() : false;
                 return (
-                  <tr key={l.id}>
+                  <tr key={l.id} className="cursor-pointer" onClick={() => router.push(`/crm/lead/${l.id}`)}>
                     <td className="text-xs text-gray-500 whitespace-nowrap">
                       {new Date(l.createdAt).toLocaleDateString("it-IT")}
                     </td>
                     <td>
-                      <Link href={`/crm/lead/${l.id}`} className="text-sm font-semibold text-gray-900 hover:text-brand">
+                      <Link href={`/crm/lead/${l.id}`} onClick={(e) => e.stopPropagation()} className="font-medium text-brand hover:underline">
                         {l.azienda ?? l.nome}
                       </Link>
                       <div className="tbl-muted">
@@ -189,7 +186,7 @@ export default function LeadPage() {
                     </td>
                     <td className="text-xs">{l.responsabile ?? "—"}</td>
                     <td className="text-xs">{l.citta ?? "—"}</td>
-                    <td>
+                    <td onClick={(e) => e.stopPropagation()}>
                       <select
                         value={l.stato}
                         onChange={(e) => cambiaStato(l, e.target.value)}
@@ -217,16 +214,6 @@ export default function LeadPage() {
                       ) : (
                         <span className="text-gray-400">—</span>
                       )}
-                    </td>
-                    <td>
-                      <div className="flex items-center gap-1 justify-end">
-                        <Link href={`/crm/lead/${l.id}`} className="p-1.5 text-gray-400 hover:text-brand" title="Apri">
-                          <ExternalLink className="w-4 h-4" />
-                        </Link>
-                        <button onClick={() => del(l)} className="p-1.5 text-gray-400 hover:text-bad" title="Elimina">
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
                     </td>
                   </tr>
                 );

@@ -3,7 +3,9 @@
 import { Kpi, KpiGrid } from "@/components/Kpi";
 import SearchBox from "@/components/SearchBox";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Plus, Pencil, Trash2, Check, X, Info } from "lucide-react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { Plus, Check, X, Info } from "lucide-react";
 import {
   fmt,
   MESI,
@@ -15,38 +17,10 @@ import { isFinnRitenuta } from "@/lib/finn-split";
 import FiltriBar from "@/components/FiltriBar";
 import { PageSizeSelect, PageNav } from "@/components/Pagination";
 import { cn, matchQ } from "@/lib/utils";
+import AltroIngressoFormModal, { type AltroIngressoBase } from "@/components/ingressi/AltroIngressoFormModal";
 
-interface AltroIngresso {
-  id: number;
-  fonte: string;
-  categoria: string | null;
-  azienda: string;
-  aziendaNota: string | null;
-  descrizione: string | null;
-  mese: number;
-  anno: number;
-  importo: number;
-  incassato: boolean;
-  dataIncasso: string | null;
-  fatturaId: number | null;
-}
+type AltroIngresso = AltroIngressoBase;
 
-const emptyForm = () => ({
-  fonte: "",
-  categoria: "altro",
-  azienda: "Spagna",
-  aziendaNota: "",
-  descrizione: "",
-  mese: new Date().getMonth() + 1,
-  anno: new Date().getFullYear(),
-  importo: "",
-  incassato: false,
-  dataIncasso: "",
-});
-
-const inputCls =
-  "w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30 bg-white";
-const labelCls = "text-xs font-medium text-gray-600 block mb-1";
 const selectCls =
   "sel";
 
@@ -59,6 +33,7 @@ const categoriaDi = (r: AltroIngresso) =>
 const soloContabile = (r: AltroIngresso) => isFinnRitenuta(r) || !!r.fatturaId;
 
 export default function AltriIngressiPage() {
+  const router = useRouter();
   const { anno, setAnno } = useAnno();
   const [rows, setRows] = useState<AltroIngresso[]>([]);
   const [azienda, setAzienda] = useState("");
@@ -67,9 +42,7 @@ export default function AltriIngressiPage() {
   const [q, setQ] = useState("");
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
-  const [showForm, setShowForm] = useState(false);
-  const [editing, setEditing] = useState<AltroIngresso | null>(null);
-  const [form, setForm] = useState(emptyForm());
+  const [nuovo, setNuovo] = useState(false);
 
   const load = useCallback(async () => {
     const params = new URLSearchParams({ anno: String(anno) });
@@ -102,43 +75,6 @@ export default function AltriIngressiPage() {
   const contabili = filtered.filter(soloContabile).reduce((s, r) => s + r.importo, 0);
   const paged = filtered.slice((page - 1) * pageSize, page * pageSize);
 
-  const openNew = () => {
-    setEditing(null);
-    setForm({ ...emptyForm(), anno: anno > 0 ? anno : new Date().getFullYear() });
-    setShowForm(true);
-  };
-  const openEdit = (r: AltroIngresso) => {
-    setEditing(r);
-    setForm({
-      fonte: r.fonte,
-      categoria: categoriaDi(r),
-      azienda: r.azienda,
-      aziendaNota: r.aziendaNota ?? "",
-      descrizione: r.descrizione ?? "",
-      mese: r.mese,
-      anno: r.anno,
-      importo: String(r.importo),
-      incassato: r.incassato,
-      dataIncasso: r.dataIncasso ? r.dataIncasso.slice(0, 10) : "",
-    });
-    setShowForm(true);
-  };
-  const save = async () => {
-    if (!form.fonte || !form.importo) return;
-    const payload = {
-      ...form,
-      importo: parseFloat(String(form.importo).replace(",", ".")),
-      dataIncasso: form.dataIncasso || null,
-      aziendaNota: form.azienda === "Altro" ? form.aziendaNota : null,
-    };
-    await fetch(editing ? `/api/altri-ingressi/${editing.id}` : "/api/altri-ingressi", {
-      method: editing ? "PATCH" : "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
-    setShowForm(false);
-    load();
-  };
   const toggleIncassato = async (r: AltroIngresso) => {
     await fetch(`/api/altri-ingressi/${r.id}`, {
       method: "PATCH",
@@ -147,12 +83,6 @@ export default function AltriIngressiPage() {
     });
     load();
   };
-  const del = async (r: AltroIngresso) => {
-    if (!confirm("Eliminare questo ingresso?")) return;
-    await fetch(`/api/altri-ingressi/${r.id}`, { method: "DELETE" });
-    load();
-  };
-
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-3">
@@ -165,7 +95,7 @@ export default function AltriIngressiPage() {
         <div className="flex items-center gap-3 flex-wrap">
           <FiltriBar anno={anno} azienda={azienda} onAnno={setAnno} onAzienda={setAzienda} showAzienda={false} />
           <button
-            onClick={openNew}
+            onClick={() => setNuovo(true)}
             className="btn btn-primary"
           >
             <Plus className="w-4 h-4" /> Nuovo ingresso
@@ -209,7 +139,7 @@ export default function AltriIngressiPage() {
         <table className="tbl">
           <thead>
             <tr>
-              {["Fonte", "Categoria", "Mese", "Importo", "Stato", ""].map((h) => (
+              {["Fonte", "Categoria", "Mese", "Importo", "Stato"].map((h) => (
                 <th
                   key={h}
                   className={cn(
@@ -225,15 +155,21 @@ export default function AltriIngressiPage() {
           <tbody>
             {paged.length === 0 && (
               <tr>
-                <td colSpan={6} className="text-center text-gray-400 py-12">Nessun ingresso</td>
+                <td colSpan={5} className="text-center text-gray-400 py-12">Nessun ingresso</td>
               </tr>
             )}
             {paged.map((r) => {
               const contabile = soloContabile(r);
               return (
-                <tr key={r.id}>
+                <tr key={r.id} className="cursor-pointer" onClick={() => router.push(`/finance/altri-ingressi/${r.id}`)}>
                   <td>
-                    <div className="tbl-primary">{r.fonte}</div>
+                    <Link
+                      href={`/finance/altri-ingressi/${r.id}`}
+                      onClick={(e) => e.stopPropagation()}
+                      className="font-medium text-brand hover:underline"
+                    >
+                      {r.fonte}
+                    </Link>
                     {r.descrizione && <div className="text-xs text-gray-500">{r.descrizione}</div>}
                   </td>
                   <td>
@@ -254,7 +190,10 @@ export default function AltriIngressiPage() {
                   </td>
                   <td className="text-center">
                     <button
-                      onClick={() => toggleIncassato(r)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        toggleIncassato(r);
+                      }}
                       className={cn(
                         "inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-1 rounded-md border",
                         r.incassato
@@ -266,16 +205,6 @@ export default function AltriIngressiPage() {
                       {r.incassato ? "Incassato" : "In attesa"}
                     </button>
                   </td>
-                  <td>
-                    <div className="flex items-center gap-1 justify-end">
-                      <button onClick={() => openEdit(r)} className="p-1.5 text-gray-400 hover:text-gray-700" title="Modifica">
-                        <Pencil className="w-4 h-4" />
-                      </button>
-                      <button onClick={() => del(r)} className="p-1.5 text-gray-400 hover:text-bad" title="Elimina">
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </td>
                 </tr>
               );
             })}
@@ -286,69 +215,16 @@ export default function AltriIngressiPage() {
         <PageNav total={filtered.length} page={page} pageSize={pageSize} onPage={setPage} labelSuffix="ingressi" />
       )}
 
-      {showForm && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-          <div className="glass-modal rounded-2xl w-full max-w-md p-6 space-y-4">
-            <div className="flex items-center justify-between">
-              <h2 className="text-lg font-bold text-gray-900">{editing ? "Modifica ingresso" : "Nuovo ingresso"}</h2>
-              <button onClick={() => setShowForm(false)} className="text-gray-400 hover:text-gray-700">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            <div className="space-y-3">
-              <div>
-                <label className={labelCls}>Categoria</label>
-                <select value={form.categoria} onChange={(e) => setForm((f) => ({ ...f, categoria: e.target.value }))} className={inputCls}>
-                  {CATEGORIE_INGRESSO.map((c) => (
-                    <option key={c.value} value={c.value}>{c.label}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className={labelCls}>Fonte *</label>
-                <input value={form.fonte} onChange={(e) => setForm((f) => ({ ...f, fonte: e.target.value }))} className={inputCls} placeholder="Es. BBVA, AEAT, nome cliente…" />
-              </div>
-              <div>
-                <label className={labelCls}>Descrizione</label>
-                <input value={form.descrizione} onChange={(e) => setForm((f) => ({ ...f, descrizione: e.target.value }))} className={inputCls} />
-              </div>
-              <div className="grid grid-cols-3 gap-3">
-                <div>
-                  <label className={labelCls}>Mese</label>
-                  <select value={form.mese} onChange={(e) => setForm((f) => ({ ...f, mese: parseInt(e.target.value) }))} className={inputCls}>
-                    {MESI.map((m, i) => (
-                      <option key={m} value={i + 1}>{m}</option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className={labelCls}>Anno</label>
-                  <input type="number" value={form.anno} onChange={(e) => setForm((f) => ({ ...f, anno: parseInt(e.target.value) || f.anno }))} className={inputCls} />
-                </div>
-                <div>
-                  <label className={labelCls}>Importo (€)</label>
-                  <input value={form.importo} onChange={(e) => setForm((f) => ({ ...f, importo: e.target.value }))} className={inputCls} inputMode="decimal" />
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-3 items-end">
-                <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
-                  <input type="checkbox" checked={form.incassato} onChange={(e) => setForm((f) => ({ ...f, incassato: e.target.checked }))} />
-                  Incassato
-                </label>
-                <div>
-                  <label className={labelCls}>Data incasso</label>
-                  <input type="date" value={form.dataIncasso} onChange={(e) => setForm((f) => ({ ...f, dataIncasso: e.target.value }))} className={inputCls} />
-                </div>
-              </div>
-            </div>
-            <div className="flex justify-end gap-2 pt-1">
-              <button onClick={() => setShowForm(false)} className="text-sm text-gray-500 hover:text-gray-700 px-3 py-2">Annulla</button>
-              <button onClick={save} className="btn btn-primary">
-                {editing ? "Salva" : "Aggiungi"}
-              </button>
-            </div>
-          </div>
-        </div>
+      {nuovo && (
+        <AltroIngressoFormModal
+          ingresso={null}
+          annoDefault={anno}
+          onClose={() => setNuovo(false)}
+          onSaved={() => {
+            setNuovo(false);
+            load();
+          }}
+        />
       )}
     </div>
   );

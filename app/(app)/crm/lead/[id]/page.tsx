@@ -181,11 +181,11 @@ export default function LeadDettaglioPage() {
           <Link href="/sales/preventivi" className="btn btn-secondary">
             <FileText className="w-4 h-4" /> Preventivo
           </Link>
-          <button onClick={() => setEdit(true)} className="p-2 rounded-xl text-gray-500 hover:bg-gray-100" title="Modifica">
-            <Pencil className="w-4 h-4" />
+          <button onClick={() => setEdit(true)} className="btn btn-secondary">
+            <Pencil className="w-4 h-4" /> Modifica
           </button>
-          <button onClick={del} className="p-2 rounded-xl text-gray-500 hover:text-bad hover:bg-bad/10" title="Elimina">
-            <Trash2 className="w-4 h-4" />
+          <button onClick={del} className="btn btn-secondary text-bad hover:text-bad">
+            <Trash2 className="w-4 h-4" /> Elimina
           </button>
         </div>
       </div>
@@ -427,11 +427,6 @@ function Referenti({ lead, onChanged }: { lead: Lead; onChanged: () => void }) {
     setOpen(false);
     onChanged();
   };
-  const del = async (c: Contatto) => {
-    if (!confirm(`Eliminare il referente ${c.nome}?`)) return;
-    await fetch(`/api/contatti/${c.id}`, { method: "DELETE" });
-    onChanged();
-  };
   return (
     <section className="glass-card rounded-2xl p-5 space-y-3">
       <div className="flex items-center justify-between">
@@ -457,14 +452,11 @@ function Referenti({ lead, onChanged }: { lead: Lead; onChanged: () => void }) {
       ) : (
         <div className="divide-y divide-gray-50">
           {lead.contatti.map((c) => (
-            <div key={c.id} className="flex items-center justify-between py-2 text-sm gap-3">
-              <div>
-                <span className="font-semibold text-gray-900">{c.nome}{c.cognome ? ` ${c.cognome}` : ""}</span>
-                {c.ruolo && <span className="text-gray-500"> · {c.ruolo}</span>}
-                <div className="text-xs text-gray-500">{[c.email, c.telefono].filter(Boolean).join(" · ")}</div>
-              </div>
-              <button onClick={() => del(c)} className="p-1.5 text-gray-400 hover:text-bad"><X className="w-4 h-4" /></button>
-            </div>
+            <Link key={c.id} href={`/crm/contatti/${c.id}`} className="block py-2 text-sm -mx-2 px-2 rounded-lg hover:bg-brand/10">
+              <span className="font-medium text-brand">{c.nome}{c.cognome ? ` ${c.cognome}` : ""}</span>
+              {c.ruolo && <span className="text-gray-500"> · {c.ruolo}</span>}
+              <div className="text-xs text-gray-500">{[c.email, c.telefono].filter(Boolean).join(" · ")}</div>
+            </Link>
           ))}
         </div>
       )}

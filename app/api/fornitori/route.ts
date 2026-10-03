@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { paeseDaPiva, pulisciPiva } from "@/lib/constants";
 
 export async function GET() {
   try {
@@ -16,13 +17,18 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
+    if (!String(body.nome ?? "").trim()) {
+      return NextResponse.json({ error: "Nome obbligatorio" }, { status: 400 });
+    }
     const fornitore = await prisma.fornitore.create({
       data: {
-        nome: body.nome,
-        paese: body.paese || "Italia",
+        nome: String(body.nome ?? "").trim(),
+        // senza paese (es. fornitore creato dalla fattura caricata) lo si
+        // ricava dalla P.IVA/NIF
+        paese: body.paese || paeseDaPiva(body.partitaIva) || "Spagna",
         email: body.email || null,
         telefono: body.telefono || null,
-        partitaIva: body.partitaIva || null,
+        partitaIva: pulisciPiva(body.partitaIva),
         via: body.via || null,
         cap: body.cap || null,
         citta: body.citta || null,

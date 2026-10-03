@@ -7,6 +7,20 @@ const INCLUDE = {
   lead: { select: { id: true, codice: true, nome: true, azienda: true } },
 };
 
+// Scheda del contatto: dati e a chi è collegato
+export async function GET(_: Request, { params }: Ctx) {
+  const { id } = await params;
+  const contatto = await prisma.contatto.findUnique({
+    where: { id: parseInt(id, 10) || 0 },
+    include: {
+      cliente: { select: { id: true, nome: true, paese: true, citta: true, email: true, telefono: true } },
+      lead: { select: { id: true, codice: true, nome: true, azienda: true, stato: true } },
+    },
+  });
+  if (!contatto) return NextResponse.json({ error: "Non trovato" }, { status: 404 });
+  return NextResponse.json(contatto);
+}
+
 export async function PATCH(request: Request, { params }: Ctx) {
   try {
     const { id } = await params;

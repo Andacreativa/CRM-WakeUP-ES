@@ -99,6 +99,26 @@ export function prefissaPiva(
   return codice + resto;
 }
 
+// Paese di una controparte dalla P.IVA/NIF (formato nazionale o prefisso):
+// la stessa regola di scripts/sistema-paesi.mjs. null se non si capisce.
+export function paeseDaPiva(piva: string | null | undefined): string | null {
+  const v = String(piva ?? "").toUpperCase().replace(/[\s.\-/]/g, "");
+  if (!v) return null;
+  if (/^PIVA\d{11}$/.test(v)) return "Italia";
+  if (/^[A-Z]{6}\d{2}[A-Z]\d{2}[A-Z]\d{3}[A-Z]$/.test(v)) return "Italia"; // codice fiscale
+  if (/^\d{11}$/.test(v)) return "Italia";
+  if (/^[ABCDEFGHJNPQRSUVW]\d{7}[0-9A-J]$/.test(v)) return "Spagna"; // NIF società
+  if (/^[XYZ]\d{7}[A-Z]$/.test(v)) return "Spagna"; // NIE
+  if (/^\d{8}[A-Z]$/.test(v)) return "Spagna"; // DNI
+  if (/^\d{7}[A-W][A-I]?$/.test(v)) return "Irlanda";
+  const m = v.match(/^([A-Z]{2})([A-Z0-9]{8,16})$/);
+  if (m) {
+    const paese = Object.entries(PAESI_CODICE).find(([, c]) => c === m[1])?.[0];
+    if (paese) return paese;
+  }
+  return null;
+}
+
 // Prefisso ripetuto: nel campo c'è già "IT" e si incolla "IT0123…"
 export const unisciPrefisso = (piva: string) => piva.replace(/^([A-Za-z]{2})\1(?=[A-Za-z0-9]{8})/, "$1");
 

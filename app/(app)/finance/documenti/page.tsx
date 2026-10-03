@@ -38,29 +38,6 @@ export default function DocumentiPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tab]);
 
-  const del = async (id: number) => {
-    if (!confirm("Eliminare questo documento?")) return;
-    await fetch(`/api/documenti/${id}`, { method: "DELETE" });
-    load();
-  };
-
-  const downloadDoc = async (d: Documento) => {
-    const res = await fetch(`/api/documenti/${d.id}/file`);
-    if (!res.ok) {
-      alert("Errore download file");
-      return;
-    }
-    const blob = await res.blob();
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = d.fileName;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
-  };
-
   return (
     <div className="space-y-6">
       <div>
@@ -120,7 +97,6 @@ export default function DocumentiPage() {
                 ...(tab === "soci" ? ["Socio"] : []),
                 "File",
                 "Data caricamento",
-                "",
               ].map((h) => (
                 <th
                   key={h}
@@ -135,7 +111,7 @@ export default function DocumentiPage() {
             {docs.length === 0 && (
               <tr>
                 <td
-                  colSpan={tab === "soci" ? 6 : 5}
+                  colSpan={tab === "soci" ? 5 : 4}
                   className="text-center text-gray-400 py-12 text-sm"
                 >
                   <Folder className="w-10 h-10 text-gray-400 mx-auto mb-2" />
@@ -143,13 +119,10 @@ export default function DocumentiPage() {
                 </td>
               </tr>
             )}
-            {visibili.map((d, i) => (
-              <tr
-                key={d.id}
-                className={`border-b border-gray-50 hover:bg-gray-50 transition-colors ${i % 2 === 1 ? "bg-[#f9fafb]" : "bg-white"}`}
-              >
-                <td className="font-medium">
-                  {d.nome}
+            {visibili.map((d) => (
+              <tr key={d.id} className="cursor-pointer" onClick={() => setPreview(d)}>
+                <td>
+                  <span className="font-medium text-brand hover:underline">{d.nome}</span>
                 </td>
                 <td>
                   <span className="tag tag-brand">
@@ -162,33 +135,10 @@ export default function DocumentiPage() {
                   </td>
                 )}
                 <td className="text-xs text-gray-500 max-w-[200px] truncate">
-                  <button
-                    onClick={() => setPreview(d)}
-                    className="hover:text-brand hover:underline text-left"
-                  >
-                    {d.fileName}
-                  </button>
+                  {d.fileName}
                 </td>
                 <td className="text-gray-500">
                   {new Date(d.dataCaricamento).toLocaleDateString("it-IT")}
-                </td>
-                <td>
-                  <div className="flex items-center gap-1 justify-end">
-                    <button
-                      onClick={() => downloadDoc(d)}
-                      title="Scarica"
-                      className="p-1.5 rounded-lg text-gray-400 hover:text-brand hover:bg-brand/10 transition-colors"
-                    >
-                      <Download className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={() => del(d.id)}
-                      title="Elimina"
-                      className="p-1.5 rounded-lg text-gray-400 hover:text-bad hover:bg-bad/10 transition-colors"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
                 </td>
               </tr>
             ))}
@@ -211,6 +161,12 @@ export default function DocumentiPage() {
         <PreviewDocumentoModal
           documento={preview}
           onClose={() => setPreview(null)}
+          onElimina={async () => {
+            if (!confirm(`Eliminare il documento «${preview.nome}»?`)) return;
+            await fetch(`/api/documenti/${preview.id}`, { method: "DELETE" });
+            setPreview(null);
+            load();
+          }}
         />
       )}
     </div>
@@ -395,9 +351,11 @@ function UploadDocumentoModal({
 function PreviewDocumentoModal({
   documento,
   onClose,
+  onElimina,
 }: {
   documento: Documento;
   onClose: () => void;
+  onElimina: () => void;
 }) {
   const fileUrl = `/api/documenti/${documento.id}/file`;
   const mime = documento.fileMimeType ?? "";
@@ -446,11 +404,11 @@ function PreviewDocumentoModal({
             </p>
           </div>
           <div className="flex items-center gap-2 shrink-0">
-            <button
-              onClick={downloadFile}
-              className="flex items-center gap-1.5 text-sm border border-gray-200 text-gray-700 px-3 py-1.5 rounded-lg hover:bg-white"
-            >
+            <button onClick={downloadFile} className="btn btn-secondary btn-sm">
               <Download className="w-4 h-4" /> Scarica
+            </button>
+            <button onClick={onElimina} className="btn btn-secondary btn-sm text-bad hover:text-bad">
+              <Trash2 className="w-4 h-4" /> Elimina
             </button>
             <button
               onClick={onClose}
