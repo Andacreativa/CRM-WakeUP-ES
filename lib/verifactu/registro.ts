@@ -162,6 +162,8 @@ export function erroriAlta(d: DatiAlta): string[] {
   if (!d.destinatario.nombreRazon.trim()) e.push("Manca il nome del cliente.");
   if (!d.destinatario.nif && !d.destinatario.idOtro?.id)
     e.push("Il cliente non ha NIF / P.IVA: completare l'anagrafica.");
+  if (d.destinatario.idOtro && !d.destinatario.idOtro.codigoPais)
+    e.push("Cliente estero senza paese riconoscibile: indicare il paese nell'anagrafica.");
   if (d.aliquota === 0 && !d.causa)
     e.push("Fattura a 0 %: scegliere se è esente (e con quale causa) o non soggetta.");
   if (d.aliquota > 0 && d.causa) e.push("Con un'aliquota non si indica una causa di esenzione.");
@@ -330,12 +332,11 @@ export function busta(
 }
 
 // ── Cliente → destinatario ─────────────────────────────────────────────────
-// Paesi con NIF-IVA europeo (IDType 02). La Grecia usa il prefisso EL.
-const UE = new Set([
-  "AT", "BE", "BG", "CY", "CZ", "DE", "DK", "EE", "EL", "FI", "FR", "HR", "HU", "IE",
-  "IT", "LT", "LU", "LV", "MT", "NL", "PL", "PT", "RO", "SE", "SI", "SK",
-]);
-
+// Spagnolo: NIF senza prefisso. Estero: documento ufficiale del paese di
+// residenza (IDType 04) con il codice del paese e la P.IVA com'è in
+// anagrafica — così sono state trasmesse finora tutte le fatture ai clienti
+// esteri (in Billin: tipo «ORIGIN»). Il tipo 02 (NIF-IVA) farebbe dipendere
+// l'accettazione dal registro europeo VIES.
 export function destinatarioDa(
   cliente: { nome: string; partitaIva: string | null },
   codicePaese: string, // ISO a due lettere della sede; "" se non noto
@@ -344,11 +345,13 @@ export function destinatarioDa(
   const nombreRazon = cliente.nome.trim();
   if (!piva) return { nombreRazon };
   const prefisso = /^[A-Z]{2}(?=[A-Z0-9]{2,})/.exec(piva)?.[0] ?? "";
-  const paese = codicePaese || prefisso;
+  // La Grecia scrive EL sulla partita IVA ma il suo codice paese è GR
+  const paese = codicePaese || (prefisso === "EL" ? "GR" : prefisso);
   if (paese === "ES") return { nombreRazon, nif: prefisso === "ES" ? piva.slice(2) : piva };
-  if (UE.has(prefisso)) return { nombreRazon, idOtro: { idType: "02", id: piva } };
-  if (UE.has(paese === "GR" ? "EL" : paese))
-    return { nombreRazon, idOtro: { idType: "02", id: (paese === "GR" ? "EL" : paese) + piva } };
-  // Fuori dall'UE: documento ufficiale del paese
-  return { nombreRazon, idOtro: { codigoPais: paese || undefined, idType: paese ? "04" : "06", id: piva } };
+  return { nombreRazon, idOtro: { codigoPais: paese || undefined, idType: "04", id: piva } };
 }
+
+// Regime dell'operazione (ClaveRegimen). Le esenti per esportazione (E2) e
+// assimilate (E3) vanno col regime 02: con lo 01 l'AEAT non le ammette.
+export const regimePer = (causa: string | null | undefined, generale: string) =>
+  causa === "E2" || causa === "E3" ? "02" : generale || "01";

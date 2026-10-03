@@ -6,6 +6,7 @@ import {
   dataRegistro,
   destinatarioDa,
   erroriAlta,
+  regimePer,
   registroAlta,
   registroAnulacion,
   type Ambiente,
@@ -60,6 +61,10 @@ const sistemaDa = (cfg: ImpostazioniFatture): SistemaInformatico => ({
   numeroInstalacion: cfg.vfNumeroInstalacion,
 });
 
+// Codice ISO del paese del cliente. PAESI_CODICE è il prefisso della partita
+// IVA (vuoto fuori dall'UE): qui serve il paese anche per quelli
+const PAESE_ISO: Record<string, string> = { ...PAESI_CODICE, Svizzera: "CH", "Stati Uniti": "US" };
+
 // Un solo registro alla volta: la catena non ammette due «ultimi»
 // (la funzione restituisce void: $executeRaw non prova a leggerne il risultato)
 export const blocca = (tx: Tx) => tx.$executeRaw`SELECT pg_advisory_xact_lock(10072023)`;
@@ -101,8 +106,8 @@ export async function creaRegistroAlta(
         ? [{ numSerie: f.rettificaDi.numero!, dataFattura: dataRegistro(f.rettificaDi.data!) }]
         : undefined,
     descrizione: (f.descrizione || cfg.vfDescrizioneDefault || "").trim(),
-    destinatario: destinatarioDa(f.cliente, PAESI_CODICE[f.cliente.paese] ?? ""),
-    claveRegimen: cfg.vfClaveRegimen || "01",
+    destinatario: destinatarioDa(f.cliente, PAESE_ISO[f.cliente.paese] ?? ""),
+    claveRegimen: regimePer(f.causaIgic, cfg.vfClaveRegimen),
     imponibile: f.importo,
     aliquota: Number(f.iva) || 0,
     causa: (f.causaIgic as CausaIgic | null) ?? null,

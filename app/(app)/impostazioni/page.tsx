@@ -317,7 +317,8 @@ export default function ImpostazioniPage() {
         </div>
         <p className="text-[11px] text-gray-400 leading-snug">
           Questi dati viaggiano in ogni registro e identificano il programma: vanno fissati prima della
-          partenza e poi non si cambiano senza motivo.
+          partenza e poi non si cambiano senza motivo. Il regime vale per le operazioni soggette; le
+          esenti E2 ed E3 partono sempre col regime 02 (esportazione).
         </p>
       </Sezione>
 
