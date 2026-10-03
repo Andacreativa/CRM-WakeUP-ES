@@ -64,6 +64,23 @@ model Fattura {
   commercialeId Int?
   commercialeRef Dipendente?   @relation("FatturaCommerciale", fields: [commercialeId], references: [id], onDelete: SetNull)
   scadenza      DateTime?
+  // Bozza: senza numero, si modifica e si elimina. Emessa: resta nel registro.
+  stato         String         @default("emessa") // bozza | emessa
+  emessaIl      DateTime?
+  // Descrizione dell'operazione e righe (JSON [{ descrizione, quantita, prezzo }]).
+  // Senza righe vale l'importo unico, come le fatture di prima.
+  descrizione   String?
+  voci          String         @default("[]")
+  // A 0 %: esente (E1…E8) o non soggetta (N1, N2). Serve al registro VeriFactu.
+  causaIgic     String?
+  // Rettificativa (serie a parte), per differenze, sulla fattura indicata
+  tipoFattura   String         @default("F1") // F1 | R1 | R2 | R3 | R4
+  rettificaDiId Int?
+  rettificaDi   Fattura?       @relation("Rettifica", fields: [rettificaDiId], references: [id], onDelete: SetNull)
+  rettifiche    Fattura[]      @relation("Rettifica")
+  // VeriFactu: null = fattura non trasmessa da questa app (registrata a mano)
+  vfStato       String? // in_coda | accettata | accettata_con_errori | rifiutata
+  vfQr          String? // indirizzo di verifica AEAT che va nel QR
   createdAt     DateTime       @default(now())
   altriIngressi AltroIngresso[]
   spese         Spesa[]
@@ -72,9 +89,43 @@ model Fattura {
   commissioni   PagamentoMensile[] @relation("CommissioneFattura")
   solleciti     Sollecito[]
   abbinamentiBancari AbbinamentoBancario[]
+  registriVerifactu  RegistroVerifactu[]
 
   @@index([contrattoId])
   @@index([commercialeId])
+  @@index([rettificaDiId])
+}
+
+// Registri di fatturazione VERI*FACTU: uno per ogni emissione, correzione o
+// annullamento, concatenati per impronta nell'ordine in cui nascono. Non si
+// modificano e non si eliminano: cambia solo l'esito dell'invio all'AEAT.
+model RegistroVerifactu {
+  id               Int       @id @default(autoincrement())
+  fatturaId        Int
+  fattura          Fattura   @relation(fields: [fatturaId], references: [id], onDelete: Restrict)
+  ambiente         String // prova | produzione (due catene distinte)
+  tipo             String // alta | anulacion
+  subsanacion      Boolean   @default(false)
+  nifEmittente     String
+  numSerie         String
+  dataFattura      String // DD-MM-AAAA, come nel registro
+  huellaPrecedente String?
+  huella           String
+  generatoIl       String // FechaHoraHusoGenRegistro
+  xml              String
+  stato            String    @default("in_coda") // in_coda | accettato | accettato_con_errori | rifiutato
+  csv              String? // codice di verifica della ricezione AEAT
+  codiceErrore     String?
+  descrizioneErrore String?
+  risposta         String? // risposta AEAT (XML)
+  tentativi        Int       @default(0)
+  ultimoErrore     String? // ultimo problema d'invio (rete, certificato)
+  inviatoIl        DateTime?
+  createdAt        DateTime  @default(now())
+
+  @@index([fatturaId])
+  @@index([ambiente, id])
+  @@index([stato])
 }
 
 // Solleciti di pagamento registrati su una fattura (come i reminders di

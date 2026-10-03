@@ -30,6 +30,20 @@ export interface ImpostazioniFatture {
   numeroFormato: string; // token: {prefisso} {AAAA} {AA} {N} {NN} {NNN} {NNNN}
   numeroPartenza: number;
   resetAnnuale: boolean;
+  // Le rettificative hanno una serie a parte (art. 6 del regolamento di
+  // fatturazione): stesso formato, prefisso diverso
+  numeroPrefissoRettifica: string;
+  // VeriFactu: spento = le fatture si registrano a mano come prima; prova =
+  // ambiente di test dell'AEAT (senza valore fiscale); produzione = invio vero
+  vfModo: "spento" | "prova" | "produzione";
+  vfNombreSistema: string;
+  vfIdSistema: string;
+  vfVersion: string;
+  vfNumeroInstalacion: string;
+  vfClaveRegimen: string; // 01 = regime generale
+  vfDescrizioneDefault: string; // descrizione dell'operazione proposta
+  vfCausaSpagna: string; // a 0 %, proposta per i clienti spagnoli (E1…E8, N1, N2)
+  vfCausaEstero: string; // a 0 %, proposta per i clienti esteri
   // PDF
   logoUrl: string;
   colore: string;
@@ -69,6 +83,16 @@ export const IMPOSTAZIONI_FATTURE_DEFAULT: ImpostazioniFatture = {
   numeroFormato: "{prefisso}{AAAA}{N}",
   numeroPartenza: 1,
   resetAnnuale: true,
+  numeroPrefissoRettifica: "R",
+  vfModo: "spento",
+  vfNombreSistema: "Anda Finance",
+  vfIdSistema: "AF",
+  vfVersion: "1.0",
+  vfNumeroInstalacion: "1",
+  vfClaveRegimen: "01",
+  vfDescrizioneDefault: "Servicios de Publicidad",
+  vfCausaSpagna: "",
+  vfCausaEstero: "",
   logoUrl: "/logo anda.png",
   colore: "#e8308a",
   linguaDefault: "it",
@@ -84,6 +108,9 @@ export const IMPOSTAZIONI_FATTURE_DEFAULT: ImpostazioniFatture = {
   sollecitoTestoEs:
     "Estimado/a {cliente},\n\nle recordamos que la factura {numero} de {importo}, con vencimiento {scadenza}, a día de hoy no consta como pagada.\nLe rogamos realice el pago mediante transferencia al IBAN {iban}.\n\nUn cordial saludo,\n{azienda}",
 };
+
+// A 0 %: esente (E1…E8 per l'IGIC) o non soggetta (N1, N2)
+export const CAUSE_IGIC = ["E1", "E2", "E3", "E4", "E5", "E6", "E7", "E8", "N1", "N2"];
 
 const CHIAVE = "fatture";
 
@@ -130,6 +157,10 @@ function sanifica(p: Partial<ImpostazioniFatture>): Partial<ImpostazioniFatture>
   }
   if (out.tipoIvaDefault && out.tipoIvaDefault !== "igic7") out.tipoIvaDefault = "igic_exenta";
   if (out.linguaDefault && !["it", "es", "en"].includes(out.linguaDefault)) out.linguaDefault = "it";
+  if (out.vfModo && !["prova", "produzione"].includes(out.vfModo)) out.vfModo = "spento";
+  for (const k of ["vfCausaSpagna", "vfCausaEstero"] as const) {
+    if (out[k] && !CAUSE_IGIC.includes(out[k])) out[k] = "";
+  }
   if (out.numeroFormato !== undefined && !out.numeroFormato.includes("{N")) {
     out.numeroFormato = IMPOSTAZIONI_FATTURE_DEFAULT.numeroFormato;
   }
@@ -190,8 +221,12 @@ export async function prossimoNumeroFattura(
   db: Db,
   anno: number,
   imp?: ImpostazioniFatture,
+  rettifica = false, // serie delle rettificative
 ): Promise<string> {
-  const cfg = imp ?? (await getImpostazioniFatture(db));
+  const base = imp ?? (await getImpostazioniFatture(db));
+  const cfg = rettifica
+    ? { ...base, numeroPrefisso: base.numeroPrefissoRettifica || "R", numeroPartenza: 1 }
+    : base;
   const re = regexNumero(cfg.numeroFormato, cfg.numeroPrefisso, cfg.resetAnnuale ? anno : null);
   const rows = await db.fattura.findMany({
     where: { numero: { not: null } },
