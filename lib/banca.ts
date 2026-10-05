@@ -55,12 +55,23 @@ export interface RigaEstratto {
   importo: number;
   saldo: number | null;
 }
+// Movimento che la banca non ha ancora contabilizzato: nell'export del
+// giorno compare con REMESA "-" e senza ordinante. Non si importa (non ha
+// ancora un riferimento stabile): entra col primo estratto che lo riporta
+// contabilizzato.
+export interface RigaInAttesa {
+  dataContabile: Date;
+  concetto: string;
+  osservazioni: string | null;
+  importo: number;
+}
 export interface EstrattoParsed {
   conto: string | null;
   titolare: string | null;
   periodoDa: Date | null;
   periodoA: Date | null;
   righe: RigaEstratto[];
+  inAttesa: RigaInAttesa[];
   hashFile: string;
 }
 
@@ -168,6 +179,7 @@ export function parseEstrattoBBVA(buffer: Buffer): EstrattoParsed {
   };
 
   const righe: RigaEstratto[] = [];
+  const inAttesa: RigaInAttesa[] = [];
   const visti = new Map<string, number>();
   for (let i = hi + 1; i < aoa.length; i++) {
     const row = aoa[i] ?? [];
@@ -180,6 +192,17 @@ export function parseEstrattoBBVA(buffer: Buffer): EstrattoParsed {
     const osservazioni = testo(row, C.osservazioni);
     const codice = testo(row, C.codice);
     const remesa = testo(row, C.remesa);
+    // REMESA valorizzata ma senza lettere né cifre ("-"): segnaposto dei
+    // movimenti del giorno. Con quello come impronta sarebbero tutti uguali.
+    if (remesa && !/[a-z0-9]/i.test(remesa)) {
+      inAttesa.push({
+        dataContabile,
+        concetto,
+        osservazioni,
+        importo: Math.round(importo * 100) / 100,
+      });
+      continue;
+    }
     let impronta: string;
     if (remesa) {
       impronta = `bbva:${remesa}`;
@@ -214,7 +237,7 @@ export function parseEstrattoBBVA(buffer: Buffer): EstrattoParsed {
       if (!periodoA || r.dataContabile > periodoA) periodoA = r.dataContabile;
     }
   }
-  return { conto, titolare, periodoDa, periodoA, righe, hashFile };
+  return { conto, titolare, periodoDa, periodoA, righe, inAttesa, hashFile };
 }
 
 // ─── Impostazioni banca: regole di categoria + memoria beneficiari ───

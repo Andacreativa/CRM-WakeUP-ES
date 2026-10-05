@@ -3,7 +3,14 @@
 import { useRef, useState } from "react";
 import { Upload, X, FileSpreadsheet, CheckCircle2, AlertCircle, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { fmt } from "@/lib/constants";
 
+interface InAttesa {
+  dataContabile: string;
+  concetto: string;
+  osservazioni: string | null;
+  importo: number;
+}
 interface Esito {
   giaImportato: boolean;
   importId: number;
@@ -18,6 +25,7 @@ interface Esito {
   uscite: number;
   entrate: number;
   escluse: number;
+  inAttesa: InAttesa[];
 }
 
 const data = (iso: string | null) =>
@@ -175,6 +183,29 @@ export default function ImportEstrattoModal({
                 ))}
               </div>
             </div>
+            {esito.inAttesa.length > 0 && (
+              <div className="text-sm rounded-lg px-3 py-2 border bg-warn/10 border-warn/30">
+                <div className="flex items-start gap-2 text-warn">
+                  <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
+                  <div>
+                    {esito.inAttesa.length === 1
+                      ? "1 movimento non ancora contabilizzato dalla banca: non caricato."
+                      : `${esito.inAttesa.length} movimenti non ancora contabilizzati dalla banca: non caricati.`}{" "}
+                    Entrano da soli col prossimo estratto che li comprende, scaricato da domani.
+                  </div>
+                </div>
+                <ul className="mt-2 space-y-1 text-xs text-gray-700">
+                  {esito.inAttesa.map((r, i) => (
+                    <li key={i} className="flex justify-between gap-3">
+                      <span className="truncate" title={r.osservazioni ?? undefined}>
+                        {data(r.dataContabile)} · {r.concetto}
+                      </span>
+                      <span className="whitespace-nowrap font-medium">{fmt(r.importo)}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
             <div className="flex justify-end gap-2">
               <button
                 onClick={() => {

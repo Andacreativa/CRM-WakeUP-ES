@@ -12,7 +12,8 @@ export const runtime = "nodejs";
 
 // POST multipart { file }: importa un estratto BBVA. I movimenti già
 // presenti (stessa impronta) vengono saltati, così si può ricaricare un
-// periodo sovrapposto quando si vuole.
+// periodo sovrapposto quando si vuole. Quelli del giorno non ancora
+// contabilizzati (`inAttesa`) non si caricano: tornano nella risposta.
 export async function POST(request: Request) {
   try {
     const ct = request.headers.get("content-type") || "";
@@ -41,7 +42,14 @@ export async function POST(request: Request) {
       );
     }
     if (parsed.righe.length === 0) {
-      return NextResponse.json({ error: "Nessun movimento trovato nel file." }, { status: 400 });
+      return NextResponse.json(
+        {
+          error: parsed.inAttesa.length
+            ? `Il file contiene solo movimenti che la banca non ha ancora contabilizzato (${parsed.inAttesa.length}): scarica di nuovo l'estratto da domani.`
+            : "Nessun movimento trovato nel file.",
+        },
+        { status: 400 },
+      );
     }
 
     const gia = await prisma.importBancario.findFirst({
@@ -63,6 +71,7 @@ export async function POST(request: Request) {
         uscite: 0,
         entrate: 0,
         escluse: 0,
+        inAttesa: parsed.inAttesa,
       });
     }
 
@@ -135,6 +144,7 @@ export async function POST(request: Request) {
       uscite: nuove.filter((r) => r.importo < 0).length,
       entrate: nuove.filter((r) => r.importo > 0).length,
       escluse: righeDb.filter((r) => r.stato === "escluso").length,
+      inAttesa: parsed.inAttesa,
     });
   } catch (e) {
     console.error("[POST /api/banca/import]", e);
