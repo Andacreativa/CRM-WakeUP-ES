@@ -44,13 +44,17 @@ export default function RichiesteFattureView() {
   const [loading, setLoading] = useState(true);
   const [msg, setMsg] = useState<{ text: string; kind: "ok" | "err" } | null>(null);
 
-  // Filtri
-  const [mese, setMese] = useState(0);
+  // Filtri. Come «Fatture da emettere» di Northstar la lista apre sul mese
+  // in corso: null = mese non scelto. Vale solo se l'anno della topbar è
+  // quello di oggi; «Tutti i mesi» resta a un clic e vale 0.
+  const [mese, setMese] = useState<number | null>(null);
   const [clienteId, setClienteId] = useState(0);
   const [stato, setStato] = useState("");
   const [q, setQ] = useState("");
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
+  const oggi = new Date();
+  const meseAttivo = mese ?? (anno === oggi.getFullYear() ? oggi.getMonth() + 1 : 0);
 
   // Modali
   const [showForm, setShowForm] = useState(false);
@@ -66,7 +70,7 @@ export default function RichiesteFattureView() {
   const load = useCallback(async () => {
     const params = new URLSearchParams();
     params.set("anno", String(anno));
-    if (mese) params.set("mese", String(mese));
+    if (meseAttivo) params.set("mese", String(meseAttivo));
     if (clienteId) params.set("clienteId", String(clienteId));
     if (stato) params.set("stato", stato);
     if (q.trim()) params.set("q", q.trim());
@@ -79,7 +83,7 @@ export default function RichiesteFattureView() {
     } finally {
       setLoading(false);
     }
-  }, [anno, mese, clienteId, stato, q]);
+  }, [anno, meseAttivo, clienteId, stato, q]);
 
   useEffect(() => {
     load();
@@ -104,7 +108,7 @@ export default function RichiesteFattureView() {
     })();
     // Tornando da una scheda, la lista si ritrova con gli stessi filtri
     const s = riprendiLista<{
-      mese: number;
+      mese: number | null;
       clienteId: number;
       stato: string;
       q: string;
@@ -112,7 +116,7 @@ export default function RichiesteFattureView() {
       pageSize: number;
     }>(CHIAVE_LISTA);
     if (s) {
-      setMese(s.mese ?? 0);
+      setMese(s.mese ?? null);
       setClienteId(s.clienteId ?? 0);
       setStato(s.stato ?? "");
       setQ(s.q ?? "");
@@ -214,7 +218,7 @@ export default function RichiesteFattureView() {
       {/* Filtri */}
       <div className="flex items-center gap-2 flex-wrap">
         <SearchBox value={q} onChange={filtra(setQ)} placeholder="Cerca cliente, descrizione, codice…" className="w-64" />
-        <select value={mese} onChange={(e) => filtra(setMese)(parseInt(e.target.value))} className={selectCls}>
+        <select value={meseAttivo} onChange={(e) => filtra(setMese)(parseInt(e.target.value))} className={selectCls}>
           <option value={0}>Tutti i mesi</option>
           {MESI.map((m, i) => (
             <option key={m} value={i + 1}>
@@ -391,10 +395,16 @@ export default function RichiesteFattureView() {
           clienti={clienti}
           contratti={contratti}
           onClose={() => setShowForm(false)}
-          onSaved={(testo) => {
+          onSaved={(testo, periodo) => {
             setShowForm(false);
             notify(testo);
-            load();
+            // Come Northstar: una richiesta nata in un altro mese porta lì la
+            // lista, altrimenti sembrerebbe non essere mai nata. Chi guarda
+            // «Tutti i mesi» non viene spostato: lì la riga si vede comunque.
+            if (meseAttivo && periodo.anno === anno && periodo.mese !== meseAttivo) {
+              setMese(periodo.mese);
+              setPage(1);
+            } else load();
           }}
         />
       )}

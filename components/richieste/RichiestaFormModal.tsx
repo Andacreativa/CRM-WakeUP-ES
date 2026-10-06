@@ -6,6 +6,8 @@ import { Plus, Trash2, Unlink, X } from "lucide-react";
 import { fmt, MESI } from "@/lib/constants";
 import ClienteSelect from "@/components/crm/ClienteSelect";
 import { cn } from "@/lib/utils";
+import { nomeCompleto } from "@/lib/dipendenti";
+import { avanzaMese, STEP_RICORRENZA } from "@/lib/richieste";
 import {
   type ClienteMin,
   type ContrattoMin,
@@ -43,6 +45,12 @@ const formDa = (r: Richiesta | null, anno: number) => {
   };
 };
 
+const CADENZA: Record<string, string> = {
+  mensile: "una al mese",
+  trimestrale: "una ogni 3 mesi",
+  annuale: "una all'anno",
+};
+
 // Form della richiesta: Nuova e Modifica (con Elimina e Scollega fattura).
 // Usato dalla lista e dalla scheda della richiesta.
 export default function RichiestaFormModal({
@@ -60,7 +68,7 @@ export default function RichiestaFormModal({
   clienti?: ClienteMin[];
   contratti?: ContrattoMin[];
   onClose: () => void;
-  onSaved: (msg: string) => void;
+  onSaved: (msg: string, periodo: { mese: number; anno: number }) => void;
   onDeleted?: () => void;
   onScollegata?: () => void;
 }) {
@@ -70,6 +78,7 @@ export default function RichiestaFormModal({
   );
   const [clienti, setClienti] = useState<ClienteMin[]>(clientiProp ?? []);
   const [contratti, setContratti] = useState<ContrattoMin[]>(contrattiProp ?? []);
+  const [persone, setPersone] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
@@ -91,6 +100,26 @@ export default function RichiestaFormModal({
         .then((k) => setContratti(Array.isArray(k) ? k : []))
         .catch(() => {});
   }, [clientiProp, contrattiProp]);
+
+  useEffect(() => {
+    fetch("/api/dipendenti?attivi=1")
+      .then((r) => r.json())
+      .then((d) =>
+        setPersone(
+          Array.isArray(d) ? Array.from(new Set(d.map(nomeCompleto).filter(Boolean))) : [],
+        ),
+      )
+      .catch(() => {});
+  }, []);
+
+  // Il responsabile resta un nome: un valore già salvato che non è (più) tra
+  // le persone attive si tiene in lista, così modificando non si perde.
+  const responsabileSalvato = richiesta?.responsabile ?? "";
+
+  // Serie: quante richieste nascono e fino a che mese (come fa l'API).
+  const passo = STEP_RICORRENZA[form.ricorrenza] ?? 0;
+  const nSerie = passo > 0 ? Math.min(36, Math.max(1, parseInt(form.ripetizioni, 10) || 1)) : 1;
+  const fineSerie = avanzaMese(form.mese, form.anno, passo * (nSerie - 1));
 
   const imponibileForm = form.voci.reduce(
     (s, v) => s + (parseFloat(String(v.importo).replace(",", ".")) || 0),
@@ -148,7 +177,10 @@ export default function RichiestaFormModal({
         setErr(j.error ?? "Salvataggio non riuscito");
         return;
       }
-      onSaved(editing ? "Richiesta aggiornata" : "Richiesta creata");
+      onSaved(editing ? "Richiesta aggiornata" : "Richiesta creata", {
+        mese: form.mese,
+        anno: form.anno,
+      });
     } finally {
       setSaving(false);
     }
@@ -234,12 +266,21 @@ export default function RichiestaFormModal({
           </div>
           <div>
             <label className={labelCls}>Responsabile commerciale</label>
-            <input
+            <select
               value={form.responsabile}
               onChange={(e) => setForm((f) => ({ ...f, responsabile: e.target.value }))}
               className={inputCls}
-              placeholder="Chi segue il cliente"
-            />
+            >
+              <option value="">— da assegnare —</option>
+              {responsabileSalvato && !persone.includes(responsabileSalvato) && (
+                <option value={responsabileSalvato}>{responsabileSalvato}</option>
+              )}
+              {persone.map((p) => (
+                <option key={p} value={p}>
+                  {p}
+                </option>
+              ))}
+            </select>
           </div>
         </div>
 
@@ -384,7 +425,7 @@ export default function RichiestaFormModal({
                 </select>
               </div>
               <div>
-                <label className={labelCls}>Numero richieste</label>
+                <label className={labelCls}>Quante fatture</label>
                 <input
                   type="number"
                   min={1}
@@ -395,6 +436,13 @@ export default function RichiestaFormModal({
                   className={cn(inputCls, "disabled:opacity-50")}
                 />
               </div>
+              {passo > 0 && (
+                <p className="md:col-span-3 text-[11px] text-gray-400 -mt-1">
+                  {nSerie > 1
+                    ? `Si creano ${nSerie} richieste, una per fattura: ${CADENZA[form.ricorrenza]}, da ${MESI[form.mese - 1]} ${form.anno} a ${MESI[fineSerie.mese - 1]} ${fineSerie.anno}.`
+                    : `Si crea una sola richiesta, per ${MESI[form.mese - 1]} ${form.anno}: per ripeterla aumenta il numero.`}
+                </p>
+              )}
             </>
           )}
         </div>
