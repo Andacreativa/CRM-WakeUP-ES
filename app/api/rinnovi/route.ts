@@ -3,6 +3,7 @@ import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import {
   RINNOVO_INCLUDE,
+  canaleValido,
   fatturazioneValida,
   proprietaValida,
   pulisciDominio,
@@ -20,6 +21,7 @@ export async function GET(request: Request) {
   const mese = num("mese");
   const clienteId = num("clienteId");
   const stato = searchParams.get("stato") || "";
+  const canale = searchParams.get("canale") || "";
   const vista = searchParams.get("vista") || "";
   const q = (searchParams.get("q") || "").trim();
 
@@ -27,6 +29,7 @@ export async function GET(request: Request) {
     deletedAt: null,
     ...(clienteId > 0 ? { clienteId } : {}),
     ...(stato ? { stato } : {}),
+    ...(canale ? { canale } : {}),
     ...(vista === "senza_cliente" ? { clienteId: null } : {}),
     ...(q
       ? {
@@ -70,6 +73,7 @@ export function datiRinnovo(body: Record<string, unknown>, parziale = false) {
     data.importo = Math.max(0, parseFloat(String(body.importo ?? "0").replace(",", ".")) || 0);
   }
   if (ha("fatturazione")) data.fatturazione = fatturazioneValida(body.fatturazione);
+  if (ha("canale")) data.canale = canaleValido(body.canale);
   if (ha("stato")) data.stato = statoRinnovoValido(body.stato);
   if (ha("hosting")) data.hosting = str("hosting");
   if (ha("proprieta")) data.proprieta = proprietaValida(body.proprieta);

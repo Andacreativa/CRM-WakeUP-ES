@@ -7,6 +7,7 @@ import type { ClienteMin } from "@/components/richieste/tipi";
 import { cn } from "@/lib/utils";
 import {
   type Rinnovo,
+  CANALI,
   FATTURAZIONI,
   HOSTING_NOTI,
   PROPRIETA,
@@ -22,6 +23,7 @@ const formDa = (r: Rinnovo | null) => ({
   scadenza: r?.scadenza ? r.scadenza.slice(0, 10) : "",
   importo: r ? String(r.importo || "") : "",
   fatturazione: r?.fatturazione ?? "rinnovo",
+  canale: r?.canale ?? "anda",
   stato: r?.stato ?? "attivo",
   hosting: r?.hosting ?? "",
   proprieta: r?.proprieta ?? "nostra",
@@ -186,6 +188,30 @@ export default function RinnovoFormModal({
               Solo «Rinnovo a parte» genera la richiesta di fattura. «Compresa» = pagata dentro
               un&apos;altra gestione, «Sito nostro» = nessuna fattura.
             </p>
+          </div>
+          <div>
+            <label className={labelCls}>Canale</label>
+            <div className="flex gap-2">
+              {CANALI.map((o) => {
+                const active = form.canale === o.value;
+                return (
+                  <button
+                    key={o.value}
+                    type="button"
+                    onClick={() => set("canale", o.value)}
+                    className="flex-1 text-sm py-2 rounded-lg border font-semibold transition-all"
+                    style={
+                      active
+                        ? { background: "#e8308a", color: "#fff", borderColor: "#e8308a" }
+                        : { background: "#fff", borderColor: "#e5e7eb", color: "#9ca3af" }
+                    }
+                  >
+                    {o.label}
+                  </button>
+                );
+              })}
+            </div>
+            <p className="text-[11px] text-gray-400 mt-1">SMH: la richiesta si fa in Northstar.</p>
           </div>
           <div>
             <label className={labelCls}>Importo annuo (imponibile)</label>

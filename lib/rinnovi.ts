@@ -6,7 +6,13 @@ import {
   nextCodiceRichiesta,
   serializzaRichiesta,
 } from "@/lib/richieste";
-import { ANTICIPO_GIORNI, FATTURAZIONI, PROPRIETA, STATI_RINNOVO } from "@/components/rinnovi/tipi";
+import {
+  ANTICIPO_GIORNI,
+  CANALI,
+  FATTURAZIONI,
+  PROPRIETA,
+  STATI_RINNOVO,
+} from "@/components/rinnovi/tipi";
 
 // Rinnovi dei siti web: helper di API, scheda e cron. Le costanti stanno
 // in components/rinnovi/tipi.ts perché servono anche al browser.
@@ -17,6 +23,8 @@ export const fatturazioneValida = (v: unknown) =>
   FATTURAZIONI.some((s) => s.value === v) ? String(v) : "rinnovo";
 export const proprietaValida = (v: unknown) =>
   PROPRIETA.some((s) => s.value === v) ? String(v) : "nostra";
+export const canaleValido = (v: unknown) =>
+  CANALI.some((s) => s.value === v) ? String(v) : "anda";
 
 // Dominio pulito: minuscolo, senza protocollo, www e barre.
 export const pulisciDominio = (v: unknown) =>
@@ -131,13 +139,15 @@ export async function creaRichiestaRinnovo(
 
 // Richieste per tutti i rinnovi fatturabili che entrano nell'anticipo e non
 // hanno ancora la richiesta della loro scadenza. Usata dal bottone «Genera
-// richieste» e dal cron giornaliero: è idempotente.
+// richieste» e dal cron giornaliero: è idempotente. I rinnovi SMH restano
+// fuori: la loro richiesta si fa in Northstar.
 export async function generaRichiesteInScadenza(oggi = new Date()) {
   const limite = new Date(oggiUTC(oggi) + ANTICIPO_GIORNI * UN_GIORNO);
   const candidati = await prisma.rinnovoSito.findMany({
     where: {
       deletedAt: null,
       fatturazione: "rinnovo",
+      canale: "anda",
       stato: "attivo",
       importo: { gt: 0 },
       scadenza: { lte: limite },

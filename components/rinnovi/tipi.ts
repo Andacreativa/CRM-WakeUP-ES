@@ -21,6 +21,13 @@ export const PROPRIETA = [
   { value: "nostra", label: "Nostra" },
   { value: "cliente", label: "Del cliente" },
 ] as const;
+// Canale del rinnovo, slegato dalla spunta SMH del cliente: i rinnovi SMH
+// si fatturano da Northstar (Fatture da emettere), non da qui.
+export const CANALI = [
+  { value: "anda", label: "ANDA" },
+  { value: "smh", label: "SMH" },
+] as const;
+export const NORTHSTAR_RICHIESTE_URL = "https://wakeup-labs.com/backend/finance/planned-invoices";
 // Hosting già usati: suggerimenti del campo, si può scrivere altro
 export const HOSTING_NOTI = [
   "Squarespace",
@@ -36,6 +43,7 @@ export const statoLabel = (v: string) => STATI_RINNOVO.find((s) => s.value === v
 export const fatturazioneLabel = (v: string) =>
   FATTURAZIONI.find((s) => s.value === v)?.label ?? v;
 export const proprietaLabel = (v: string) => PROPRIETA.find((s) => s.value === v)?.label ?? v;
+export const canaleLabel = (v: string) => CANALI.find((s) => s.value === v)?.label ?? v;
 
 // Stato = pill piena (come nel resto dell'app)
 export const STATO_PILL: Record<string, string> = {
@@ -60,6 +68,7 @@ export interface Rinnovo {
   scadenza: string;
   importo: number;
   fatturazione: string;
+  canale: string;
   stato: string;
   hosting: string | null;
   proprieta: string;

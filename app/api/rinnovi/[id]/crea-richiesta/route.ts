@@ -16,6 +16,12 @@ export async function POST(_: Request, { params }: Ctx) {
     if (!r || r.deletedAt) {
       return NextResponse.json({ error: "Non trovato" }, { status: 404 });
     }
+    if (r.canale === "smh") {
+      return NextResponse.json(
+        { error: "Rinnovo SMH: la richiesta si fa in Northstar (Fatture da emettere)" },
+        { status: 400 },
+      );
+    }
     const s = serializzaRinnovo(r);
     if (s.richiestaCorrente) {
       return NextResponse.json(

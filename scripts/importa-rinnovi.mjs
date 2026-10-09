@@ -10,8 +10,9 @@
 //   subito la richiesta di fattura (da validare).
 // - Prezzo → importo e fatturazione «rinnovo»; senza prezzo: «compresa» se
 //   la nota dice "compreso", altrimenti «nessuna» (sito nostro).
-// - Colonne Reforge e SMH/ANDA: la prima finisce nelle note, la seconda
-//   mette la spunta SMH solo sui clienti nuovi.
+// - Colonna SMH/ANDA → canale del rinnovo (vuoto = anda) e spunta SMH sui
+//   clienti nuovi; i rinnovi SMH «da fatturare» NON ricevono la richiesta
+//   (si fa in Northstar). Reforge finisce nelle note.
 // Idempotente: salta i domini già presenti e i clienti già creati.
 //
 // Uso: node scripts/importa-rinnovi.mjs <file.csv> [--apply] [--senza-northstar]
@@ -102,7 +103,7 @@ const righe = fs
       statoTesto: stato,
       reforge,
       daFatturare: !!fatt,
-      canale: canale.toUpperCase(),
+      canale: canale.toUpperCase() === "SMH" ? "smh" : "anda",
       contact: vuoto(contact) ? "" : contact,
       account: vuoto(account) ? "" : account,
       dominio: pulisciDominio(dominio),
@@ -357,7 +358,7 @@ for (const r of domini) {
   if (anda) cliente = { tipo: "anda", id: anda.x.id, nome: anda.x.nome, via };
   else if (nsHit) {
     const codice = nsHit.x.code;
-    if (!daCreareNs.has(codice)) daCreareNs.set(codice, clienteDaNorthstar(nsHit.x, r.canale === "SMH"));
+    if (!daCreareNs.has(codice)) daCreareNs.set(codice, clienteDaNorthstar(nsHit.x, r.canale === "smh"));
     cliente = { tipo: "nuovo", codice, nome: daCreareNs.get(codice).nome, via: viaNs };
   } else if (r.account || r.contact) cliente = { tipo: "nome", nome: r.account || r.contact };
   // Fattura da fare ma nessun nome nel foglio: resta il dominio come promemoria
@@ -404,19 +405,20 @@ const etichettaCliente = (c) =>
         ? `solo nome: ${c.nome}`
         : "—";
 console.log(
-  `${"DOMINIO".padEnd(30)} ${"SCADENZA".padEnd(22)} ${"STATO".padEnd(14)} ${"IMPORTO".padStart(8)}  ${"FATT.".padEnd(8)} CLIENTE`,
+  `${"DOMINIO".padEnd(30)} ${"SCADENZA".padEnd(22)} ${"STATO".padEnd(14)} ${"IMPORTO".padStart(8)}  ${"FATT.".padEnd(8)} ${"CAN.".padEnd(4)} CLIENTE`,
 );
 for (const p of piano) {
   const scad = `${dataIt(p.scadenza)}${p.spostata ? ` (era ${p.dataTesto})` : ""}`;
   console.log(
-    `${(p.giaPresente ? "= " : "+ ") + p.dominio.padEnd(28)} ${scad.padEnd(22)} ${p.stato.padEnd(14)} ${(p.importo ? String(p.importo) : "").padStart(8)}  ${p.fatturazione.padEnd(8)} ${etichettaCliente(p.cliente)}${p.cliente.via ? ` [${p.cliente.via}]` : ""}${p.daFatturare ? "  → RICHIESTA SUBITO" : ""}`,
+    `${(p.giaPresente ? "= " : "+ ") + p.dominio.padEnd(28)} ${scad.padEnd(22)} ${p.stato.padEnd(14)} ${(p.importo ? String(p.importo) : "").padStart(8)}  ${p.fatturazione.padEnd(8)} ${p.canale.toUpperCase().padEnd(4)} ${etichettaCliente(p.cliente)}${p.cliente.via ? ` [${p.cliente.via}]` : ""}${p.daFatturare ? (p.canale === "smh" ? "  → DA FATTURARE IN NORTHSTAR" : "  → RICHIESTA SUBITO") : ""}`,
   );
 }
 const conta = (f) => piano.filter(f).length;
 console.log(`
 Domini nel foglio: ${piano.length} (righe ${righe.length}, già presenti ${conta((p) => p.giaPresente)})
 Cliente: già in Anda ${conta((p) => p.cliente.tipo === "anda")} · da creare da Northstar ${conta((p) => p.cliente.tipo === "nuovo")} (${daCreareNs.size} clienti) · solo nome ${conta((p) => p.cliente.tipo === "nome")} · nessuno ${conta((p) => p.cliente.tipo === "nessuno")}
-Scadenze spostate alla prossima ricorrenza: ${conta((p) => p.spostata)} · richieste di fattura da creare subito: ${conta((p) => p.daFatturare && !p.giaPresente)}
+Canale: ANDA ${conta((p) => p.canale === "anda")} · SMH ${conta((p) => p.canale === "smh")}
+Scadenze spostate alla prossima ricorrenza: ${conta((p) => p.spostata)} · richieste di fattura da creare subito: ${conta((p) => p.daFatturare && p.canale === "anda" && !p.giaPresente)} (SMH da fare in Northstar: ${conta((p) => p.daFatturare && p.canale === "smh")})
 Fatturazione: rinnovo ${conta((p) => p.fatturazione === "rinnovo")} · compresa ${conta((p) => p.fatturazione === "compresa")} · nessuna ${conta((p) => p.fatturazione === "nessuna")}`);
 if (daCreareNs.size) {
   console.log("\nClienti nuovi da Northstar:");
@@ -482,6 +484,7 @@ for (const p of piano) {
       scadenza: p.scadenza,
       importo: p.importo,
       fatturazione: p.fatturazione,
+      canale: p.canale,
       stato: p.stato,
       hosting: p.hosting,
       proprieta: p.proprieta,
@@ -491,7 +494,7 @@ for (const p of piano) {
     include: { cliente: { select: { tipoImposta: true } } },
   });
   nRinnovi++;
-  if (p.daFatturare && p.importo > 0 && (clienteId || nomeCliente)) {
+  if (p.daFatturare && p.canale === "anda" && p.importo > 0 && (clienteId || nomeCliente)) {
     // Stessa regola di lib/rinnovi.ts: invio = scadenza − anticipo, mai nel passato
     let invio = new Date(r.scadenza.getTime() - ANTICIPO_GIORNI * UN_GIORNO);
     if (invio.getTime() < oggiUTC) invio = new Date(oggiUTC);
