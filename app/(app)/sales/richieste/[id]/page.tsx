@@ -12,6 +12,7 @@ import {
   FilePlus2,
   FileSignature,
   FileText,
+  Globe,
   Pencil,
   Receipt,
   Trash2,
@@ -35,6 +36,7 @@ const ORIGINE: Record<string, string> = {
   manuale: "creata a mano",
   contratto: "generata dal contratto",
   legacy_sales: "convertita dal vecchio registro Sales",
+  rinnovo: "generata dal rinnovo del sito",
 };
 
 // Scheda della richiesta di fattura (come la scheda della fattura): voci,
@@ -331,6 +333,20 @@ export default function RichiestaPage() {
                 <span className="flex-1 min-w-0">
                   Contratto {r.contratto.numero}
                   <span className="block text-[11px] text-gray-500 truncate">{r.contratto.oggetto}</span>
+                </span>
+                <ArrowRight className="w-4 h-4 text-gray-400 shrink-0" />
+              </Link>
+            ) : r.rinnovo ? (
+              <Link
+                href={`/sales/rinnovi/${r.rinnovo.id}`}
+                className="flex items-center gap-2.5 rounded-lg bg-gray-50 px-3 py-2.5 text-[13px] text-gray-900 hover:bg-brand/10"
+              >
+                <Globe className="w-4 h-4 text-brand shrink-0" />
+                <span className="flex-1 min-w-0">
+                  Rinnovo sito {r.rinnovo.dominio}
+                  <span className="block text-[11px] text-gray-500">
+                    scadenza {dataIt(r.rinnovoScadenza)}
+                  </span>
                 </span>
                 <ArrowRight className="w-4 h-4 text-gray-400 shrink-0" />
               </Link>

@@ -29,6 +29,9 @@ export interface Richiesta {
   nomeCliente: string | null;
   contrattoId: number | null;
   contratto: { id: number; numero: string; oggetto: string } | null;
+  rinnovoId?: number | null;
+  rinnovo?: { id: number; dominio: string } | null;
+  rinnovoScadenza?: string | null;
   azienda: string;
   aziendaNota: string | null;
   descrizione: string;

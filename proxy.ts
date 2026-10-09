@@ -20,6 +20,10 @@ export async function proxy(req: NextRequest) {
   if (pathname.startsWith("/api/auth/")) {
     return NextResponse.next();
   }
+  // I cron di Vercel non hanno la sessione: la route controlla CRON_SECRET
+  if (pathname.startsWith("/api/cron/")) {
+    return NextResponse.next();
+  }
 
   if (session) return NextResponse.next();
 

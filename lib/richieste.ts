@@ -83,6 +83,7 @@ export async function nextCodiceRichiesta(
 export const RICHIESTA_INCLUDE = {
   cliente: { select: { id: true, nome: true, paese: true } },
   contratto: { select: { id: true, numero: true, oggetto: true } },
+  rinnovo: { select: { id: true, dominio: true } },
   fattura: {
     select: {
       id: true,

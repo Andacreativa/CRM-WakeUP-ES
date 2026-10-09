@@ -27,6 +27,7 @@ model Cliente {
   fatture      Fattura[]
   contratti    Contratto[]
   richiesteFattura RichiestaFattura[]
+  rinnoviSiti  RinnovoSito[]
   contatti     Contatto[]
   leads        Lead[]
 }
@@ -515,8 +516,13 @@ model RichiestaFattura {
   incassata       Boolean    @default(false) // flag manuale finché non c'è fatturaId
   fatturaId       Int?       @unique
   fattura         Fattura?   @relation(fields: [fatturaId], references: [id], onDelete: SetNull)
-  origine         String     @default("manuale") // manuale | contratto | legacy_sales
+  origine         String     @default("manuale") // manuale | contratto | legacy_sales | rinnovo
   legacyFatturaId Int?       @unique // vecchia Fattura origine=sales da cui è stata convertita
+  // Rinnovo del sito da cui è nata e la scadenza che copre: una richiesta
+  // per ogni scadenza, così «Rinnovato» (+12 mesi) apre un ciclo nuovo.
+  rinnovoId       Int?
+  rinnovo         RinnovoSito? @relation(fields: [rinnovoId], references: [id], onDelete: SetNull)
+  rinnovoScadenza DateTime?
   note            String?
   createdAt       DateTime   @default(now())
   updatedAt       DateTime   @updatedAt
@@ -526,6 +532,34 @@ model RichiestaFattura {
   @@index([clienteId])
   @@index([contrattoId])
   @@index([serieCodice])
+  @@index([rinnovoId])
+}
+
+// Rinnovi dei siti web (Sales › Rinnovi siti): dominio, scadenza e prezzo
+// di rinnovo annuo. Da qui nasce la richiesta di fattura del rinnovo,
+// ANTICIPO_GIORNI prima della scadenza (lib/rinnovi.ts).
+model RinnovoSito {
+  id           Int       @id @default(autoincrement())
+  dominio      String    @unique
+  clienteId    Int?
+  cliente      Cliente?  @relation(fields: [clienteId], references: [id], onDelete: SetNull)
+  nomeCliente  String? // promemoria se il cliente non è in anagrafica
+  scadenza     DateTime // prossima scadenza del dominio
+  importo      Float     @default(0) // prezzo di rinnovo annuo (imponibile)
+  fatturazione String    @default("rinnovo") // rinnovo (si fattura) | compresa (in un'altra gestione) | nessuna (sito nostro)
+  stato        String    @default("attivo") // attivo | in_lavorazione | in_dubbio | non_attivo
+  hosting      String?
+  proprieta    String    @default("nostra") // nostra | cliente
+  accesso      String? // account con cui si entra nell'hosting (solo scheda)
+  note         String?
+  rinnovatoIl  DateTime? // ultimo «Rinnovato»
+  richieste    RichiestaFattura[]
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  deletedAt    DateTime?
+
+  @@index([scadenza])
+  @@index([clienteId])
 }
 
 // ─── Banca (Fase 3) ────────────────────────────────────────────────────

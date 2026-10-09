@@ -83,6 +83,7 @@ export const NAV: NavSection[] = [
           { label: "Preventivi", href: "/sales/preventivi" },
           { label: "Contratti", href: "/sales/contratti" },
           { label: "Richieste fattura", href: "/sales/richieste" },
+          { label: "Rinnovi siti", href: "/sales/rinnovi" },
         ],
       },
     ],
