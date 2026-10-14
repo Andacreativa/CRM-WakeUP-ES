@@ -5,6 +5,7 @@ import Link from "next/link";
 import { AlertTriangle, X } from "lucide-react";
 import { PAESI, TIPO_IMPOSTA_OPTIONS, prefissaPiva, unisciPrefisso } from "@/lib/constants";
 import AddressFields from "@/components/AddressFields";
+import { trovaDoppioni } from "@/lib/doppioni";
 
 export interface ClienteBase {
   id?: number;
@@ -35,49 +36,6 @@ export interface ClienteMinimo {
 const inputCls =
   "w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30 bg-white";
 const labelCls = "text-xs font-medium text-gray-600 block mb-1";
-
-// Forme societarie e parole che non distinguono due ragioni sociali
-const FORME = new Set([
-  "srl", "srls", "sas", "snc", "spa", "sl", "slu", "sa", "scp", "ltd", "limited", "di", "de", "e", "c",
-  "sociedad", "limitada", "societa", "responsabilita", "unipersonale",
-]);
-const normNome = (s: string) =>
-  s
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[̀-ͯ]/g, "")
-    .replace(/[^a-z0-9]+/g, " ")
-    .split(" ")
-    .filter((t) => t && !FORME.has(t))
-    .join(" ");
-// P.IVA confrontabile: senza prefisso paese e senza simboli
-const normPiva = (s: string | null | undefined) =>
-  String(s ?? "")
-    .toUpperCase()
-    .replace(/[^A-Z0-9]/g, "")
-    .replace(/^(IT|ES|FR|DE|PT|GB|IE|NL|BE|LU|AT|PIVA)(?=[A-Z0-9]{8,})/, "");
-
-// Clienti già in anagrafica simili a quello che si sta scrivendo: stesso
-// nome (anche senza forma societaria), stessa P.IVA o stessa email.
-export function trovaDoppioni(
-  f: { nome: string; partitaIva: string; email: string },
-  clienti: ClienteMinimo[],
-  escludiId?: number,
-): { c: ClienteMinimo; motivo: string }[] {
-  const n = normNome(f.nome);
-  const p = normPiva(f.partitaIva);
-  const e = f.email.trim().toLowerCase();
-  const out: { c: ClienteMinimo; motivo: string }[] = [];
-  for (const c of clienti) {
-    if (c.id === escludiId) continue;
-    const cn = normNome(c.nome);
-    if (p.length >= 8 && normPiva(c.partitaIva) === p) out.push({ c, motivo: "stessa P.IVA" });
-    else if (e && (c.email ?? "").trim().toLowerCase() === e) out.push({ c, motivo: "stessa email" });
-    else if (n.length >= 4 && cn && (cn === n || (cn.length >= 4 && (cn.includes(n) || n.includes(cn)))))
-      out.push({ c, motivo: "nome simile" });
-  }
-  return out.slice(0, 5);
-}
 
 export default function ClienteFormModal({
   cliente,

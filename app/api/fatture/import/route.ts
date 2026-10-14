@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { trovaStessa } from "@/lib/doppioni";
 
 interface BillinRow {
   fechaExpedicion?: string | number | null;
@@ -87,6 +88,9 @@ export async function POST(request: Request) {
   const skipped: { numero: string; reason: string }[] = [];
   const errors: { numero: string; error: string }[] = [];
   let createdClienti = 0;
+  const anagrafica = await prisma.cliente.findMany({
+    select: { id: true, nome: true, partitaIva: true },
+  });
 
   for (const r of rows) {
     const numero = (r.numFactura || "").toString().trim();
@@ -112,17 +116,9 @@ export async function POST(request: Request) {
       const nif = normNif(r.nifCliente);
       const nomeCliente = (r.nombreCliente || "").trim();
 
-      let cliente = null;
-      if (nif) {
-        cliente = await prisma.cliente.findFirst({
-          where: { partitaIva: nif },
-        });
-      }
-      if (!cliente && nomeCliente) {
-        cliente = await prisma.cliente.findFirst({
-          where: { nome: { equals: nomeCliente, mode: "insensitive" } },
-        });
-      }
+      // Stessa P.IVA (con o senza prefisso) o stesso nome a meno di
+      // maiuscole e forma societaria: «ASD JUDO AZZANESE» = «Judo Azzanese»
+      let cliente = trovaStessa(nif, nomeCliente, anagrafica);
       if (!cliente && nomeCliente) {
         cliente = await prisma.cliente.create({
           data: {
@@ -131,7 +127,9 @@ export async function POST(request: Request) {
             paese,
             cap: r.codPostal?.toString().trim() || null,
           },
+          select: { id: true, nome: true, partitaIva: true },
         });
+        anagrafica.push(cliente);
         createdClienti++;
       }
 

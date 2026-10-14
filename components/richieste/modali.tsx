@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Link2, X } from "lucide-react";
 import { fmt, MESI } from "@/lib/constants";
 import { cn } from "@/lib/utils";
+import SearchBox from "@/components/SearchBox";
 import {
   type ContrattoMin,
   type FatturaCandidata,
@@ -176,20 +177,38 @@ export function CollegaModal({
   const [sel, setSel] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
+  // Anche le fatture di altri clienti (es. finite su un doppione del cliente)
+  const [tutti, setTutti] = useState(false);
+  const [q, setQ] = useState("");
 
   useEffect(() => {
-    fetch(`/api/richieste-fattura/${richiesta.id}/fatture-candidate`)
-      .then((r) => r.json())
-      .then((d) => setCandidate(Array.isArray(d) ? d : []))
-      .finally(() => setLoading(false));
-  }, [richiesta.id]);
+    let vivo = true;
+    const qs = new URLSearchParams();
+    if (tutti) qs.set("tutti", "1");
+    if (q.trim()) qs.set("q", q.trim());
+    const t = setTimeout(() => {
+      setLoading(true);
+      fetch(`/api/richieste-fattura/${richiesta.id}/fatture-candidate?${qs}`)
+        .then((r) => r.json())
+        .then((d) => vivo && setCandidate(Array.isArray(d) ? d : []))
+        .finally(() => vivo && setLoading(false));
+    }, q ? 250 : 0);
+    return () => {
+      vivo = false;
+      clearTimeout(t);
+    };
+  }, [richiesta.id, tutti, q]);
+
+  const scelta = candidate.find((f) => f.id === sel);
+  const altroCliente =
+    scelta && richiesta.clienteId != null && scelta.clienteId !== richiesta.clienteId;
 
   const submit = async () => {
-    if (!sel) return;
+    if (!scelta) return;
     const res = await fetch(`/api/richieste-fattura/${richiesta.id}/collega`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ fatturaId: sel }),
+      body: JSON.stringify({ fatturaId: scelta.id }),
     });
     if (!res.ok) {
       const j = await res.json().catch(() => ({}));
@@ -210,12 +229,41 @@ export function CollegaModal({
         </div>
         <p className="text-sm text-gray-500">
           Fatture non ancora collegate
-          {richiesta.cliente ? ` di ${richiesta.cliente.nome}` : ` del ${richiesta.anno}`}.
+          {tutti
+            ? " di tutti i clienti"
+            : richiesta.cliente
+              ? ` di ${richiesta.cliente.nome}`
+              : ` del ${richiesta.anno}`}
+          .
         </p>
+        <div className="flex flex-wrap items-center gap-3">
+          <SearchBox
+            value={q}
+            onChange={setQ}
+            placeholder="Numero o cliente…"
+            className="flex-1 min-w-48"
+          />
+          <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer whitespace-nowrap">
+            <input
+              type="checkbox"
+              checked={tutti}
+              onChange={(e) => {
+                setTutti(e.target.checked);
+                setSel(null);
+              }}
+            />
+            Tutti i clienti
+          </label>
+        </div>
         <div className="flex-1 overflow-y-auto border border-gray-100 rounded-lg divide-y divide-gray-50">
-          {loading && <div className="p-4 text-sm text-gray-400">Caricamento…</div>}
+          {loading && candidate.length === 0 && (
+            <div className="p-4 text-sm text-gray-400">Caricamento…</div>
+          )}
           {!loading && candidate.length === 0 && (
-            <div className="p-4 text-sm text-gray-400">Nessuna fattura disponibile.</div>
+            <div className="p-4 text-sm text-gray-400">
+              Nessuna fattura disponibile.
+              {!tutti && " Se è intestata a un altro nome, spunta «Tutti i clienti»."}
+            </div>
           )}
           {candidate.map((f) => (
             <label
@@ -235,6 +283,13 @@ export function CollegaModal({
             </label>
           ))}
         </div>
+        {altroCliente && (
+          <div className="text-xs text-warn">
+            {scelta.numero ?? "La fattura"} è intestata a{" "}
+            {scelta.cliente?.nome ?? "nessun cliente"}, non a {richiesta.cliente?.nome}: se è
+            lo stesso cliente, l&apos;anagrafica doppia va unita.
+          </div>
+        )}
         {err && <div className="text-sm text-bad">{err}</div>}
         <div className="flex justify-end gap-2">
           <button onClick={onClose} className="text-sm text-gray-500 hover:text-gray-700 px-3 py-2">
@@ -242,7 +297,7 @@ export function CollegaModal({
           </button>
           <button
             onClick={submit}
-            disabled={!sel}
+            disabled={!scelta}
             className="btn btn-primary disabled:opacity-60"
           >
             Collega

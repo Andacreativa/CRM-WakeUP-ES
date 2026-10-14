@@ -76,6 +76,7 @@ export interface FatturaCandidata {
   anno: number;
   importo: number;
   pagato: boolean;
+  clienteId: number | null;
   cliente: { nome: string } | null;
 }
 

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { LEAD_INCLUDE } from "@/lib/lead";
+import { trovaStessa } from "@/lib/doppioni";
 
 // Converte il lead in cliente: crea il Cliente (o riusa quello collegato),
 // sposta i referenti sul cliente e segna il lead come vinto/convertito.
@@ -19,9 +20,11 @@ export async function POST(
       let clienteId = lead.clienteId;
       if (!clienteId) {
         const nome = (lead.azienda || lead.nome).trim();
-        const esistente = await tx.cliente.findFirst({
-          where: { nome: { equals: nome, mode: "insensitive" } },
-        });
+        const esistente = trovaStessa(
+          lead.partitaIva,
+          nome,
+          await tx.cliente.findMany({ select: { id: true, nome: true, partitaIva: true } }),
+        );
         const cliente =
           esistente ??
           (await tx.cliente.create({

@@ -5,7 +5,8 @@ import Link from "next/link";
 import { AlertTriangle, X } from "lucide-react";
 import { PAESI, prefissaPiva, unisciPrefisso } from "@/lib/constants";
 import AddressFields from "@/components/AddressFields";
-import { trovaDoppioni, type ClienteMinimo } from "@/components/crm/ClienteFormModal";
+import { type ClienteMinimo } from "@/components/crm/ClienteFormModal";
+import { trovaDoppioni } from "@/lib/doppioni";
 
 // Form del fornitore: Nuovo e Modifica. Il paese è la sede del fornitore e
 // dà il prefisso alla P.IVA/NIF, come nel form cliente.
