@@ -67,6 +67,10 @@ export interface Richiesta {
   emessaEff: boolean;
   incassataEff: boolean;
   stato: "da_validare" | "da_fare" | "emessa" | "incassata";
+  // Quante rate della stessa serie vengono dopo questa (solo dalla scheda,
+  // GET /api/richieste-fattura/[id]): se > 0 il modulo chiede «Solo questa /
+  // Da questa in poi».
+  successive?: number;
 }
 export interface FatturaCandidata {
   id: number;

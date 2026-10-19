@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import {
   RICHIESTA_INCLUDE,
@@ -6,9 +7,13 @@ import {
   parseVoci,
   serializzaRichiesta,
 } from "@/lib/richieste";
+import { allineaSuccessive, contaSuccessive } from "@/lib/richieste-serie";
 
 type Ctx = { params: Promise<{ id: string }> };
 
+// `successive` = quante rate della stessa serie vengono dopo questa: il
+// modulo lo usa per chiedere «Solo questa / Da questa in poi» solo quando
+// ha senso (lib/richieste-serie.ts).
 export async function GET(_: Request, { params }: Ctx) {
   const { id } = await params;
   const r = await prisma.richiestaFattura.findUnique({
@@ -18,9 +23,13 @@ export async function GET(_: Request, { params }: Ctx) {
   if (!r || r.deletedAt) {
     return NextResponse.json({ error: "Non trovata" }, { status: 404 });
   }
-  return NextResponse.json(serializzaRichiesta(r));
+  const successive = await contaSuccessive(prisma, r);
+  return NextResponse.json({ ...serializzaRichiesta(r), successive });
 }
 
+// Modifica. Con `applyTo: "successive"` la stessa modifica si porta sulle
+// rate successive della serie non ancora fatte (mese, anno e data di invio
+// di ogni rata restano i suoi): la risposta aggiunge `serie` con l'esito.
 export async function PATCH(request: Request, { params }: Ctx) {
   try {
     const { id } = await params;
@@ -32,6 +41,7 @@ export async function PATCH(request: Request, { params }: Ctx) {
     if (!before || before.deletedAt) {
       return NextResponse.json({ error: "Non trovata" }, { status: 404 });
     }
+    const applyTo = body.applyTo === "successive" ? "successive" : "questa";
 
     // Ricalcolo importi se cambiano voci, imponibile o tipo IVA
     const vociCambiate = body.voci !== undefined;
@@ -48,43 +58,52 @@ export async function PATCH(request: Request, { params }: Ctx) {
       tipoIva,
     );
 
-    const r = await prisma.richiestaFattura.update({
-      where: { id: richiestaId },
-      data: {
-        ...(body.clienteId !== undefined && {
-          clienteId: body.clienteId ? parseInt(body.clienteId, 10) : null,
-        }),
-        ...(body.nomeCliente !== undefined && {
-          nomeCliente: body.nomeCliente?.trim() || null,
-        }),
-        ...(body.contrattoId !== undefined && {
-          contrattoId: body.contrattoId ? parseInt(body.contrattoId, 10) : null,
-        }),
-        ...(body.azienda !== undefined && { azienda: body.azienda || "Spagna" }),
-        ...(body.aziendaNota !== undefined && {
-          aziendaNota: body.aziendaNota || null,
-        }),
-        ...(body.descrizione !== undefined && {
-          descrizione: String(body.descrizione).trim(),
-        }),
-        ...(vociCambiate && { voci: JSON.stringify(voci) }),
-        imponibile: importi.imponibile,
-        tipoIva,
-        iva: importi.iva,
-        totale: importi.totale,
-        ...(body.mese !== undefined && { mese: parseInt(body.mese, 10) }),
-        ...(body.anno !== undefined && { anno: parseInt(body.anno, 10) }),
-        ...(body.dataInvio !== undefined && {
-          dataInvio: body.dataInvio ? new Date(body.dataInvio) : null,
-        }),
-        ...(body.responsabile !== undefined && {
-          responsabile: body.responsabile?.trim() || null,
-        }),
-        ...(body.note !== undefined && { note: body.note?.trim() || null }),
-      },
-      include: RICHIESTA_INCLUDE,
+    const data: Prisma.RichiestaFatturaUncheckedUpdateInput = {
+      ...(body.clienteId !== undefined && {
+        clienteId: body.clienteId ? parseInt(body.clienteId, 10) : null,
+      }),
+      ...(body.nomeCliente !== undefined && {
+        nomeCliente: body.nomeCliente?.trim() || null,
+      }),
+      ...(body.contrattoId !== undefined && {
+        contrattoId: body.contrattoId ? parseInt(body.contrattoId, 10) : null,
+      }),
+      ...(body.azienda !== undefined && { azienda: body.azienda || "Spagna" }),
+      ...(body.aziendaNota !== undefined && {
+        aziendaNota: body.aziendaNota || null,
+      }),
+      ...(body.descrizione !== undefined && {
+        descrizione: String(body.descrizione).trim(),
+      }),
+      ...(vociCambiate && { voci: JSON.stringify(voci) }),
+      imponibile: importi.imponibile,
+      tipoIva,
+      iva: importi.iva,
+      totale: importi.totale,
+      ...(body.mese !== undefined && { mese: parseInt(body.mese, 10) }),
+      ...(body.anno !== undefined && { anno: parseInt(body.anno, 10) }),
+      ...(body.dataInvio !== undefined && {
+        dataInvio: body.dataInvio ? new Date(body.dataInvio) : null,
+      }),
+      ...(body.responsabile !== undefined && {
+        responsabile: body.responsabile?.trim() || null,
+      }),
+      ...(body.note !== undefined && { note: body.note?.trim() || null }),
+    };
+
+    // La rata e le sue successive si aggiornano insieme o per niente.
+    // «Successive» si decide su `before`: la posizione prima del salvataggio.
+    const { r, serie } = await prisma.$transaction(async (tx) => {
+      const r = await tx.richiestaFattura.update({
+        where: { id: richiestaId },
+        data,
+        include: RICHIESTA_INCLUDE,
+      });
+      const serie =
+        applyTo === "successive" ? await allineaSuccessive(tx, before, data) : null;
+      return { r, serie };
     });
-    return NextResponse.json(serializzaRichiesta(r));
+    return NextResponse.json({ ...serializzaRichiesta(r), serie });
   } catch (e) {
     console.error("[PATCH /api/richieste-fattura/[id]]", e);
     return NextResponse.json(

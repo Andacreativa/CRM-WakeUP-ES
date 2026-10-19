@@ -81,6 +81,18 @@ export default function RichiestaFormModal({
   const [persone, setPersone] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  // «Solo questa / Da questa in poi»: si chiede solo in modifica e solo se
+  // dopo questa rata ce n'è almeno un'altra nella serie (conteggio dal server).
+  const successive = richiesta?.successive ?? 0;
+  const [chiediSerie, setChiediSerie] = useState(false);
+  useEffect(() => {
+    if (!chiediSerie) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setChiediSerie(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [chiediSerie]);
 
   useEffect(() => {
     if (!clientiProp)
@@ -128,7 +140,9 @@ export default function RichiestaFormModal({
   const ivaForm = form.tipoIva === "igic7" ? 7 : 0;
   const totaleForm = Math.round(imponibileForm * (1 + ivaForm / 100) * 100) / 100;
 
-  const save = async () => {
+  // `applyTo` arriva dalla finestrella della serie; senza, su una rata che ha
+  // altre rate dopo di sé si apre la finestrella invece di salvare.
+  const save = async (applyTo?: "questa" | "successive") => {
     const voci = form.voci
       .map((v) => ({
         descrizione: v.descrizione.trim(),
@@ -141,6 +155,11 @@ export default function RichiestaFormModal({
     }
     if (!voci.length || imponibileForm <= 0) {
       setErr("Inserisci almeno una voce con importo");
+      return;
+    }
+    if (editing && successive > 0 && !applyTo) {
+      setErr(null);
+      setChiediSerie(true);
       return;
     }
     setSaving(true);
@@ -163,6 +182,7 @@ export default function RichiestaFormModal({
         ripetizioni: form.ripetizioni,
         autorizzaTutte: form.autorizzaTutte,
         note: form.note,
+        applyTo: applyTo ?? "questa",
       };
       const res = await fetch(
         editing ? `/api/richieste-fattura/${editing.id}` : "/api/richieste-fattura",
@@ -172,15 +192,21 @@ export default function RichiestaFormModal({
           body: JSON.stringify(payload),
         },
       );
+      const j = (await res.json().catch(() => ({}))) as {
+        error?: string;
+        serie?: { messaggio: string } | null;
+      };
       if (!res.ok) {
-        const j = await res.json().catch(() => ({}));
         setErr(j.error ?? "Salvataggio non riuscito");
         return;
       }
-      onSaved(editing ? "Richiesta aggiornata" : "Richiesta creata", {
-        mese: form.mese,
-        anno: form.anno,
-      });
+      // Con «Da questa in poi» il server dice quante rate successive ha
+      // aggiornato e quante ha lasciato perché già fatte.
+      const esitoSerie = j.serie?.messaggio ? ` ${j.serie.messaggio}` : "";
+      onSaved(
+        editing ? `Richiesta aggiornata${esitoSerie ? "." + esitoSerie : ""}` : "Richiesta creata",
+        { mese: form.mese, anno: form.anno },
+      );
     } finally {
       setSaving(false);
     }
@@ -494,7 +520,7 @@ export default function RichiestaFormModal({
               Annulla
             </button>
             <button
-              onClick={save}
+              onClick={() => save()}
               disabled={saving}
               className="btn btn-primary disabled:opacity-60"
             >
@@ -503,6 +529,76 @@ export default function RichiestaFormModal({
           </div>
         </div>
       </div>
+
+      {/* Finestrella della serie: «Solo questa» o «Da questa in poi» */}
+      {chiediSerie && editing && (
+        <div
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 p-4"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setChiediSerie(false);
+          }}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="serie-titolo"
+            className="glass-modal rounded-2xl w-full max-w-md p-5 space-y-3"
+          >
+            <h3 id="serie-titolo" className="text-base font-bold text-gray-900">
+              Questa rata fa parte di una serie
+            </h3>
+            <p className="text-sm text-gray-600 leading-relaxed">
+              {editing.serieIndice && editing.serieTotale ? (
+                <>
+                  È la rata <strong>{editing.serieIndice}</strong> di{" "}
+                  <strong>{editing.serieTotale}</strong>
+                  {successive === 1
+                    ? ", dopo ce n'è ancora una."
+                    : `, dopo ce ne sono ancora ${successive}.`}
+                </>
+              ) : successive === 1 ? (
+                <>Dopo questa c&apos;è ancora una rata.</>
+              ) : (
+                <>Dopo questa ci sono ancora {successive} rate.</>
+              )}{" "}
+              Vuoi applicare la modifica solo a questa o anche alle rate successive?
+            </p>
+            <p className="text-xs text-gray-400">
+              Mese e data di invio di ogni rata non cambiano. Le rate già fatturate o
+              incassate restano com&apos;erano.
+            </p>
+            <div className="flex flex-wrap items-center justify-end gap-2 pt-1">
+              <button
+                type="button"
+                onClick={() => setChiediSerie(false)}
+                className="text-sm text-gray-500 hover:text-gray-700 px-3 py-2"
+              >
+                Annulla
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setChiediSerie(false);
+                  save("questa");
+                }}
+                className="btn btn-secondary"
+              >
+                Solo questa
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setChiediSerie(false);
+                  save("successive");
+                }}
+                className="btn btn-primary"
+              >
+                Da questa in poi
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
