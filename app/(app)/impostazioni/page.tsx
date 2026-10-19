@@ -101,7 +101,7 @@ export default function ImpostazioniPage() {
         <div>
           <h1 className="page-title">Fatturazione</h1>
           <p className="page-sub">
-            Dati emittente, numerazione, valori di default e testi dei solleciti
+            Dati emittente, numerazione, valori di default, testi dell&apos;email di invio e dei solleciti
           </p>
         </div>
         <button
@@ -393,6 +393,38 @@ export default function ImpostazioniPage() {
               value={cfg.smhRitenuta}
               onChange={(e) => set("smhRitenuta", parseFloat(e.target.value) || 0)}
             />
+          </div>
+        </div>
+      </Sezione>
+
+      <Sezione
+        titolo="Email di invio fattura"
+        sotto="Testi usati dal bottone Invia email nella fattura (il PDF va in allegato). Spagnolo per i clienti spagnoli, italiano per gli altri. Segnaposto: {cliente} {numero} {data} {importo} {scadenza} {iban} {azienda}. Se la fattura non ha scadenza, l'inciso fra virgole con {scadenza} viene tolto."
+      >
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="space-y-3">
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Italiano</p>
+            <Testo cfg={cfg} set={set} k="invioOggettoIt" label="Oggetto" />
+            <div>
+              <label className={labelCls}>Testo</label>
+              <textarea
+                value={cfg.invioTestoIt}
+                onChange={(e) => set("invioTestoIt", e.target.value)}
+                className={cn(inputCls, "min-h-[180px] font-mono text-xs")}
+              />
+            </div>
+          </div>
+          <div className="space-y-3">
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Español</p>
+            <Testo cfg={cfg} set={set} k="invioOggettoEs" label="Asunto" />
+            <div>
+              <label className={labelCls}>Texto</label>
+              <textarea
+                value={cfg.invioTestoEs}
+                onChange={(e) => set("invioTestoEs", e.target.value)}
+                className={cn(inputCls, "min-h-[180px] font-mono text-xs")}
+              />
+            </div>
           </div>
         </div>
       </Sezione>

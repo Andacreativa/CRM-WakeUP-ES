@@ -55,6 +55,11 @@ export interface ImpostazioniFatture {
   smhNome: string;
   smhCompensoMensile: number;
   smhRitenuta: number; // percentuale trattenuta da SMH sulle fatture ai suoi clienti
+  // Email di invio della fattura (bottone «Invia email» nella fattura)
+  invioOggettoIt: string;
+  invioTestoIt: string;
+  invioOggettoEs: string;
+  invioTestoEs: string;
   // Solleciti
   sollecitoOggettoIt: string;
   sollecitoTestoIt: string;
@@ -101,6 +106,12 @@ export const IMPOSTAZIONI_FATTURE_DEFAULT: ImpostazioniFatture = {
   smhNome: "SocialMediaHouse S.R.L.",
   smhCompensoMensile: 2700,
   smhRitenuta: 15,
+  invioOggettoIt: "Fattura {numero} — {azienda}",
+  invioTestoIt:
+    "Gentile {cliente},\n\nin allegato la fattura {numero} del {data} di {importo}, con scadenza {scadenza}.\nPagamento con bonifico sull'IBAN {iban}.\n\nCordiali saluti,\n{azienda}",
+  invioOggettoEs: "Factura {numero} — {azienda}",
+  invioTestoEs:
+    "Estimado/a {cliente},\n\nadjuntamos la factura {numero} del {data} por importe de {importo}, con vencimiento {scadenza}.\nPago mediante transferencia al IBAN {iban}.\n\nUn cordial saludo,\n{azienda}",
   sollecitoOggettoIt: "Sollecito pagamento fattura {numero}",
   sollecitoTestoIt:
     "Gentile {cliente},\n\nle ricordiamo che la fattura {numero} di {importo}, con scadenza {scadenza}, risulta a oggi non saldata.\nLa preghiamo di provvedere al pagamento con bonifico sull'IBAN {iban}.\n\nCordiali saluti,\n{azienda}",
@@ -243,10 +254,18 @@ export async function prossimoNumeroFattura(
   return formattaNumero(cfg.numeroFormato, cfg.numeroPrefisso, anno, next);
 }
 
-// ── Solleciti ─────────────────────────────────────────────────────────────
+// ── Testi con segnaposto (email di invio, solleciti) ──────────────────────
 export function compilaTesto(
   testo: string,
   v: Record<string, string>,
 ): string {
   return testo.replace(/\{(\w+)\}/g, (_, k: string) => v[k] ?? "");
+}
+
+// Se un dato manca (es. fattura senza scadenza), toglie l'inciso fra virgole
+// che contiene il suo segnaposto: «di 100 €, con scadenza {scadenza}.» →
+// «di 100 €.». Fuori da un inciso il segnaposto resta e diventa vuoto.
+export function togliInciso(testo: string, segnaposto: string): string {
+  const tag = segnaposto.replace(/[{}]/g, "\\$&");
+  return testo.replace(new RegExp(`,[^,.\\n]*${tag}[^,.\\n]*`, "g"), "");
 }

@@ -1,5 +1,5 @@
 import { fmt, MESI } from "./constants";
-import { compilaTesto, type ImpostazioniFatture } from "./impostazioni";
+import { compilaTesto, togliInciso, type ImpostazioniFatture } from "./impostazioni";
 import { leggiVoci, nonSoggetta, type FatturaDettaglio } from "./fatture";
 
 // PDF della singola fattura e messaggio email. I dati dell'emittente, la
@@ -489,23 +489,9 @@ async function creaFatturaPDF(f: FatturaDettaglio, cfg: ImpostazioniFatture) {
 }
 
 // ── Email ────────────────────────────────────────────────────────────────
-const MAIL = {
-  it: {
-    oggetto: "Fattura {numero} — {azienda}",
-    testo:
-      "Gentile {cliente},\n\nin allegato la fattura {numero} del {data} di {importo}{scadenza}.\nPagamento con bonifico sull'IBAN {iban}.\n\nCordiali saluti,\n{azienda}",
-    scadenza: ", con scadenza {d}",
-  },
-  es: {
-    oggetto: "Factura {numero} — {azienda}",
-    testo:
-      "Estimado/a {cliente},\n\nadjuntamos la factura {numero} del {data} por importe de {importo}{scadenza}.\nPago mediante transferencia al IBAN {iban}.\n\nUn cordial saludo,\n{azienda}",
-    scadenza: ", con vencimiento {d}",
-  },
-};
-
 // Destinatario, oggetto e testo del messaggio che accompagna la fattura.
-// Spagnolo per i clienti spagnoli, italiano per gli altri (come i solleciti).
+// I testi si cambiano in Impostazioni › Email di invio fattura. Spagnolo per
+// i clienti spagnoli, italiano per gli altri (come i solleciti).
 export function messaggioFattura(
   f: {
     numero: string | null;
@@ -519,23 +505,26 @@ export function messaggioFattura(
 ): { a: string; oggetto: string; testo: string } | null {
   if (!f.cliente?.email) return null;
   const es = (f.cliente.paese ?? "").toLowerCase() === "spagna";
-  const M = es ? MAIL.es : MAIL.it;
   const loc = es ? "es-ES" : "it-IT";
   const v = {
     cliente: f.cliente.nome,
     numero: f.numero ?? "",
     data: f.data ? new Date(f.data).toLocaleDateString(loc) : "",
     importo: fmt(totaliFattura(f).totale),
-    scadenza: f.scadenza
-      ? M.scadenza.replace("{d}", new Date(f.scadenza).toLocaleDateString(loc))
-      : "",
+    scadenza: f.scadenza ? new Date(f.scadenza).toLocaleDateString(loc) : "",
     iban: cfg.iban,
     azienda: cfg.ragioneSociale,
   };
+  let oggetto = es ? cfg.invioOggettoEs : cfg.invioOggettoIt;
+  let testo = es ? cfg.invioTestoEs : cfg.invioTestoIt;
+  if (!f.scadenza) {
+    oggetto = togliInciso(oggetto, "{scadenza}");
+    testo = togliInciso(testo, "{scadenza}");
+  }
   return {
     a: f.cliente.email,
-    oggetto: compilaTesto(M.oggetto, v),
-    testo: compilaTesto(M.testo, v),
+    oggetto: compilaTesto(oggetto, v),
+    testo: compilaTesto(testo, v),
   };
 }
 
