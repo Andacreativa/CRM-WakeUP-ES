@@ -49,6 +49,7 @@ export const NAV: NavSection[] = [
           { label: "Spese", href: "/finance/spese" },
           { label: "Banca", href: "/finance/banca" },
           { label: "Scadenze", href: "/finance/scadenze" },
+          { label: "Calendario", href: "/finance/calendario" },
         ],
       },
       {

@@ -5,8 +5,10 @@ import Pills from "@/components/Pills";
 import { Kpi, KpiGrid } from "@/components/Kpi";
 import SearchBox from "@/components/SearchBox";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import {
   AlertTriangle,
+  CalendarDays,
   Clock,
   CheckCircle,
   Check,
@@ -240,6 +242,9 @@ export default function ScadenzePage() {
           <p className="page-sub">Fatture non pagate con data di scadenza</p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
+          <Link href="/finance/calendario" className="btn btn-secondary" title="Scadenze e fatture da emettere nel calendario">
+            <CalendarDays className="w-4 h-4" /> Calendario
+          </Link>
           <SearchBox value={q} onChange={setQ} placeholder="Cerca cliente, numero…" className="w-64" />
           <select
             value={filtroPaese}

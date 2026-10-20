@@ -24,6 +24,11 @@ export async function proxy(req: NextRequest) {
   if (pathname.startsWith("/api/cron/")) {
     return NextResponse.next();
   }
+  // Il feed iCal lo leggono Google/Apple Calendar senza sessione: la route
+  // controlla il token nell'indirizzo
+  if (pathname === "/api/calendario/ical") {
+    return NextResponse.next();
+  }
 
   if (session) return NextResponse.next();
 
