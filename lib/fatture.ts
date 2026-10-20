@@ -160,10 +160,28 @@ export const TIPI_RETTIFICA: { value: string; label: string }[] = [
 
 export const totalePagato = (f: { acconti?: { importo: number }[] }) =>
   (f.acconti ?? []).reduce((s, a) => s + a.importo, 0);
+
+// `importo` è l'imponibile. L'aliquota si legge come la deriva l'API dal
+// tipo d'imposta; il lordo (con l'IGIC) è il «total facturado» di Billin.
+export interface ImportiFattura {
+  importo: number;
+  tipoIva?: string | null;
+  iva?: number | null;
+}
+export const aliquota = (f: ImportiFattura) =>
+  f.tipoIva === "igic7" ? 7 : f.tipoIva === "igic_exenta" ? 0 : (f.iva ?? 0);
+export const imposta = (f: ImportiFattura) => round2((f.importo * aliquota(f)) / 100);
+export const lordo = (f: ImportiFattura) => round2(f.importo + imposta(f));
+
 // Una rettificativa ha importo negativo: il suo residuo (negativo) compensa
-// quello della fattura che corregge
-export const residuo = (f: { importo: number; acconti?: { importo: number }[] }) =>
-  f.importo < 0 ? f.importo - totalePagato(f) : Math.max(0, f.importo - totalePagato(f));
+// quello della fattura che corregge. Sul lordo quando il dovuto è con l'IGIC.
+export const residuo = (
+  f: ImportiFattura & { acconti?: { importo: number }[] },
+  suLordo = false,
+) => {
+  const dovuto = suLordo ? lordo(f) : f.importo;
+  return dovuto < 0 ? dovuto - totalePagato(f) : Math.max(0, dovuto - totalePagato(f));
+};
 export const statoCalcolato = (f: {
   pagato: boolean;
   importo: number;

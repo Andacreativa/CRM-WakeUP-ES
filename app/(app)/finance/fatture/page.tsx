@@ -45,6 +45,8 @@ import {
   type Fattura,
   totalePagato,
   residuo,
+  lordo,
+  imposta,
   statoCalcolato,
   isScaduta,
   dataIt,
@@ -325,7 +327,7 @@ export default function FatturePage() {
   // nasconde una riga selezionata, quella riga esce anche dall'export.
   const attive = filtered.filter((f) => !f.annullata);
   const selected = attive.filter((f) => selectedIds.has(f.id));
-  const selTotale = selected.reduce((s, f) => s + (f?.importo ?? 0), 0);
+  const selTotale = selected.reduce((s, f) => s + lordo(f), 0);
   // Esporta: le spuntate, oppure tutte quelle del filtro
   const exportList = tutte || selected.length === 0 ? attive : selected;
 
@@ -350,15 +352,16 @@ export default function FatturePage() {
     setLastClickedId(f.id);
   };
 
-  const totale = attive.reduce((s, f) => s + (f?.importo ?? 0), 0);
+  // Contatori sul lordo (con l'IGIC), come il «total facturado» di Billin:
+  // Totale = Incassato + Da incassare. L'IGIC a parte, solo la somma.
+  const totale = attive.reduce((s, f) => s + lordo(f), 0);
+  const igic = attive.reduce((s, f) => s + imposta(f), 0);
   const pagate = attive.reduce(
-    (s, f) =>
-      s +
-      (statoCalcolato(f) === "pagato" ? (f?.importo ?? 0) : totalePagato(f)),
+    (s, f) => s + (statoCalcolato(f) === "pagato" ? lordo(f) : totalePagato(f)),
     0,
   );
   const daIncassare = attive.reduce(
-    (s, f) => s + (statoCalcolato(f) === "pagato" ? 0 : residuo(f)),
+    (s, f) => s + (statoCalcolato(f) === "pagato" ? 0 : residuo(f, true)),
     0,
   );
 
@@ -505,7 +508,7 @@ export default function FatturePage() {
       {tab === "emesse" && (
         <>
       {/* KPI */}
-      <KpiGrid cols={3}>
+      <KpiGrid cols={4}>
         {[
           { label: "Totale", val: fmt(totale), color: "text-gray-900" },
           { label: "Incassato", val: fmt(pagate), color: "text-ok" },
@@ -514,6 +517,7 @@ export default function FatturePage() {
             val: fmt(daIncassare),
             color: "text-warn",
           },
+          { label: "IGIC", val: fmt(igic), color: "text-gray-500" },
         ].map((k) => (
           <Kpi key={k.label} label={k.label} value={k.val} valueClass={k.color} />
         ))}
