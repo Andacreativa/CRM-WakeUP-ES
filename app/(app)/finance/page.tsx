@@ -29,7 +29,6 @@ import {
 import Link from "next/link";
 import { fmt, MESI, CATEGORIE_COLORI_CHART } from "@/lib/constants";
 import FiltriBar from "@/components/FiltriBar";
-import Calendario from "@/components/Calendario";
 import { useAnno } from "@/lib/anno-context";
 
 interface DashboardData {
@@ -233,9 +232,6 @@ export default function Dashboard() {
           />
         ))}
       </KpiGrid>
-
-      {/* Calendario: fatture da emettere e scadenze del mese, prossimi 30 giorni */}
-      <Calendario vista="dashboard" />
 
       {/* Charts row */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
