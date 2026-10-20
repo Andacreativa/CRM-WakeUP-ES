@@ -461,6 +461,25 @@ export default function ImpostazioniPage() {
         </div>
       </Sezione>
 
+      <Sezione
+        titolo="Commercialista"
+        sotto="Destinatario di Bilancio › Informe commercialista (PDF ed Excel in spagnolo, mensile, trimestrale o annuale). Segnaposto: {periodo} {azienda} {nombre}"
+      >
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <Testo cfg={cfg} set={set} k="commercialistaNome" label="Nome (per il saluto)" placeholder="es. María" />
+          <Testo cfg={cfg} set={set} k="commercialistaEmail" label="Email" placeholder="gestor@ejemplo.es" />
+          <Testo cfg={cfg} set={set} k="informeOggetto" label="Asunto" />
+          <div>
+            <label className={labelCls}>Texto</label>
+            <textarea
+              value={cfg.informeTesto}
+              onChange={(e) => set("informeTesto", e.target.value)}
+              className={cn(inputCls, "min-h-[140px] font-mono text-xs")}
+            />
+          </div>
+        </div>
+      </Sezione>
+
       <div className="flex justify-end">
         <button
           onClick={salva}

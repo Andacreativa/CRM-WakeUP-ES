@@ -65,6 +65,11 @@ export interface ImpostazioniFatture {
   sollecitoTestoIt: string;
   sollecitoOggettoEs: string;
   sollecitoTestoEs: string;
+  // Commercialista: destinatario dell'informe (Bilancio › Informe commercialista)
+  commercialistaNome: string;
+  commercialistaEmail: string;
+  informeOggetto: string; // segnaposto: {periodo} {azienda} {nombre}
+  informeTesto: string;
 }
 
 export const IMPOSTAZIONI_FATTURE_DEFAULT: ImpostazioniFatture = {
@@ -118,6 +123,11 @@ export const IMPOSTAZIONI_FATTURE_DEFAULT: ImpostazioniFatture = {
   sollecitoOggettoEs: "Recordatorio de pago factura {numero}",
   sollecitoTestoEs:
     "Estimado/a {cliente},\n\nle recordamos que la factura {numero} de {importo}, con vencimiento {scadenza}, a día de hoy no consta como pagada.\nLe rogamos realice el pago mediante transferencia al IBAN {iban}.\n\nUn cordial saludo,\n{azienda}",
+  commercialistaNome: "",
+  commercialistaEmail: "",
+  informeOggetto: "Informe {periodo} — {azienda}",
+  informeTesto:
+    "Hola {nombre},\n\nadjuntamos el informe del periodo {periodo} de {azienda}: resumen, libro de facturas emitidas, gastos y otros ingresos, en PDF y Excel.\n\nQuedamos a tu disposición para cualquier aclaración.\n\nUn cordial saludo,\n{azienda}",
 };
 
 // A 0 %: esente (E1…E8 per l'IGIC) o non soggetta (N1, N2)

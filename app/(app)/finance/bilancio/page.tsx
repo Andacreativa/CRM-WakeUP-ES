@@ -15,13 +15,14 @@ import {
   Legend,
   ReferenceLine,
 } from "recharts";
-import { Download, FileSpreadsheet, FileText } from "lucide-react";
+import { Briefcase, Download, FileSpreadsheet, FileText } from "lucide-react";
 import { fmt, MESI } from "@/lib/constants";
 import FiltriBar from "@/components/FiltriBar";
 import { useAnno } from "@/lib/anno-context";
 import { exportExcel, exportPDF } from "@/lib/export";
 import { isFinnRitenuta } from "@/lib/finn-split";
 import ReportModal from "@/components/ReportModal";
+import InformeModal from "@/components/InformeModal";
 
 interface MeseData {
   mese: number;
@@ -39,6 +40,7 @@ export default function BilancioPage() {
   const { anno, setAnno } = useAnno();
   const [azienda, setAzienda] = useState("");
   const [reportOpen, setReportOpen] = useState(false);
+  const [informeOpen, setInformeOpen] = useState(false);
 
   useEffect(() => {
     const run = async () => {
@@ -166,6 +168,13 @@ export default function BilancioPage() {
           />
           <ExportButton active={exportMode} onClick={() => setExportMode((v) => !v)} title="Scarica il bilancio in Excel o PDF" />
           <button
+            onClick={() => setInformeOpen(true)}
+            className="btn btn-secondary"
+            title="Registri del periodo per il commercialista, in spagnolo: mese, trimestre o anno"
+          >
+            <Briefcase className="w-4 h-4" /> Informe commercialista
+          </button>
+          <button
             onClick={() => setReportOpen(true)}
             className="btn btn-primary"
           >
@@ -174,6 +183,7 @@ export default function BilancioPage() {
         </div>
       </div>
 
+      <InformeModal open={informeOpen} onClose={() => setInformeOpen(false)} />
       <ReportModal
         open={reportOpen}
         onClose={() => setReportOpen(false)}
