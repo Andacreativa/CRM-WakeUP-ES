@@ -3,12 +3,14 @@ import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import {
   RICHIESTA_INCLUDE,
-  STEP_RICORRENZA,
+  aggiungiMesi,
   avanzaMese,
   calcolaImporti,
+  leggiRicorrenza,
   nextCodiceRichiesta,
   parseVoci,
   serializzaRichiesta,
+  tettoRate,
 } from "@/lib/richieste";
 
 // Lista richieste con filtri. anno=0 e mese=0 significano "tutti".
@@ -65,6 +67,8 @@ export async function GET(request: Request) {
 }
 
 // Crea una richiesta, oppure una serie (ricorrenza + numero ripetizioni).
+// Con «personalizzata» il passo arriva in `passoMesi` (2-24) e si salva
+// sulla richiesta: se manca o è fuori limite la richiesta si rifiuta.
 export async function POST(request: Request) {
   try {
     const body = await request.json();
@@ -92,11 +96,16 @@ export async function POST(request: Request) {
       );
     }
 
-    const ricorrenza = STEP_RICORRENZA[body.ricorrenza] !== undefined
-      ? String(body.ricorrenza)
-      : "una_tantum";
-    const step = STEP_RICORRENZA[ricorrenza];
-    const n = step > 0 ? Math.min(36, Math.max(1, parseInt(body.ripetizioni, 10) || 1)) : 1;
+    const ric = leggiRicorrenza(body.ricorrenza, body.passoMesi);
+    if (!ric.ok) {
+      return NextResponse.json({ error: ric.errore }, { status: 400 });
+    }
+    const { ricorrenza, passoMesi } = ric;
+    const step = ric.passo;
+    const n =
+      step > 0
+        ? Math.min(tettoRate(ricorrenza, step), Math.max(1, parseInt(body.ripetizioni, 10) || 1))
+        : 1;
     const validazione = body.autorizzaTutte ? "ok" : "in_attesa";
     const dataInvio = body.dataInvio ? new Date(body.dataInvio) : null;
 
@@ -107,11 +116,8 @@ export async function POST(request: Request) {
       for (let i = 0; i < n; i++) {
         const codice = await nextCodiceRichiesta(tx, periodo.anno);
         if (n > 1 && i === 0) serieCodice = codice;
-        let invio: Date | null = dataInvio;
-        if (dataInvio && i > 0) {
-          invio = new Date(dataInvio);
-          invio.setMonth(invio.getMonth() + step * i);
-        }
+        // Stesso giorno a ogni rata, ultimo del mese se quel giorno non c'è
+        const invio = dataInvio && i > 0 ? aggiungiMesi(dataInvio, step * i) : dataInvio;
         const row = await tx.richiestaFattura.create({
           data: {
             codice,
@@ -133,6 +139,7 @@ export async function POST(request: Request) {
             serieIndice: n > 1 ? i + 1 : null,
             serieTotale: n > 1 ? n : null,
             ricorrenza,
+            passoMesi,
             responsabile: body.responsabile?.trim() || null,
             validazione,
             validataIl: validazione === "ok" ? new Date() : null,

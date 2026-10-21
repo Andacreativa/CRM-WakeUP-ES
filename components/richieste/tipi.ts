@@ -47,6 +47,7 @@ export interface Richiesta {
   serieIndice: number | null;
   serieTotale: number | null;
   ricorrenza: string;
+  passoMesi?: number | null; // solo con ricorrenza «personalizzata»
   responsabile: string | null;
   validazione: string;
   validataIl?: string | null;
@@ -90,14 +91,38 @@ export const STATI_RICHIESTA = [
   { value: "da_fare", label: "Da fare" },
   { value: "emesse", label: "Fatte" },
 ];
-export const RICORRENZE = [
+// Voci standard della tendina «Ricorrenza». Il passo libero («Ogni N mesi»)
+// non è in tendina: ha il suo tastino e si salva come «personalizzata».
+// `nuova`: la tendina la mostra solo se il server la conosce (regole
+// ricevute da GET /api/richieste-fattura/ricorrenze).
+export const RICORRENZE: { value: string; label: string; nuova?: boolean }[] = [
   { value: "una_tantum", label: "Una tantum" },
   { value: "mensile", label: "Mensile" },
   { value: "trimestrale", label: "Trimestrale" },
+  { value: "semestrale", label: "Semestrale", nuova: true },
   { value: "annuale", label: "Annuale" },
 ];
-export const ricorrenzaLabel = (v: string) =>
-  RICORRENZE.find((r) => r.value === v)?.label ?? v;
+export const ricorrenzaLabel = (v: string, passoMesi?: number | null) =>
+  v === "personalizzata"
+    ? passoMesi
+      ? `Ogni ${passoMesi} mesi`
+      : "Ogni N mesi"
+    : RICORRENZE.find((r) => r.value === v)?.label ?? v;
+
+// Regole delle ricorrenze calcolate dal server (passo e tetto delle rate).
+// Se la risposta manca o non ha la forma attesa (server non ancora
+// aggiornato) il modulo resta com'era: niente Semestrale, niente tastino.
+export interface RegoleRicorrenze {
+  fisse: Record<string, { passo: number; tetto: number }>;
+  libera: { valore: string; min: number; max: number; iniziale: number; tetti: Record<string, number> };
+}
+export function regoleValide(j: unknown): RegoleRicorrenze | null {
+  const r = j as Partial<RegoleRicorrenze> | null;
+  const l = r?.libera;
+  if (!r?.fisse || typeof r.fisse !== "object" || !l || typeof l !== "object") return null;
+  if (![l.min, l.max, l.iniziale].every((n) => Number.isInteger(n)) || !l.tetti) return null;
+  return r as RegoleRicorrenze;
+}
 export const ANNI_FORM = [new Date().getFullYear() + 1, ...ANNI];
 
 export const nomeCliente = (r: {

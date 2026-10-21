@@ -81,6 +81,7 @@ const NON_COPIABILI = new Set<string>([
   "serieIndice",
   "serieTotale",
   "ricorrenza",
+  "passoMesi",
   "validazione",
   "validataIl",
   "emessa",

@@ -507,7 +507,8 @@ model RichiestaFattura {
   serieCodice     String? // codice della serie (ricorrenza o numero contratto)
   serieIndice     Int?
   serieTotale     Int?
-  ricorrenza      String     @default("una_tantum") // una_tantum | mensile | trimestrale | annuale
+  ricorrenza      String     @default("una_tantum") // una_tantum | mensile | trimestrale | semestrale | annuale | personalizzata
+  passoMesi       Int? // solo con «personalizzata»: mesi fra una rata e la successiva (2-24)
   responsabile    String? // commerciale di riferimento
   validazione     String     @default("in_attesa") // in_attesa | ok
   validataIl      DateTime?

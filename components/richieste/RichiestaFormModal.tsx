@@ -11,12 +11,14 @@ import { avanzaMese, STEP_RICORRENZA } from "@/lib/richieste";
 import {
   type ClienteMin,
   type ContrattoMin,
+  type RegoleRicorrenze,
   type Richiesta,
   ANNI_FORM,
   RICORRENZE,
   inputCls,
   labelCls,
   parseVoci,
+  regoleValide,
 } from "./tipi";
 
 const formDa = (r: Richiesta | null, anno: number) => {
@@ -38,7 +40,11 @@ const formDa = (r: Richiesta | null, anno: number) => {
     mese: r?.mese ?? new Date().getMonth() + 1,
     anno: r?.anno ?? anno,
     dataInvio: r?.dataInvio ? r.dataInvio.slice(0, 10) : "",
-    ricorrenza: r?.ricorrenza ?? "una_tantum",
+    // Ultima scelta della tendina: «Standard» ci torna dal passo libero
+    ricorrenza: r?.ricorrenza && r.ricorrenza !== "personalizzata" ? r.ricorrenza : "una_tantum",
+    // «Ogni N mesi»: al posto della tendina, con il numero di mesi
+    passoLibero: r?.ricorrenza === "personalizzata",
+    passoMesi: r?.passoMesi ? String(r.passoMesi) : "",
     ripetizioni: "1",
     autorizzaTutte: false,
     note: r?.note ?? "",
@@ -48,6 +54,7 @@ const formDa = (r: Richiesta | null, anno: number) => {
 const CADENZA: Record<string, string> = {
   mensile: "una al mese",
   trimestrale: "una ogni 3 mesi",
+  semestrale: "una ogni 6 mesi",
   annuale: "una all'anno",
 };
 
@@ -81,6 +88,16 @@ export default function RichiestaFormModal({
   const [persone, setPersone] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  // Passo e tetto delle rate li decide il server: senza risposta (server non
+  // ancora aggiornato) la tendina resta quella di prima e il tastino non c'è.
+  const [regole, setRegole] = useState<RegoleRicorrenze | null>(null);
+  useEffect(() => {
+    if (editing) return;
+    fetch("/api/richieste-fattura/ricorrenze")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((j) => setRegole(regoleValide(j)))
+      .catch(() => setRegole(null));
+  }, [editing]);
   // «Solo questa / Da questa in poi»: si chiede solo in modifica e solo se
   // dopo questa rata ce n'è almeno un'altra nella serie (conteggio dal server).
   const successive = richiesta?.successive ?? 0;
@@ -129,9 +146,40 @@ export default function RichiestaFormModal({
   const responsabileSalvato = richiesta?.responsabile ?? "";
 
   // Serie: quante richieste nascono e fino a che mese (come fa l'API).
-  const passo = STEP_RICORRENZA[form.ricorrenza] ?? 0;
-  const nSerie = passo > 0 ? Math.min(36, Math.max(1, parseInt(form.ripetizioni, 10) || 1)) : 1;
+  // Con il passo libero il numero di mesi è nel campo «Ogni [N] mesi».
+  const libero = form.passoLibero && regole !== null;
+  const nMesi = Number(form.passoMesi);
+  const passoLiberoOk =
+    libero &&
+    form.passoMesi.trim() !== "" &&
+    Number.isInteger(nMesi) &&
+    nMesi >= regole.libera.min &&
+    nMesi <= regole.libera.max;
+  const passo = libero
+    ? passoLiberoOk
+      ? nMesi
+      : 0
+    : (regole?.fisse[form.ricorrenza]?.passo ?? STEP_RICORRENZA[form.ricorrenza] ?? 0);
+  const tetto = !regole
+    ? undefined
+    : libero
+      ? passoLiberoOk
+        ? regole.libera.tetti[String(nMesi)]
+        : undefined
+      : regole.fisse[form.ricorrenza]?.tetto;
+  const chieste = Math.max(1, parseInt(form.ripetizioni, 10) || 1);
+  const nSerie = passo > 0 ? (tetto ? Math.min(tetto, chieste) : chieste) : 1;
   const fineSerie = avanzaMese(form.mese, form.anno, passo * (nSerie - 1));
+  const cadenza = libero ? `una ogni ${passo} mesi` : CADENZA[form.ricorrenza];
+  const etichettaQuante = libero
+    ? "Quante rate"
+    : form.ricorrenza === "semestrale"
+      ? "Per quanti semestri"
+      : "Quante fatture";
+  // In tendina solo le ricorrenze che il server conosce
+  const opzioniRicorrenza = RICORRENZE.filter((r) =>
+    regole ? regole.fisse[r.value] !== undefined : !r.nuova,
+  );
 
   const imponibileForm = form.voci.reduce(
     (s, v) => s + (parseFloat(String(v.importo).replace(",", ".")) || 0),
@@ -157,6 +205,10 @@ export default function RichiestaFormModal({
       setErr("Inserisci almeno una voce con importo");
       return;
     }
+    if (!editing && libero && !passoLiberoOk) {
+      setErr(`Ogni quanti mesi: scegli un numero intero da ${regole.libera.min} a ${regole.libera.max}`);
+      return;
+    }
     if (editing && successive > 0 && !applyTo) {
       setErr(null);
       setChiediSerie(true);
@@ -178,7 +230,8 @@ export default function RichiestaFormModal({
         mese: form.mese,
         anno: form.anno,
         dataInvio: form.dataInvio || null,
-        ricorrenza: form.ricorrenza,
+        ricorrenza: libero ? regole.libera.valore : form.ricorrenza,
+        passoMesi: libero ? nMesi : null,
         ripetizioni: form.ripetizioni,
         autorizzaTutte: form.autorizzaTutte,
         note: form.note,
@@ -437,27 +490,73 @@ export default function RichiestaFormModal({
           {!editing && (
             <>
               <div>
-                <label className={labelCls}>Ricorrenza</label>
-                <select
-                  value={form.ricorrenza}
-                  onChange={(e) => setForm((f) => ({ ...f, ricorrenza: e.target.value }))}
-                  className={inputCls}
-                >
-                  {RICORRENZE.map((r) => (
-                    <option key={r.value} value={r.value}>
-                      {r.label}
-                    </option>
-                  ))}
-                </select>
+                {/* Etichetta e tastino sulla stessa riga: la tendina resta
+                    allineata ai campi accanto e larga quanto prima */}
+                <div className="flex items-center justify-between gap-2 mb-1">
+                  <label htmlFor="ricorrenza" className={cn(labelCls, "mb-0")}>
+                    Ricorrenza
+                  </label>
+                  {regole && (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setForm((f) => ({
+                          ...f,
+                          passoLibero: !f.passoLibero,
+                          passoMesi: f.passoMesi || String(regole.libera.iniziale),
+                        }))
+                      }
+                      className="text-xs font-semibold text-brand hover:text-brand whitespace-nowrap"
+                      title={
+                        libero
+                          ? "Torna alle ricorrenze standard"
+                          : "Una rata ogni tot mesi, a scelta"
+                      }
+                    >
+                      {libero ? "Standard" : "Ogni N mesi"}
+                    </button>
+                  )}
+                </div>
+                {libero ? (
+                  <div className="flex items-center gap-2 text-sm text-gray-700">
+                    <span>Ogni</span>
+                    <input
+                      id="ricorrenza"
+                      type="number"
+                      required
+                      min={regole.libera.min}
+                      max={regole.libera.max}
+                      step={1}
+                      value={form.passoMesi}
+                      onChange={(e) => setForm((f) => ({ ...f, passoMesi: e.target.value }))}
+                      className={cn(inputCls, "w-20 text-right invalid:border-bad")}
+                      aria-label="Ogni quanti mesi"
+                    />
+                    <span>mesi</span>
+                  </div>
+                ) : (
+                  <select
+                    id="ricorrenza"
+                    value={form.ricorrenza}
+                    onChange={(e) => setForm((f) => ({ ...f, ricorrenza: e.target.value }))}
+                    className={inputCls}
+                  >
+                    {opzioniRicorrenza.map((r) => (
+                      <option key={r.value} value={r.value}>
+                        {r.label}
+                      </option>
+                    ))}
+                  </select>
+                )}
               </div>
               <div>
-                <label className={labelCls}>Quante fatture</label>
+                <label className={labelCls}>{etichettaQuante}</label>
                 <input
                   type="number"
                   min={1}
-                  max={36}
+                  max={tetto}
                   value={form.ripetizioni}
-                  disabled={form.ricorrenza === "una_tantum"}
+                  disabled={!libero && form.ricorrenza === "una_tantum"}
                   onChange={(e) => setForm((f) => ({ ...f, ripetizioni: e.target.value }))}
                   className={cn(inputCls, "disabled:opacity-50")}
                 />
@@ -465,8 +564,9 @@ export default function RichiestaFormModal({
               {passo > 0 && (
                 <p className="md:col-span-3 text-[11px] text-gray-400 -mt-1">
                   {nSerie > 1
-                    ? `Si creano ${nSerie} richieste, una per fattura: ${CADENZA[form.ricorrenza]}, da ${MESI[form.mese - 1]} ${form.anno} a ${MESI[fineSerie.mese - 1]} ${fineSerie.anno}.`
+                    ? `Si creano ${nSerie} richieste, una per fattura: ${cadenza}, da ${MESI[form.mese - 1]} ${form.anno} a ${MESI[fineSerie.mese - 1]} ${fineSerie.anno}.`
                     : `Si crea una sola richiesta, per ${MESI[form.mese - 1]} ${form.anno}: per ripeterla aumenta il numero.`}
+                  {tetto && chieste > tetto ? ` Al massimo ${tetto} in una volta.` : ""}
                 </p>
               )}
             </>

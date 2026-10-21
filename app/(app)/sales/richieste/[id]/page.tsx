@@ -143,8 +143,8 @@ export default function RichiestaPage() {
           {pillStato}
           {r.cliente?.paese && <span className="tag tag-neutral">{r.cliente.paese}</span>}
           {r.serieTotale && (
-            <span className="tag tag-neutral" title={ricorrenzaLabel(r.ricorrenza)}>
-              {r.serieIndice}/{r.serieTotale} · {ricorrenzaLabel(r.ricorrenza).toLowerCase()}
+            <span className="tag tag-neutral" title={ricorrenzaLabel(r.ricorrenza, r.passoMesi)}>
+              {r.serieIndice}/{r.serieTotale} · {ricorrenzaLabel(r.ricorrenza, r.passoMesi).toLowerCase()}
             </span>
           )}
         </div>

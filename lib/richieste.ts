@@ -49,18 +49,109 @@ export function calcolaImporti(
   return { imponibile, iva, totale };
 }
 
-// Avanza di `step` mesi (1 = mensile, 3 = trimestrale, 12 = annuale).
+// Avanza di `step` mesi (1 = mensile, 3 = trimestrale, 6 = semestrale,
+// 12 = annuale, N = «ogni N mesi»).
 export function avanzaMese(mese: number, anno: number, step: number) {
   const idx = (anno * 12 + (mese - 1)) + step;
   return { anno: Math.floor(idx / 12), mese: (idx % 12) + 1 };
 }
 
+// ── Ricorrenze ───────────────────────────────────────────────────────────
+// Il passo è il numero di mesi fra una rata e la successiva. Le ricorrenze
+// standard hanno il passo fisso; «personalizzata» («Ogni N mesi» nel
+// modulo) lo prende da `passoMesi`, salvato sulla richiesta.
 export const STEP_RICORRENZA: Record<string, number> = {
   una_tantum: 0,
   mensile: 1,
   trimestrale: 3,
+  semestrale: 6,
   annuale: 12,
 };
+export const RICORRENZA_LIBERA = "personalizzata";
+export const PASSO_LIBERO = { min: 2, max: 24, iniziale: 4 } as const;
+
+// Il passo libero arriva dal browser: se manca, non è intero o è fuori da
+// 2-24 si rifiuta (null), non si inventa un passo.
+export function passoLiberoValido(v: unknown): number | null {
+  if (v === null || v === undefined || v === "") return null;
+  const n = Number(v);
+  return Number.isInteger(n) && n >= PASSO_LIBERO.min && n <= PASSO_LIBERO.max ? n : null;
+}
+
+export type RicorrenzaLetta =
+  | { ok: true; ricorrenza: string; passo: number; passoMesi: number | null }
+  | { ok: false; errore: string };
+
+// Ricorrenza e passo dal corpo della richiesta. Un valore sconosciuto vale
+// «una tantum» come prima; «personalizzata» senza un passo valido è un errore.
+export function leggiRicorrenza(ricorrenza: unknown, passoMesi: unknown): RicorrenzaLetta {
+  const r = String(ricorrenza ?? "");
+  if (r === RICORRENZA_LIBERA) {
+    const passo = passoLiberoValido(passoMesi);
+    if (passo === null) {
+      return {
+        ok: false,
+        errore: `Ogni quanti mesi: serve un numero intero da ${PASSO_LIBERO.min} a ${PASSO_LIBERO.max}`,
+      };
+    }
+    return { ok: true, ricorrenza: r, passo, passoMesi: passo };
+  }
+  if (STEP_RICORRENZA[r] !== undefined) {
+    return { ok: true, ricorrenza: r, passo: STEP_RICORRENZA[r], passoMesi: null };
+  }
+  return { ok: true, ricorrenza: "una_tantum", passo: 0, passoMesi: null };
+}
+
+// Quante rate si possono chiedere in un colpo. Unico posto in cui si
+// calcola: la pagina lo riceve da GET /api/richieste-fattura/ricorrenze.
+// Mensile, trimestrale e annuale restano a 36 come prima; semestrale 6
+// (3 anni); passo libero: sotto i 12 mesi quante ne stanno in 3 anni, da 12
+// in su quante ne stanno in 10 anni.
+const TETTO_STANDARD = 36;
+export function tettoRate(ricorrenza: string, passo: number): number {
+  if (passo <= 0) return 1;
+  if (ricorrenza === "semestrale") return 6;
+  if (ricorrenza === RICORRENZA_LIBERA) {
+    return Math.max(1, Math.floor((passo < 12 ? 36 : 120) / passo));
+  }
+  return TETTO_STANDARD;
+}
+
+// Regole per il modulo: passo e tetto di ogni ricorrenza standard, limiti
+// e tetti del passo libero.
+export function regoleRicorrenze() {
+  const fisse: Record<string, { passo: number; tetto: number }> = {};
+  for (const [r, passo] of Object.entries(STEP_RICORRENZA)) {
+    fisse[r] = { passo, tetto: tettoRate(r, passo) };
+  }
+  const tetti: Record<string, number> = {};
+  for (let n = PASSO_LIBERO.min; n <= PASSO_LIBERO.max; n++) {
+    tetti[String(n)] = tettoRate(RICORRENZA_LIBERA, n);
+  }
+  return { fisse, libera: { valore: RICORRENZA_LIBERA, ...PASSO_LIBERO, tetti } };
+}
+export type RegoleRicorrenze = ReturnType<typeof regoleRicorrenze>;
+
+// Data di una rata: stesso giorno del mese della prima, `mesi` dopo; se quel
+// giorno non esiste nel mese d'arrivo si usa l'ultimo del mese (mai il mese
+// dopo). Si conta sempre dalla prima data, così dopo un 28/02 si torna al
+// 30. In UTC, come le date «AAAA-MM-GG» che arrivano dal modulo.
+export function aggiungiMesi(data: Date, mesi: number): Date {
+  const anno = data.getUTCFullYear();
+  const mese = data.getUTCMonth() + mesi;
+  const ultimo = new Date(Date.UTC(anno, mese + 1, 0)).getUTCDate();
+  return new Date(
+    Date.UTC(
+      anno,
+      mese,
+      Math.min(data.getUTCDate(), ultimo),
+      data.getUTCHours(),
+      data.getUTCMinutes(),
+      data.getUTCSeconds(),
+      data.getUTCMilliseconds(),
+    ),
+  );
+}
 
 // Codice progressivo per anno: RF-2026-0001 (max esistente + 1).
 export async function nextCodiceRichiesta(
