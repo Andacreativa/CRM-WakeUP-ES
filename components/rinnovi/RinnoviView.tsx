@@ -4,7 +4,6 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
   Check,
-  ExternalLink,
   FilePlus2,
   Globe,
   Plus,
@@ -29,11 +28,8 @@ import RinnovoFormModal from "./RinnovoFormModal";
 import {
   type Rinnovo,
   ANTICIPO_GIORNI,
-  CANALI,
-  NORTHSTAR_RICHIESTE_URL,
   STATI_RINNOVO,
   STATO_PILL,
-  canaleLabel,
   fatturazioneLabel,
   nomeClienteRinnovo,
   proprietaLabel,
@@ -80,7 +76,6 @@ export default function RinnoviView() {
   const [vista, setVista] = useState<Vista>("");
   const [mese, setMese] = useState(0);
   const [stato, setStato] = useState("");
-  const [canale, setCanale] = useState("");
   const [clienteId, setClienteId] = useState(0);
   const [q, setQ] = useState("");
   const [page, setPage] = useState(1);
@@ -101,7 +96,6 @@ export default function RinnoviView() {
     if (vista) params.set("vista", vista);
     if (mese) params.set("mese", String(mese));
     if (stato) params.set("stato", stato);
-    if (canale) params.set("canale", canale);
     if (clienteId) params.set("clienteId", String(clienteId));
     if (q.trim()) params.set("q", q.trim());
     try {
@@ -113,7 +107,7 @@ export default function RinnoviView() {
     } finally {
       setLoading(false);
     }
-  }, [vista, mese, stato, canale, clienteId, q]);
+  }, [vista, mese, stato, clienteId, q]);
 
   useEffect(() => {
     load();
@@ -135,7 +129,6 @@ export default function RinnoviView() {
       vista: Vista;
       mese: number;
       stato: string;
-      canale: string;
       clienteId: number;
       q: string;
       page: number;
@@ -145,7 +138,6 @@ export default function RinnoviView() {
       setVista(s.vista ?? "");
       setMese(s.mese ?? 0);
       setStato(s.stato ?? "");
-      setCanale(s.canale ?? "");
       setClienteId(s.clienteId ?? 0);
       setQ(s.q ?? "");
       setPageSize(s.pageSize ?? 20);
@@ -153,7 +145,7 @@ export default function RinnoviView() {
     }
   }, []);
   const ricorda = () =>
-    ricordaLista(CHIAVE_LISTA, { vista, mese, stato, canale, clienteId, q, page, pageSize });
+    ricordaLista(CHIAVE_LISTA, { vista, mese, stato, clienteId, q, page, pageSize });
   const filtra =
     <T,>(set: (v: T) => void) =>
     (v: T) => {
@@ -168,8 +160,6 @@ export default function RinnoviView() {
       prossimi: prossimi.length,
       prossimiImporto: prossimi.reduce((s, r) => s + r.importo, 0),
       daFatturare: rows.filter((r) => r.daFatturare).length,
-      // «Genera richieste» crea solo quelle ANDA: le SMH si fanno in Northstar
-      daGenerare: rows.filter((r) => r.daFatturare && r.canale !== "smh").length,
       attivi: rows.filter((r) => r.stato === "attivo").length,
       annuo: rows.filter((r) => r.fatturabile).reduce((s, r) => s + r.importo, 0),
     };
@@ -196,19 +186,6 @@ export default function RinnoviView() {
     const j = await post(`/api/rinnovi/${r.id}/crea-richiesta`);
     if (j) {
       notify(`Richiesta ${j.codice} creata per ${r.dominio}: è in «Richieste fattura», da validare`);
-      load();
-    }
-  };
-  // Canale cambiato dalla riga: la lista si aggiorna subito, poi si salva
-  const cambiaCanale = async (r: Rinnovo, nuovo: string) => {
-    setRows((rs) => rs.map((x) => (x.id === r.id ? { ...x, canale: nuovo } : x)));
-    const res = await fetch(`/api/rinnovi/${r.id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ canale: nuovo }),
-    });
-    if (!res.ok) {
-      notify("Canale non salvato", "err");
       load();
     }
   };
@@ -240,7 +217,6 @@ export default function RinnoviView() {
       rows.map((r) => ({
         Dominio: r.dominio,
         Cliente: nomeClienteRinnovo(r),
-        Canale: canaleLabel(r.canale),
         Scadenza: dataIt(r.scadenza),
         "Importo annuo": r.importo,
         Fatturazione: fatturazioneLabel(r.fatturazione),
@@ -281,12 +257,12 @@ export default function RinnoviView() {
             onClick={genera}
             disabled={busy}
             className="btn btn-secondary disabled:opacity-60"
-            title={`Crea la richiesta di fattura per i rinnovi ANDA entro ${ANTICIPO_GIORNI} giorni che non ce l'hanno (lo fa anche da solo ogni mattina); quelli SMH si fanno in Northstar`}
+            title={`Crea la richiesta di fattura per i rinnovi entro ${ANTICIPO_GIORNI} giorni che non ce l'hanno (lo fa anche da solo ogni mattina)`}
           >
             <Sparkles className="w-4 h-4" /> Genera richieste
-            {kpi.daGenerare > 0 && (
+            {kpi.daFatturare > 0 && (
               <span className="ml-1 rounded-full bg-warn/15 text-warn text-[11px] font-bold px-1.5">
-                {kpi.daGenerare}
+                {kpi.daFatturare}
               </span>
             )}
           </button>
@@ -307,7 +283,7 @@ export default function RinnoviView() {
         <Kpi
           label="Da fatturare"
           value={String(kpi.daFatturare)}
-          sub={`entro ${ANTICIPO_GIORNI} gg · ${kpi.daGenerare} ANDA, ${kpi.daFatturare - kpi.daGenerare} SMH`}
+          sub={`entro ${ANTICIPO_GIORNI} gg`}
           color="#f59e0b"
           onClick={() => filtra(setVista)(vista === "da_fatturare" ? "" : "da_fatturare")}
           title="Mostra solo i rinnovi da fatturare"
@@ -336,14 +312,6 @@ export default function RinnoviView() {
             </option>
           ))}
         </select>
-        <select value={canale} onChange={(e) => filtra(setCanale)(e.target.value)} className="sel">
-          <option value="">ANDA e SMH</option>
-          {CANALI.map((c) => (
-            <option key={c.value} value={c.value}>
-              Solo {c.label}
-            </option>
-          ))}
-        </select>
         <select
           value={clienteId}
           onChange={(e) => filtra(setClienteId)(parseInt(e.target.value))}
@@ -367,7 +335,6 @@ export default function RinnoviView() {
               <tr>
                 <th>Dominio</th>
                 <th>Cliente</th>
-                <th>Canale</th>
                 <th>Scadenza</th>
                 <th className="text-right">Importo annuo</th>
                 <th>Stato</th>
@@ -378,14 +345,14 @@ export default function RinnoviView() {
             <tbody>
               {loading && (
                 <tr>
-                  <td colSpan={8} className="text-center text-gray-400">
+                  <td colSpan={7} className="text-center text-gray-400">
                     Caricamento…
                   </td>
                 </tr>
               )}
               {!loading && paged.length === 0 && (
                 <tr>
-                  <td colSpan={8} className="text-center text-gray-400 py-10">
+                  <td colSpan={7} className="text-center text-gray-400 py-10">
                     <Globe className="w-10 h-10 mx-auto mb-2 text-gray-400" />
                     Nessun rinnovo per i filtri scelti
                   </td>
@@ -423,21 +390,6 @@ export default function RinnoviView() {
                       <span className="text-gray-400">—</span>
                     )}
                   </td>
-                  <td>
-                    {/* Canale scelto in riga: SMH = la fattura si fa in Northstar */}
-                    <select
-                      value={r.canale}
-                      onChange={(e) => cambiaCanale(r, e.target.value)}
-                      className="sel sel-sm"
-                      title="ANDA: la richiesta nasce qui · SMH: si fa in Northstar"
-                    >
-                      {CANALI.map((c) => (
-                        <option key={c.value} value={c.value}>
-                          {c.label}
-                        </option>
-                      ))}
-                    </select>
-                  </td>
                   <td className="whitespace-nowrap">
                     <div className="tbl-primary">{dataIt(r.scadenza)}</div>
                     <div
@@ -469,16 +421,6 @@ export default function RinnoviView() {
                         <PillRichiesta r={r.richiestaCorrente} />
                         <div className="tbl-muted">richiesta {r.richiestaCorrente.codice}</div>
                       </>
-                    ) : r.daFatturare && r.canale === "smh" ? (
-                      <a
-                        href={NORTHSTAR_RICHIESTE_URL}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="pill-wait"
-                        title="Rinnovo SMH: la richiesta di fattura si fa in Northstar › Fatture da emettere"
-                      >
-                        <ExternalLink /> in Northstar
-                      </a>
                     ) : r.daFatturare ? (
                       <button
                         onClick={() => creaRichiesta(r)}
@@ -505,20 +447,8 @@ export default function RinnoviView() {
                     <RowMenu>
                       {(chiudi) => (
                         <>
-                          {!r.richiestaCorrente && r.importo > 0 && r.canale === "smh" && (
-                            <a
-                              className="menu-item"
-                              href={NORTHSTAR_RICHIESTE_URL}
-                              target="_blank"
-                              rel="noreferrer"
-                              onClick={chiudi}
-                            >
-                              <ExternalLink /> Crea richiesta in Northstar
-                            </a>
-                          )}
                           {!r.richiestaCorrente &&
                             r.importo > 0 &&
-                            r.canale !== "smh" &&
                             (r.clienteId || r.nomeCliente) && (
                               <button
                                 className="menu-item"

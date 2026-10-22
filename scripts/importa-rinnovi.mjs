@@ -10,9 +10,9 @@
 //   subito la richiesta di fattura (da validare).
 // - Prezzo → importo e fatturazione «rinnovo»; senza prezzo: «compresa» se
 //   la nota dice "compreso", altrimenti «nessuna» (sito nostro).
-// - Colonna SMH/ANDA → canale del rinnovo (vuoto = anda) e spunta SMH sui
-//   clienti nuovi; i rinnovi SMH «da fatturare» NON ricevono la richiesta
-//   (si fa in Northstar). Reforge finisce nelle note.
+// - Colonna SMH/ANDA: dal 2026-10-22 le righe SMH NON si importano (si
+//   fatturano da Northstar e in Rinnovi siti restano solo quelle Anda).
+//   Reforge finisce nelle note.
 // Idempotente: salta i domini già presenti e i clienti già creati.
 //
 // Uso: node scripts/importa-rinnovi.mjs <file.csv> [--apply] [--senza-northstar]
@@ -114,7 +114,8 @@ const righe = fs
       note: note || "",
     }),
   )
-  .filter((r) => r.dominio && r.data);
+  .filter((r) => r.dominio && r.data)
+  .filter((r) => r.canale !== "smh");
 
 // Stesso dominio su più righe: tiene quella col prezzo, le altre vanno in nota
 const perDominio = new Map();

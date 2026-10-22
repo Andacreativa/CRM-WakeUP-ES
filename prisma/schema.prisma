@@ -548,7 +548,7 @@ model RinnovoSito {
   scadenza     DateTime // prossima scadenza del dominio
   importo      Float     @default(0) // prezzo di rinnovo annuo (imponibile)
   fatturazione String    @default("rinnovo") // rinnovo (si fattura) | compresa (in un'altra gestione) | nessuna (sito nostro)
-  canale       String    @default("anda") // anda | smh: i rinnovi SMH si fatturano da Northstar, non da qui
+  canale       String    @default("anda") // non più usato dal 2026-10-22: i rinnovi SMH sono stati tolti (deletedAt), qui restano solo quelli Anda. La colonna resta per non fare una migrazione che cancella
   stato        String    @default("attivo") // attivo | in_lavorazione | in_dubbio | non_attivo
   hosting      String?
   proprieta    String    @default("nostra") // nostra | cliente

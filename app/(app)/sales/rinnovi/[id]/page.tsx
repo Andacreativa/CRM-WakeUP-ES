@@ -7,7 +7,6 @@ import {
   ArrowLeft,
   ArrowRight,
   Calendar,
-  ExternalLink,
   FilePlus2,
   Pencil,
   Receipt,
@@ -24,9 +23,7 @@ import { PillRichiesta } from "@/components/rinnovi/RinnoviView";
 import {
   type Rinnovo,
   ANTICIPO_GIORNI,
-  NORTHSTAR_RICHIESTE_URL,
   STATO_PILL,
-  canaleLabel,
   fatturazioneLabel,
   proprietaLabel,
   statoLabel,
@@ -101,8 +98,7 @@ export default function RinnovoPage() {
     router.push("/sales/rinnovi");
   };
 
-  const smh = r.canale === "smh";
-  const puoCreare = !r.richiestaCorrente && r.importo > 0 && (smh || r.clienteId || r.nomeCliente);
+  const puoCreare = !r.richiestaCorrente && r.importo > 0 && (r.clienteId || r.nomeCliente);
   const nonAttivo = r.stato === "non_attivo";
 
   return (
@@ -141,7 +137,6 @@ export default function RinnovoPage() {
             </span>
           </span>
           <span className={STATO_PILL[r.stato] ?? "pill-off"}>{statoLabel(r.stato)}</span>
-          <span className={smh ? "tag tag-brand" : "tag tag-neutral"}>{canaleLabel(r.canale)}</span>
           <span className="tag tag-neutral">{fatturazioneLabel(r.fatturazione)}</span>
           {r.cliente?.paese && <span className="tag tag-neutral">{r.cliente.paese}</span>}
         </div>
@@ -166,18 +161,7 @@ export default function RinnovoPage() {
         <button onClick={elimina} className="btn btn-secondary text-bad hover:text-bad">
           <Trash2 /> Elimina
         </button>
-        {puoCreare && smh && (
-          <a
-            href={NORTHSTAR_RICHIESTE_URL}
-            target="_blank"
-            rel="noreferrer"
-            className="btn btn-primary"
-            title="Rinnovo SMH: la richiesta di fattura si fa in Northstar › Fatture da emettere"
-          >
-            <ExternalLink /> Crea richiesta in Northstar
-          </a>
-        )}
-        {puoCreare && !smh && (
+        {puoCreare && (
           <button onClick={creaRichiesta} disabled={busy} className="btn btn-primary disabled:opacity-60">
             <FilePlus2 /> Crea richiesta fattura
           </button>
@@ -286,10 +270,7 @@ export default function RinnovoPage() {
                 <User className="w-4 h-4 text-brand shrink-0" />
                 <span className="flex-1 min-w-0">
                   {r.cliente.nome}
-                  <span className="block text-[11px] text-gray-500">
-                    {r.cliente.paese}
-                    {r.cliente.smh ? " · cliente SMH" : ""}
-                  </span>
+                  <span className="block text-[11px] text-gray-500">{r.cliente.paese}</span>
                 </span>
                 <ArrowRight className="w-4 h-4 text-gray-400 shrink-0" />
               </Link>
@@ -328,19 +309,6 @@ export default function RinnovoPage() {
                 </span>
                 <ArrowRight className="w-4 h-4 text-gray-400 shrink-0" />
               </Link>
-            ) : smh ? (
-              <p className="text-xs text-gray-500">
-                Rinnovo SMH: la richiesta di fattura si fa in{" "}
-                <a
-                  href={NORTHSTAR_RICHIESTE_URL}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="font-semibold text-brand hover:underline"
-                >
-                  Northstar › Fatture da emettere
-                </a>
-                , non da qui. Quando il dominio è rinnovato, usa «Rinnovato».
-              </p>
             ) : (
               <p className="text-xs text-gray-400">
                 {r.fatturabile
