@@ -239,6 +239,28 @@ const PAESE_L: Record<Lingua, Record<string, string>> = {
   en: { Italia: "Italy", Spagna: "Spain", Francia: "France", Germania: "Germany", Portogallo: "Portugal", "Regno Unito": "United Kingdom", Irlanda: "Ireland", "Paesi Bassi": "Netherlands", Belgio: "Belgium", Lussemburgo: "Luxembourg", Austria: "Austria", Svizzera: "Switzerland", "Stati Uniti": "United States", Altro: "Other" },
 };
 
+// Colore del prodotto al posto del rosa Anda: i token --brand / --color-brand
+// valgono solo dentro la pagina (bottoni, pill, card attiva, link, focus).
+// Boogo = teal del suo tema di default; Cobrea = verde «cobro» del logo.
+const TEMI: Record<string, React.CSSProperties> = {
+  boogo: {
+    "--brand": "#0d9488",
+    "--brand-hover": "#0f766e",
+    "--brand-soft": "#ccfbf1",
+    "--brand-ink": "#115e59",
+    "--color-brand": "#0d9488",
+    "--color-brand-hover": "#0f766e",
+  } as React.CSSProperties,
+  cobrea: {
+    "--brand": "#0fa07a",
+    "--brand-hover": "#0c8565",
+    "--brand-soft": "#d6f5ea",
+    "--brand-ink": "#0b6b52",
+    "--color-brand": "#0fa07a",
+    "--color-brand-hover": "#0c8565",
+  } as React.CSSProperties,
+};
+
 const euro = (n: number, l: Lingua) => `${n.toLocaleString(LOCALE[l], { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €`;
 const inputCls = "w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30 bg-white";
 const labelCls = "text-xs font-medium text-gray-600 block mb-1";
@@ -297,7 +319,12 @@ export default function FormSuscripcion({
   const set = (k: keyof typeof form, v: string) => setForm((f) => ({ ...f, [k]: v }));
   const pianoSel = useMemo(() => dati?.piani.find((p) => p.codice === piano) ?? null, [dati, piano]);
   const firma = dati?.firma ?? null;
-  const prodottoNome = nomeProdotto(firma?.prodotto ?? dati?.prodotto ?? prodotto ?? "");
+  const prodottoChiave = firma?.prodotto ?? dati?.prodotto ?? prodotto ?? "";
+  const prodottoNome = nomeProdotto(prodottoChiave);
+  const tema = TEMI[prodottoChiave];
+  useEffect(() => {
+    if (prodottoNome) document.title = `${prodottoNome} · ${lingua === "it" ? "Abbonamento" : lingua === "en" ? "Subscription" : "Suscripción"}`;
+  }, [prodottoNome, lingua]);
 
   // Importi: dal piano scelto (modulo) o dall'abbonamento creato da Sales (firma)
   const importi = useMemo(() => {
@@ -412,7 +439,7 @@ export default function FormSuscripcion({
 
   if (erroreCarico) {
     return (
-      <div className="max-w-2xl mx-auto px-4 py-10">
+      <div className="max-w-2xl mx-auto px-4 py-10" style={tema}>
         {testata()}
         <div className="glass-card rounded-2xl p-8 text-center text-sm text-gray-700">{erroreCarico === "link_non_valido" ? t("linkNonValido") : t("errGenerico")}</div>
       </div>
@@ -420,14 +447,14 @@ export default function FormSuscripcion({
   }
   if (!dati) {
     return (
-      <div className="max-w-2xl mx-auto px-4 py-10 text-center text-sm text-gray-400">
+      <div className="max-w-2xl mx-auto px-4 py-10 text-center text-sm text-gray-400" style={tema}>
         <Loader2 className="w-5 h-5 animate-spin inline mr-2" /> {t("caricamento")}
       </div>
     );
   }
   if (fatto) {
     return (
-      <div className="max-w-2xl mx-auto px-4 py-10">
+      <div className="max-w-2xl mx-auto px-4 py-10" style={tema}>
         {testata()}
         <div className="glass-card rounded-2xl p-8 text-center space-y-3">
           <span className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-ok/15 text-ok">
@@ -441,7 +468,7 @@ export default function FormSuscripcion({
   }
   if (firma && (firma.stato !== "in_attesa" || firma.scaduto)) {
     return (
-      <div className="max-w-2xl mx-auto px-4 py-10">
+      <div className="max-w-2xl mx-auto px-4 py-10" style={tema}>
         {testata()}
         <div className="glass-card rounded-2xl p-8 text-center text-sm text-gray-700">{firma.scaduto && firma.stato === "in_attesa" ? t("linkScaduto") : t("giaFirmato")}</div>
       </div>
@@ -463,7 +490,7 @@ export default function FormSuscripcion({
   );
 
   return (
-    <div className="max-w-3xl mx-auto px-4 py-8">
+    <div className="max-w-3xl mx-auto px-4 py-8" style={tema}>
       {testata()}
       <h1 className="text-2xl font-bold mb-1">{firma ? t("firmaTitolo", { producto: prodottoNome }) : t("titolo", { producto: prodottoNome })}</h1>
       <p className="text-sm text-gray-600 mb-6">{firma ? t("firmaSotto") : t("sotto")}</p>
