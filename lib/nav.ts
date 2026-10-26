@@ -48,6 +48,7 @@ export const NAV: NavSection[] = [
           { label: "Altri ingressi", href: "/finance/altri-ingressi" },
           { label: "Spese", href: "/finance/spese" },
           { label: "Banca", href: "/finance/banca" },
+          { label: "Addebiti SEPA", href: "/finance/addebiti" },
           { label: "Scadenze", href: "/finance/scadenze" },
           { label: "Calendario", href: "/finance/calendario" },
         ],
@@ -83,6 +84,7 @@ export const NAV: NavSection[] = [
           { label: "Pipeline", href: "/sales" },
           { label: "Preventivi", href: "/sales/preventivi" },
           { label: "Contratti", href: "/sales/contratti" },
+          { label: "Abbonamenti", href: "/sales/abbonamenti" },
           { label: "Rinnovi siti", href: "/sales/rinnovi" },
           { label: "Richieste fattura", href: "/sales/richieste" },
         ],
@@ -117,6 +119,7 @@ export const NAV: NavSection[] = [
         tabs: [
           { label: "Fatturazione", href: "/impostazioni" },
           { label: "Banca", href: "/impostazioni/banca" },
+          { label: "Abbonamenti", href: "/impostazioni/abbonamenti" },
         ],
       },
     ],

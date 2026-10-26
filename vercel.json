@@ -1,5 +1,12 @@
 {
   "crons": [
-    { "path": "/api/cron/rinnovi", "schedule": "0 6 * * *" }
+    {
+      "path": "/api/cron/rinnovi",
+      "schedule": "0 6 * * *"
+    },
+    {
+      "path": "/api/cron/abbonamenti",
+      "schedule": "30 6 * * *"
+    }
   ]
 }

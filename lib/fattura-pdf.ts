@@ -229,14 +229,27 @@ async function caricaLogoRifilato(
   }
 }
 
-const nomeFilePDF = (f: { id: number; numero: string | null }) =>
+export const nomeFilePDF = (f: { id: number; numero: string | null }) =>
   `fattura_${(f.numero ?? `bozza_${f.id}`).replace(/[^\w.-]+/g, "_")}.pdf`;
 
 export async function exportFatturaPDF(f: FatturaDettaglio, cfg: ImpostazioniFatture) {
   (await creaFatturaPDF(f, cfg)).save(nomeFilePDF(f));
 }
 
-async function creaFatturaPDF(f: FatturaDettaglio, cfg: ImpostazioniFatture) {
+// Logo già pronto per il PDF (immagine rifilata, misure in pixel). Nel
+// browser lo prepara caricaLogoRifilato; sul server (email automatiche
+// degli abbonamenti) lo passa lib/pdf-server.ts, che non ha canvas.
+export interface LogoPdf {
+  dataUrl: string;
+  width: number;
+  height: number;
+}
+
+export async function creaFatturaPDF(
+  f: FatturaDettaglio,
+  cfg: ImpostazioniFatture,
+  opts: { logo?: LogoPdf | null } = {},
+) {
   const lingua: Lingua = cfg.linguaDefault === "es" || cfg.linguaDefault === "en" ? cfg.linguaDefault : "it";
   const L = T[lingua];
   const { default: jsPDF } = await import("jspdf");
@@ -259,7 +272,8 @@ async function creaFatturaPDF(f: FatturaDettaglio, cfg: ImpostazioniFatture) {
   const c = f.cliente;
 
   // ── Logo e azienda a sinistra ──────────────────────────────────────────
-  const logo = cfg.logoUrl ? await caricaLogoRifilato(cfg.logoUrl) : null;
+  const logo =
+    opts.logo !== undefined ? opts.logo : cfg.logoUrl ? await caricaLogoRifilato(cfg.logoUrl) : null;
   if (logo) {
     // Sta in un riquadro di 34×12 mm, senza deformarsi
     const k = Math.min(34 / logo.width, 12 / logo.height);

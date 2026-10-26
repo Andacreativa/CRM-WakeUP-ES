@@ -30,6 +30,7 @@ model Cliente {
   rinnoviSiti  RinnovoSito[]
   contatti     Contatto[]
   leads        Lead[]
+  abbonamenti  Abbonamento[]
 }
 
 model Fattura {
@@ -95,6 +96,7 @@ model Fattura {
   solleciti     Sollecito[]
   abbinamentiBancari AbbinamentoBancario[]
   registriVerifactu  RegistroVerifactu[]
+  addebitoSepa       AddebitoSepa?
 
   @@index([contrattoId])
   @@index([commercialeId])
@@ -634,4 +636,139 @@ model AbbinamentoBancario {
   @@index([fatturaId])
   @@index([accontoId])
   @@index([altroIngressoId])
+}
+
+// ─── Abbonamenti boogo / cobrea e addebiti SEPA ─────────────────────────
+// Piani in vendita (Configurazione › Abbonamenti): prezzo mensile imponibile.
+// «prezzoLibero» = il prezzo si concorda caso per caso (Pro «da 60 €»): non
+// si sottoscrive da soli dal modulo pubblico, lo crea l'agenzia da Sales.
+model PianoAbbonamento {
+  id           Int      @id @default(autoincrement())
+  prodotto     String // boogo | cobrea
+  codice       String // base | medium | pro
+  nome         String
+  descrizione  String?
+  prezzo       Float    @default(0) // imponibile al mese
+  prezzoLibero Boolean  @default(false)
+  tipoIva      String   @default("igic7") // igic7 | igic_exenta | iva
+  attivo       Boolean  @default(true)
+  ordine       Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  abbonamenti  Abbonamento[]
+
+  @@unique([prodotto, codice])
+}
+
+// Abbonamento sottoscritto (Sales › Abbonamenti): intestatario, conto e
+// mandato SEPA Core firmato dal modulo pubblico (spunta + data + IP) oppure
+// creato a mano. Il testo del contratto accettato resta qui com'era.
+// stato: in_attesa (creato da Sales, link di firma mandato, non ancora
+// firmato) | attivo | sospeso | cancellato
+model Abbonamento {
+  id               Int       @id @default(autoincrement())
+  codice           String    @unique // AB-2026-0001
+  prodotto         String // boogo | cobrea
+  pianoId          Int?
+  piano            PianoAbbonamento? @relation(fields: [pianoId], references: [id], onDelete: SetNull)
+  pianoNome        String
+  prezzo           Float // imponibile al mese, copiato dal piano alla firma
+  tipoIva          String    @default("igic7")
+  iva              Float     @default(7)
+  totale           Float // lordo al mese
+  // Intestatario
+  intestatario     String
+  nif              String?
+  email            String
+  telefono         String?
+  via              String?
+  cap              String?
+  citta            String?
+  provincia        String?
+  paese            String    @default("Spagna")
+  // Conto
+  titolareConto    String
+  iban             String
+  bic              String?
+  // Mandato SEPA Core (ricorrente)
+  mandatoRef       String    @unique
+  mandatoFirmatoIl DateTime?
+  mandatoLuogo     String?
+  mandatoIp        String?
+  mandatoUserAgent String?
+  contrattoTesto   String?   @db.Text
+  contrattoVersione String?
+  lingua           String    @default("es") // es | it | en
+  // Stato e date
+  stato            String    @default("in_attesa")
+  dataInizio       DateTime? // primo mese addebitato (primo del mese, UTC)
+  dataFine         DateTime?
+  sospesoIl        DateTime?
+  cancellatoIl     DateTime?
+  tokenFirma       String?   @unique // link di firma per gli abbonamenti creati da Sales
+  tokenScadenza    DateTime?
+  clienteId        Int?
+  cliente          Cliente?  @relation(fields: [clienteId], references: [id], onDelete: SetNull)
+  origine          String    @default("modulo") // modulo | manuale
+  note             String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  deletedAt        DateTime?
+  addebiti         AddebitoSepa[]
+
+  @@index([stato])
+  @@index([prodotto])
+  @@index([clienteId])
+}
+
+// Un addebito al mese per abbonamento (Finance › Addebiti SEPA). Nasce
+// «previsto» (cron del giorno 1 o bottone), entra in una remessa, poi
+// incassato o devuelto. La fattura nasce con la remessa.
+model AddebitoSepa {
+  id               Int       @id @default(autoincrement())
+  abbonamentoId    Int
+  abbonamento      Abbonamento @relation(fields: [abbonamentoId], references: [id], onDelete: Cascade)
+  anno             Int
+  mese             Int
+  importo          Float // lordo addebitato
+  descrizione      String // concepto che il cliente vede sull'estratto
+  endToEndId       String    @unique
+  seq              String    @default("RCUR") // FRST | RCUR | FNAL | OOFF
+  stato            String    @default("previsto") // previsto | in_remessa | incassato | devuelto | annullato
+  remessaId        Int?
+  remessa          RemessaSepa? @relation(fields: [remessaId], references: [id], onDelete: SetNull)
+  fatturaId        Int?      @unique
+  fattura          Fattura?  @relation(fields: [fatturaId], references: [id], onDelete: SetNull)
+  dataIncasso      DateTime?
+  dataDevoluzione  DateTime?
+  motivoDevoluzione String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  @@unique([abbonamentoId, anno, mese])
+  @@index([anno, mese])
+  @@index([stato])
+  @@index([remessaId])
+}
+
+// Remessa = il fichero XML (pain.008) caricato in BBVA. Si conserva per
+// riscaricarlo. stato: generata | inviata (caricata in banca) | incassata
+model RemessaSepa {
+  id           Int       @id @default(autoincrement())
+  codice       String    @unique // REM-2026-0001
+  msgId        String    @unique
+  dataAddebito DateTime // data richiesta di addebito (ReqdColltnDt)
+  numero       Int       @default(0)
+  totale       Float     @default(0)
+  versione     String    @default("pain.008.001.08")
+  nomeFile     String
+  xml          String    @db.Text
+  stato        String    @default("generata")
+  inviataIl    DateTime?
+  incassataIl  DateTime?
+  note         String?
+  createdAt    DateTime  @default(now())
+  addebiti     AddebitoSepa[]
+
+  @@index([dataAddebito])
 }

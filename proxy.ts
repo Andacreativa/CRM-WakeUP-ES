@@ -29,6 +29,11 @@ export async function proxy(req: NextRequest) {
   if (pathname === "/api/calendario/ical") {
     return NextResponse.next();
   }
+  // Modulo pubblico di sottoscrizione degli abbonamenti (boogo / cobrea) e
+  // la sua API: li usano i clienti, senza sessione
+  if (pathname === "/suscripcion" || pathname.startsWith("/suscripcion/") || pathname.startsWith("/api/public/")) {
+    return NextResponse.next();
+  }
 
   if (session) return NextResponse.next();
 
