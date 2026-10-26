@@ -20,7 +20,7 @@ import {
 import { fmt } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 import { dataIt } from "@/lib/fatture";
-import { formattaIban } from "@/lib/sepa";
+import { formattaIban, mascheraIban } from "@/lib/sepa";
 import { MESI_L } from "@/lib/abbonamenti-testi";
 import AbbonamentoFormModal from "@/components/abbonamenti/AbbonamentoFormModal";
 import { copia, meseBreve } from "@/components/abbonamenti/AbbonamentiView";
@@ -111,6 +111,10 @@ export default function AbbonamentoPage() {
     const link = a.linkFirma.startsWith("http") ? a.linkFirma : `${window.location.origin}${a.linkFirma}`;
     notify((await copia(link)) ? `Link copiato: ${link}` : link);
   };
+  const copiaLinkArea = async () => {
+    const j = await chiama(`/api/abbonamenti/${a.id}/link-area`, "GET");
+    if (j?.link) notify((await copia(j.link)) ? `Link all'area cliente copiato (vale ${j.giorni} giorni): ${j.link}` : j.link);
+  };
   const reinviaConferma = async () => {
     if (!confirm(`Rimandare contratto e mandato in PDF a ${a.email}?`)) return;
     const j = await chiama(`/api/abbonamenti/${a.id}/invia-conferma`, "POST");
@@ -176,6 +180,9 @@ export default function AbbonamentoPage() {
             </a>
             <button onClick={reinviaConferma} disabled={busy} className="btn btn-secondary disabled:opacity-60">
               <Mail /> Rimanda al cliente
+            </button>
+            <button onClick={copiaLinkArea} disabled={busy} className="btn btn-secondary disabled:opacity-60" title="Link con cui il cliente entra nella sua area (fatture, dati, conto) senza password: vale 7 giorni">
+              <Copy /> Link area cliente
             </button>
           </>
         )}
@@ -383,6 +390,22 @@ export default function AbbonamentoPage() {
                 Link di firma: <code>{a.linkFirma}</code>
                 {a.tokenScadenza && <span> · scade il {dataIt(a.tokenScadenza)}</span>}
               </p>
+            )}
+            {!!a.mandatiPrecedenti?.length && (
+              <div className="mt-3 border-t border-gray-100 pt-3">
+                <div className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide mb-1">Mandati precedenti</div>
+                <ul className="space-y-1.5">
+                  {a.mandatiPrecedenti.map((m) => (
+                    <li key={m.id} className="text-[12px] text-gray-600">
+                      <span className="font-mono">{m.mandatoRef}</span> · {mascheraIban(m.iban)} · {m.titolareConto}
+                      <span className="block text-[11px] text-gray-400">
+                        firmato {m.firmatoIl ? dataIt(m.firmatoIl) : "—"} · sostituito il {dataIt(m.sostituitoIl)}
+                        {m.motivo ? ` (${m.motivo})` : ""}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
             )}
           </section>
 

@@ -329,13 +329,14 @@ export function testoContratto(
 // ── Lettura ──────────────────────────────────────────────────────────────
 export const ADDEBITO_INCLUDE = {
   remessa: { select: { id: true, codice: true, dataAddebito: true, stato: true } },
-  fattura: { select: { id: true, numero: true, pagato: true, stato: true } },
+  fattura: { select: { id: true, numero: true, pagato: true, stato: true, data: true, annullata: true } },
 } satisfies Prisma.AddebitoSepaInclude;
 
 export const ABBONAMENTO_INCLUDE = {
   piano: { select: { id: true, codice: true, nome: true } },
   cliente: { select: { id: true, nome: true, paese: true } },
   addebiti: { orderBy: [{ anno: "desc" }, { mese: "desc" }], include: ADDEBITO_INCLUDE },
+  mandatiPrecedenti: { orderBy: { sostituitoIl: "desc" } },
 } satisfies Prisma.AbbonamentoInclude;
 
 export type AbbonamentoConRelazioni = Prisma.AbbonamentoGetPayload<{ include: typeof ABBONAMENTO_INCLUDE }>;

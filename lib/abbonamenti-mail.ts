@@ -6,8 +6,12 @@ import { pdfContrattoMandato } from "@/lib/mandato-pdf";
 import { logoServer, pdfFatturaServer } from "@/lib/pdf-server";
 import { messaggioFattura } from "@/lib/fattura-pdf";
 import { fmt } from "@/lib/constants";
-import { euroTesto, type AbbonamentoConRelazioni } from "@/lib/abbonamenti";
-import { linguaValida, nomeProdotto } from "@/components/abbonamenti/tipi";
+import { dataTesto, euroTesto, type AbbonamentoConRelazioni } from "@/lib/abbonamenti";
+import { CAMBIO_CONTO_TESTI, MESI_L } from "@/lib/abbonamenti-testi";
+import { DURATA_LINK_ACCESSO, linkArea } from "@/lib/area-token";
+import { formattaIban, mascheraIban } from "@/lib/sepa";
+import type { Modifica } from "@/lib/abbonamenti-area";
+import { linguaValida, nomeProdotto, type Lingua } from "@/components/abbonamenti/tipi";
 
 // Email degli abbonamenti: conferma della firma (contratto + mandato in
 // PDF), link di firma, avviso all'agenzia, fattura della quota. Gli invii
@@ -36,7 +40,10 @@ export async function pdfMandato(a: AbbonamentoConRelazioni): Promise<{ buffer: 
   return { buffer, nomeFile: `contrato_mandato_${a.codice}.pdf` };
 }
 
-const segnaposto = (a: AbbonamentoConRelazioni, azienda: string, extra: Record<string, string> = {}) => {
+type AbbonamentoMin = { intestatario: string; prodotto: string; pianoNome: string; totale: number; mandatoRef: string; codice: string; lingua: string };
+const suffissoLingua = (lingua: Lingua): "Es" | "It" | "En" => (lingua === "it" ? "It" : lingua === "en" ? "En" : "Es");
+
+const segnaposto = (a: AbbonamentoMin, azienda: string, extra: Record<string, string> = {}) => {
   const lingua = linguaValida(a.lingua);
   return {
     nombre: a.intestatario,
@@ -123,8 +130,112 @@ export async function inviaFatturaServer(fatturaId: number): Promise<EsitoInvio>
   return out;
 }
 
-export async function inviaFattureRemessa(ids: number[]) {
-  const out: { fatturaId: number; esito: EsitoInvio }[] = [];
-  for (const id of ids) out.push({ fatturaId: id, esito: await inviaFatturaServer(id) });
+// Fattura della quota di un abbonamento: all'email dell'abbonamento, nella
+// sua lingua, con la data dell'addebito e il link all'area cliente (7
+// giorni). Una fattura che non viene da un addebito prende il testo generico.
+export async function inviaFatturaAbbonamento(fatturaId: number, base: string): Promise<EsitoInvio> {
+  const ad = await prisma.addebitoSepa.findUnique({
+    where: { fatturaId },
+    include: { abbonamento: true, remessa: { select: { dataAddebito: true } } },
+  });
+  if (!ad) return inviaFatturaServer(fatturaId);
+  const pdf = await pdfFatturaServer(prisma, fatturaId);
+  if (!pdf) return { inviata: false, a: null, errore: "fattura non trovata" };
+  const [cfg, , cred] = await getCreditore(prisma);
+  const a = ad.abbonamento;
+  const lingua = linguaValida(a.lingua);
+  const L = suffissoLingua(lingua);
+  const out = await esito(a.email, async () => {
+    const link = await linkArea(base, a.email, lingua);
+    const v = segnaposto(a, cred.nome, {
+      numero: pdf.fattura.numero ?? "",
+      fecha: pdf.fattura.data ? dataTesto(new Date(pdf.fattura.data), lingua) : "",
+      importe: `${euroTesto(ad.importo, lingua)} €`,
+      fecha_cargo: ad.remessa ? dataTesto(ad.remessa.dataAddebito, lingua) : "",
+      iban: mascheraIban(a.iban),
+      mes: `${MESI_L[lingua][ad.mese - 1]} ${ad.anno}`,
+      link,
+    });
+    await inviaMail({
+      a: a.email,
+      oggetto: compilaTesto(cfg[`fatturaOggetto${L}`], v),
+      testo: compilaTesto(cfg[`fatturaTesto${L}`], v),
+      nomeMittente: cred.nome,
+      allegati: [{ filename: pdf.nomeFile, content: pdf.buffer, contentType: "application/pdf" }],
+    });
+  });
+  if (out.inviata) {
+    await prisma.fattura.update({ where: { id: fatturaId }, data: { inviata: true, dataInvio: new Date() } });
+  }
   return out;
+}
+
+export async function inviaFattureRemessa(ids: number[], base: string) {
+  const out: { fatturaId: number; esito: EsitoInvio }[] = [];
+  for (const id of ids) out.push({ fatturaId: id, esito: await inviaFatturaAbbonamento(id, base) });
+  return out;
+}
+
+// Link di accesso all'area cliente chiesto dal modulo (60 minuti)
+export async function inviaLinkAccessoArea(email: string, lingua: Lingua, base: string): Promise<EsitoInvio> {
+  const [cfg, , cred] = await getCreditore(prisma);
+  const L = suffissoLingua(lingua);
+  return esito(email, async () => {
+    const v = { link: await linkArea(base, email, lingua, DURATA_LINK_ACCESSO), azienda: cred.nome };
+    await inviaMail({
+      a: email,
+      oggetto: compilaTesto(cfg[`areaOggetto${L}`], v),
+      testo: compilaTesto(cfg[`areaTesto${L}`], v),
+      nomeMittente: cred.nome,
+    });
+  });
+}
+
+// Dopo il cambio di conto dall'area: al cliente il PDF con il nuovo
+// mandato, all'agenzia l'avviso con i due conti.
+export async function inviaConfermaCambioConto(a: AbbonamentoConRelazioni, base: string, precedente: { mandatoRef: string; iban: string }) {
+  const [cfg, , cred] = await getCreditore(prisma);
+  const lingua = linguaValida(a.lingua);
+  const t = CAMBIO_CONTO_TESTI[lingua];
+  const v = segnaposto(a, cred.nome, { iban: mascheraIban(a.iban), refPrecedente: precedente.mandatoRef });
+  const cliente = await esito(a.email, async () => {
+    const pdf = await pdfMandato(a);
+    await inviaMail({
+      a: a.email,
+      oggetto: compilaTesto(t.oggetto, v),
+      testo: compilaTesto(t.testo, v),
+      nomeMittente: cred.nome,
+      allegati: [{ filename: pdf.nomeFile, content: pdf.buffer, contentType: "application/pdf" }],
+    });
+  });
+  const agenzia = await esito(cfg.notificaEmail.trim() || null, async () => {
+    await inviaMail({
+      a: cfg.notificaEmail.trim(),
+      oggetto: `Cambio conto ${nomeProdotto(a.prodotto)} — ${a.intestatario} (${a.codice})`,
+      testo:
+        `${a.intestatario} ha cambiato il conto dell'abbonamento ${a.codice} dall'area cliente.\n` +
+        `Nuovo mandato ${a.mandatoRef}: ${formattaIban(a.iban)} (${a.titolareConto}), firmato il ${a.mandatoFirmatoIl?.toLocaleString("it-IT", { timeZone: "Europe/Madrid" }) ?? "—"}${a.mandatoIp ? ` da ${a.mandatoIp}` : ""}.\n` +
+        `Mandato precedente ${precedente.mandatoRef}: ${mascheraIban(precedente.iban)}.\n` +
+        `Gli addebiti già in remessa passano ancora sul conto precedente.\n\n` +
+        `Scheda: ${base}/sales/abbonamenti/${a.id}\n`,
+      nomeMittente: "Anda Finance",
+    });
+  });
+  return { cliente, agenzia };
+}
+
+// Il cliente ha cambiato i dati di contatto dall'area: avviso all'agenzia
+export async function inviaAvvisoDatiArea(a: AbbonamentoConRelazioni, modifiche: Modifica[], base: string): Promise<EsitoInvio> {
+  const [cfg] = await getCreditore(prisma);
+  return esito(cfg.notificaEmail.trim() || null, async () => {
+    await inviaMail({
+      a: cfg.notificaEmail.trim(),
+      oggetto: `Dati aggiornati ${nomeProdotto(a.prodotto)} — ${a.intestatario} (${a.codice})`,
+      testo:
+        `${a.intestatario} ha aggiornato i dati dell'abbonamento ${a.codice} dall'area cliente:\n` +
+        modifiche.map((m) => `- ${m.campo}: ${m.prima || "—"} → ${m.dopo || "—"}`).join("\n") +
+        `\n\nSe cambia la sede può cambiare l'imposta delle prossime fatture: controlla la scheda.\n${base}/sales/abbonamenti/${a.id}\n`,
+      nomeMittente: "Anda Finance",
+    });
+  });
 }

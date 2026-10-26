@@ -9,14 +9,14 @@ interface SessionPayload {
   exp: number; // unix seconds
 }
 
-function bytesToBase64Url(bytes: ArrayBuffer | Uint8Array): string {
+export function bytesToBase64Url(bytes: ArrayBuffer | Uint8Array): string {
   const arr = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
   let s = "";
   for (let i = 0; i < arr.length; i++) s += String.fromCharCode(arr[i]!);
   return btoa(s).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 }
 
-function base64UrlToBytes(b64: string): Uint8Array {
+export function base64UrlToBytes(b64: string): Uint8Array {
   const pad = b64.length % 4 === 0 ? "" : "=".repeat(4 - (b64.length % 4));
   const std = b64.replace(/-/g, "+").replace(/_/g, "/") + pad;
   const bin = atob(std);
@@ -25,7 +25,7 @@ function base64UrlToBytes(b64: string): Uint8Array {
   return out;
 }
 
-async function hmac(secret: string, data: string): Promise<string> {
+export async function hmac(secret: string, data: string): Promise<string> {
   const enc = new TextEncoder();
   const key = await crypto.subtle.importKey(
     "raw",
@@ -39,7 +39,7 @@ async function hmac(secret: string, data: string): Promise<string> {
 }
 
 // Confronto a tempo costante per evitare timing attacks.
-function timingSafeEqual(a: string, b: string): boolean {
+export function timingSafeEqual(a: string, b: string): boolean {
   if (a.length !== b.length) return false;
   let diff = 0;
   for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);

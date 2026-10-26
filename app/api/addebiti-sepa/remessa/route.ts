@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { ErroreAbbonamento, creaRemessa } from "@/lib/abbonamenti";
+import { ErroreAbbonamento, baseUrl, creaRemessa } from "@/lib/abbonamenti";
 import { getCreditore } from "@/lib/abbonamenti-impostazioni";
 import { inviaFattureRemessa } from "@/lib/abbonamenti-mail";
 
@@ -28,7 +28,7 @@ export async function POST(request: Request) {
       addebitoIds: Array.isArray(body.addebitoIds) ? body.addebitoIds.map(Number).filter(Boolean) : null,
     });
     const [cfg] = await getCreditore(prisma);
-    const email = cfg.fatturaAutomatica && cfg.emailFattura && esito.fattureIds.length ? await inviaFattureRemessa(esito.fattureIds) : [];
+    const email = cfg.fatturaAutomatica && cfg.emailFattura && esito.fattureIds.length ? await inviaFattureRemessa(esito.fattureIds, baseUrl(request)) : [];
     return NextResponse.json({
       ...esito,
       email: { inviate: email.filter((e) => e.esito.inviata).length, nonInviate: email.filter((e) => !e.esito.inviata) },

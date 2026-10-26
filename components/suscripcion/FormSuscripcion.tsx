@@ -11,6 +11,8 @@ import {
   IMPOSTA_LABEL,
   LINGUE,
   type Lingua,
+  PAESE_L,
+  TEMI_PRODOTTO,
   importiMensili,
   nomeProdotto,
   tipoIvaSuggerito,
@@ -233,35 +235,6 @@ const T: Record<Lingua, Record<string, string>> = {
   },
 };
 
-const PAESE_L: Record<Lingua, Record<string, string>> = {
-  es: { Italia: "Italia", Spagna: "España", Francia: "Francia", Germania: "Alemania", Portogallo: "Portugal", "Regno Unito": "Reino Unido", Irlanda: "Irlanda", "Paesi Bassi": "Países Bajos", Belgio: "Bélgica", Lussemburgo: "Luxemburgo", Austria: "Austria", Svizzera: "Suiza", "Stati Uniti": "Estados Unidos", Altro: "Otro" },
-  it: {},
-  en: { Italia: "Italy", Spagna: "Spain", Francia: "France", Germania: "Germany", Portogallo: "Portugal", "Regno Unito": "United Kingdom", Irlanda: "Ireland", "Paesi Bassi": "Netherlands", Belgio: "Belgium", Lussemburgo: "Luxembourg", Austria: "Austria", Svizzera: "Switzerland", "Stati Uniti": "United States", Altro: "Other" },
-};
-
-// Colore del prodotto al posto del rosa Anda: i token --brand / --color-brand
-// valgono solo dentro la pagina (bottoni, pill, card attiva, link, focus).
-// Boogo = blu della presentazione e della landing (navy #0a2540 + blu);
-// Cobrea = verde «cobro» del logo.
-const TEMI: Record<string, React.CSSProperties> = {
-  boogo: {
-    "--brand": "#2563eb",
-    "--brand-hover": "#1d4ed8",
-    "--brand-soft": "#dbeafe",
-    "--brand-ink": "#1e40af",
-    "--color-brand": "#2563eb",
-    "--color-brand-hover": "#1d4ed8",
-  } as React.CSSProperties,
-  cobrea: {
-    "--brand": "#0fa07a",
-    "--brand-hover": "#0c8565",
-    "--brand-soft": "#d6f5ea",
-    "--brand-ink": "#0b6b52",
-    "--color-brand": "#0fa07a",
-    "--color-brand-hover": "#0c8565",
-  } as React.CSSProperties,
-};
-
 const euro = (n: number, l: Lingua) => `${n.toLocaleString(LOCALE[l], { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €`;
 const inputCls = "w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30 bg-white";
 const labelCls = "text-xs font-medium text-gray-600 block mb-1";
@@ -322,7 +295,7 @@ export default function FormSuscripcion({
   const firma = dati?.firma ?? null;
   const prodottoChiave = firma?.prodotto ?? dati?.prodotto ?? prodotto ?? "";
   const prodottoNome = nomeProdotto(prodottoChiave);
-  const tema = TEMI[prodottoChiave];
+  const tema = TEMI_PRODOTTO[prodottoChiave] as React.CSSProperties | undefined;
   useEffect(() => {
     if (prodottoNome) document.title = `${prodottoNome} · ${lingua === "it" ? "Abbonamento" : lingua === "en" ? "Subscription" : "Suscripción"}`;
   }, [prodottoNome, lingua]);

@@ -1,6 +1,6 @@
 import type { Prisma, PrismaClient } from "@prisma/client";
 import { getImpostazioniFatture, type ImpostazioniFatture } from "@/lib/impostazioni";
-import { CONFERMA_DEFAULT, CONTRATTO_DEFAULT, LINK_DEFAULT } from "@/lib/abbonamenti-testi";
+import { AREA_LINK_DEFAULT, CONFERMA_DEFAULT, CONTRATTO_DEFAULT, FATTURA_DEFAULT, LINK_DEFAULT } from "@/lib/abbonamenti-testi";
 import { identificadorAcreedor, versionePainValida, type VersionePain } from "@/lib/sepa";
 
 type Db = PrismaClient | Prisma.TransactionClient;
@@ -17,7 +17,7 @@ export interface ImpostazioniAbbonamenti {
   versione: VersionePain;
   batchBooking: boolean; // una sola entrata in banca per remessa
   fatturaAutomatica: boolean; // la remessa crea le fatture
-  emailFattura: boolean; // ... e le manda per email
+  emailFattura: boolean; // ... e le manda per email all'email dell'abbonamento, con il link all'area
   notificaEmail: string; // avviso di ogni nuova firma
   luogoFirma: string; // luogo stampato sul mandato
   inizioMeseSuccessivo: boolean; // primo addebito il mese dopo la firma
@@ -37,6 +37,20 @@ export interface ImpostazioniAbbonamenti {
   linkTestoIt: string;
   linkOggettoEn: string;
   linkTestoEn: string;
+  // Fattura della quota (all'email dell'abbonamento, con il link all'area)
+  fatturaOggettoEs: string;
+  fatturaTestoEs: string;
+  fatturaOggettoIt: string;
+  fatturaTestoIt: string;
+  fatturaOggettoEn: string;
+  fatturaTestoEn: string;
+  // Link di accesso all'area cliente chiesto dal modulo
+  areaOggettoEs: string;
+  areaTestoEs: string;
+  areaOggettoIt: string;
+  areaTestoIt: string;
+  areaOggettoEn: string;
+  areaTestoEn: string;
 }
 
 export const IMPOSTAZIONI_ABBONAMENTI_DEFAULT: ImpostazioniAbbonamenti = {
@@ -68,6 +82,18 @@ export const IMPOSTAZIONI_ABBONAMENTI_DEFAULT: ImpostazioniAbbonamenti = {
   linkTestoIt: LINK_DEFAULT.it.testo,
   linkOggettoEn: LINK_DEFAULT.en.oggetto,
   linkTestoEn: LINK_DEFAULT.en.testo,
+  fatturaOggettoEs: FATTURA_DEFAULT.es.oggetto,
+  fatturaTestoEs: FATTURA_DEFAULT.es.testo,
+  fatturaOggettoIt: FATTURA_DEFAULT.it.oggetto,
+  fatturaTestoIt: FATTURA_DEFAULT.it.testo,
+  fatturaOggettoEn: FATTURA_DEFAULT.en.oggetto,
+  fatturaTestoEn: FATTURA_DEFAULT.en.testo,
+  areaOggettoEs: AREA_LINK_DEFAULT.es.oggetto,
+  areaTestoEs: AREA_LINK_DEFAULT.es.testo,
+  areaOggettoIt: AREA_LINK_DEFAULT.it.oggetto,
+  areaTestoIt: AREA_LINK_DEFAULT.it.testo,
+  areaOggettoEn: AREA_LINK_DEFAULT.en.oggetto,
+  areaTestoEn: AREA_LINK_DEFAULT.en.testo,
 };
 
 const CHIAVE = "abbonamenti";

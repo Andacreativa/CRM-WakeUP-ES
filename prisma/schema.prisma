@@ -717,10 +717,33 @@ model Abbonamento {
   updatedAt        DateTime  @updatedAt
   deletedAt        DateTime?
   addebiti         AddebitoSepa[]
+  mandatiPrecedenti MandatoSepaStorico[]
 
   @@index([stato])
   @@index([prodotto])
   @@index([clienteId])
+}
+
+// Mandati SEPA sostituiti da un cambio di conto (area cliente): restano
+// nel registro con i dati della firma, come chiede la normativa SEPA.
+model MandatoSepaStorico {
+  id            Int         @id @default(autoincrement())
+  abbonamentoId Int
+  abbonamento   Abbonamento @relation(fields: [abbonamentoId], references: [id], onDelete: Cascade)
+  mandatoRef    String
+  titolareConto String
+  iban          String
+  bic           String?
+  firmatoIl     DateTime?
+  luogo         String?
+  ip            String?
+  userAgent     String?
+  sostituitoIl  DateTime    @default(now())
+  sostituitoIp  String?
+  motivo        String?
+  createdAt     DateTime    @default(now())
+
+  @@index([abbonamentoId])
 }
 
 // Un addebito al mese per abbonamento (Finance › Addebiti SEPA). Nasce

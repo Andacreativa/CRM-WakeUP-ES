@@ -203,7 +203,7 @@ export default function ImpostazioniAbbonamentiPage() {
           {spunta("inizioMeseSuccessivo", "Il primo addebito è il mese dopo la firma", "Spento: si addebita già il mese della firma (se la remessa non è ancora partita).")}
           {spunta("batchBooking", "Una sola entrata in banca per remessa", "Spento: un movimento per ogni addebito sull'estratto conto.")}
           {spunta("fatturaAutomatica", "La remessa crea una fattura per ogni addebito", "Numerata subito con VeriFactu spento; bozza da emettere con VeriFactu acceso.")}
-          {spunta("emailFattura", "…e la manda per email al cliente con il PDF")}
+          {spunta("emailFattura", "…e la manda per email al cliente con il PDF", "All'email dell'abbonamento, nella sua lingua, con la data dell'addebito e il link all'area cliente.")}
         </div>
       </section>
 
@@ -313,6 +313,29 @@ export default function ImpostazioniAbbonamentiPage() {
             <label className={cn(labelCls, "mt-2")}>Testo</label>
             {testo(`linkTesto${linguaTesti}` as Campo, 8)}
             <p className="text-[11px] text-gray-400 mt-1">Segnaposto: {"{nombre} {producto} {plan} {importe} {link} {azienda}"}</p>
+          </div>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div>
+            <label className={labelCls}>Email con la fattura della quota: oggetto</label>
+            {testo(`fatturaOggetto${linguaTesti}` as Campo, 1)}
+            <label className={cn(labelCls, "mt-2")}>Testo</label>
+            {testo(`fatturaTesto${linguaTesti}` as Campo, 10)}
+            <p className="text-[11px] text-gray-400 mt-1">
+              Segnaposto: {"{nombre} {producto} {plan} {numero} {fecha} {importe} {fecha_cargo} {iban} {ref} {codigo} {mes} {link} {azienda}"}. {"{iban}"} è mascherato; {"{link}"} entra nell&apos;area cliente senza password (vale 7 giorni).
+            </p>
+          </div>
+          <div>
+            <label className={labelCls}>Email con il link all&apos;area cliente: oggetto</label>
+            {testo(`areaOggetto${linguaTesti}` as Campo, 1)}
+            <label className={cn(labelCls, "mt-2")}>Testo</label>
+            {testo(`areaTesto${linguaTesti}` as Campo, 10)}
+            <p className="text-[11px] text-gray-400 mt-1">
+              Segnaposto: {"{link} {azienda}"}. La manda il modulo «mandami il link di accesso» dell&apos;area cliente (link valido 60 minuti):{" "}
+              <button type="button" className="text-brand hover:underline" onClick={() => copia(`${base}/suscripcion/area`)}>
+                {base}/suscripcion/area
+              </button>
+            </p>
           </div>
         </div>
       </section>

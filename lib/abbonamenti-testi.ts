@@ -236,3 +236,63 @@ export const LINK_DEFAULT: Record<Lingua, { oggetto: string; testo: string }> = 
       "Hi {nombre},\n\nwe have prepared your {producto} subscription, {plan} plan: {importe} per month.\n\nTo activate it, check your details, enter the account to be debited and accept the agreement and the SEPA mandate at this link:\n{link}\n\nThe link is personal and expires in 30 days.\n\nKind regards,\n{azienda}",
   },
 };
+
+// Email con la fattura della quota (allegato: PDF della fattura), all'email
+// dell'abbonamento, nella sua lingua. {iban} è mascherato; {link} entra
+// nell'area cliente senza password (vale 7 giorni).
+export const FATTURA_DEFAULT: Record<Lingua, { oggetto: string; testo: string }> = {
+  es: {
+    oggetto: "Factura {numero} de tu suscripción a {producto} — {azienda}",
+    testo:
+      "Hola {nombre},\n\nadjuntamos la factura {numero} del {fecha}, por importe de {importe}, de tu suscripción a {producto}, plan {plan} ({mes}).\n\nEl importe se cargará en tu cuenta {iban} el {fecha_cargo} mediante adeudo directo SEPA (orden {ref}): no tienes que hacer nada.\n\nEn tu área de cliente puedes consultar y descargar todas tus facturas y actualizar tus datos o la cuenta de cargo:\n{link}\n\nUn cordial saludo,\n{azienda}",
+  },
+  it: {
+    oggetto: "Fattura {numero} del tuo abbonamento a {producto} — {azienda}",
+    testo:
+      "Ciao {nombre},\n\nin allegato la fattura {numero} del {fecha}, di {importe}, del tuo abbonamento a {producto}, piano {plan} ({mes}).\n\nL'importo verrà addebitato sul tuo conto {iban} il {fecha_cargo} con addebito diretto SEPA (mandato {ref}): non devi fare nulla.\n\nNella tua area cliente trovi tutte le fatture da scaricare e puoi aggiornare i tuoi dati o il conto da addebitare:\n{link}\n\nCordiali saluti,\n{azienda}",
+  },
+  en: {
+    oggetto: "Invoice {numero} for your {producto} subscription — {azienda}",
+    testo:
+      "Hi {nombre},\n\nattached is invoice {numero} dated {fecha}, for {importe}, for your {producto} subscription, {plan} plan ({mes}).\n\nThe amount will be debited from your account {iban} on {fecha_cargo} by SEPA direct debit (mandate {ref}): nothing to do on your side.\n\nIn your customer area you can view and download all your invoices and update your details or the account to be debited:\n{link}\n\nKind regards,\n{azienda}",
+  },
+};
+
+// Email con il link di accesso all'area cliente (chiesto dal modulo: 60 minuti)
+export const AREA_LINK_DEFAULT: Record<Lingua, { oggetto: string; testo: string }> = {
+  es: {
+    oggetto: "Acceso a tu área de cliente — {azienda}",
+    testo:
+      "Hola,\n\npara entrar en tu área de cliente (facturas, suscripción, cuenta de cargo) usa este enlace:\n{link}\n\nEl enlace es personal y caduca en 60 minutos. Si no lo has pedido tú, ignora este correo.\n\nUn cordial saludo,\n{azienda}",
+  },
+  it: {
+    oggetto: "Accesso alla tua area cliente — {azienda}",
+    testo:
+      "Ciao,\n\nper entrare nella tua area cliente (fatture, abbonamento, conto da addebitare) usa questo link:\n{link}\n\nIl link è personale e scade tra 60 minuti. Se non l'hai chiesto tu, ignora questa email.\n\nCordiali saluti,\n{azienda}",
+  },
+  en: {
+    oggetto: "Access to your customer area — {azienda}",
+    testo:
+      "Hi,\n\nto enter your customer area (invoices, subscription, account to be debited) use this link:\n{link}\n\nThe link is personal and expires in 60 minutes. If you did not request it, please ignore this email.\n\nKind regards,\n{azienda}",
+  },
+};
+
+// Email dopo il cambio di conto dall'area (testo fisso; allegato: contratto
+// e nuovo mandato in PDF)
+export const CAMBIO_CONTO_TESTI: Record<Lingua, { oggetto: string; testo: string }> = {
+  es: {
+    oggetto: "Nueva orden de domiciliación {ref} — {azienda}",
+    testo:
+      "Hola {nombre},\n\nhemos registrado la nueva cuenta de cargo de tu suscripción a {producto} ({codigo}). Adjuntamos el contrato y la nueva orden de domiciliación SEPA (referencia {ref}), que sustituye a la anterior ({refPrecedente}).\n\nLos próximos recibos se cargarán en la cuenta {iban}. Los recibos ya enviados al banco se cargarán todavía en la cuenta anterior.\n\nUn cordial saludo,\n{azienda}",
+  },
+  it: {
+    oggetto: "Nuovo mandato SEPA {ref} — {azienda}",
+    testo:
+      "Ciao {nombre},\n\nabbiamo registrato il nuovo conto da addebitare del tuo abbonamento a {producto} ({codigo}). In allegato il contratto e il nuovo mandato SEPA (riferimento {ref}), che sostituisce il precedente ({refPrecedente}).\n\nI prossimi addebiti andranno sul conto {iban}. Gli addebiti già mandati in banca passano ancora sul conto precedente.\n\nCordiali saluti,\n{azienda}",
+  },
+  en: {
+    oggetto: "New SEPA mandate {ref} — {azienda}",
+    testo:
+      "Hi {nombre},\n\nwe have registered the new account to be debited for your {producto} subscription ({codigo}). Attached are the agreement and the new SEPA direct debit mandate (reference {ref}), which replaces the previous one ({refPrecedente}).\n\nThe next collections will be debited from account {iban}. Collections already sent to the bank will still be debited from the previous account.\n\nKind regards,\n{azienda}",
+  },
+};

@@ -123,7 +123,7 @@ export interface AddebitoMin {
   remessaId: number | null;
   remessa: { id: number; codice: string; dataAddebito: string; stato: string } | null;
   fatturaId: number | null;
-  fattura: { id: number; numero: string | null; pagato: boolean; stato: string } | null;
+  fattura: { id: number; numero: string | null; pagato: boolean; stato: string; data?: string | null; annullata?: boolean } | null;
   dataIncasso: string | null;
   dataDevoluzione: string | null;
   motivoDevoluzione: string | null;
@@ -175,10 +175,26 @@ export interface Abbonamento {
   createdAt: string;
   updatedAt: string;
   addebiti: AddebitoMin[];
+  mandatiPrecedenti?: MandatoStorico[];
   // calcolati
   ultimoAddebito: AddebitoMin | null;
   devoluciones: number;
   linkFirma: string | null;
+}
+
+// Mandato sostituito da un cambio di conto (area cliente)
+export interface MandatoStorico {
+  id: number;
+  mandatoRef: string;
+  titolareConto: string;
+  iban: string;
+  bic: string | null;
+  firmatoIl: string | null;
+  luogo: string | null;
+  ip: string | null;
+  sostituitoIl: string;
+  sostituitoIp: string | null;
+  motivo: string | null;
 }
 
 export interface AddebitoRiga extends AddebitoMin {
@@ -225,3 +241,34 @@ export const IMPOSTA_LABEL: Record<Lingua, Record<string, string>> = {
 export const inputCls =
   "w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30 bg-white";
 export const labelCls = "text-xs font-medium text-gray-600 block mb-1";
+
+// Colore del prodotto al posto del rosa Anda nelle pagine pubbliche: i
+// token --brand / --color-brand valgono solo dentro la pagina (bottoni,
+// pill, card attiva, link, focus). Boogo = blu della presentazione e della
+// landing (navy #0a2540 + blu); Cobrea = verde «cobro» del logo.
+export const TEMI_PRODOTTO: Record<string, Record<string, string>> = {
+  boogo: {
+    "--brand": "#2563eb",
+    "--brand-hover": "#1d4ed8",
+    "--brand-soft": "#dbeafe",
+    "--brand-ink": "#1e40af",
+    "--color-brand": "#2563eb",
+    "--color-brand-hover": "#1d4ed8",
+  },
+  cobrea: {
+    "--brand": "#0fa07a",
+    "--brand-hover": "#0c8565",
+    "--brand-soft": "#d6f5ea",
+    "--brand-ink": "#0b6b52",
+    "--color-brand": "#0fa07a",
+    "--color-brand-hover": "#0c8565",
+  },
+};
+
+// Nome del paese nella lingua del modulo pubblico e dell'area cliente
+export const PAESE_L: Record<Lingua, Record<string, string>> = {
+  es: { Italia: "Italia", Spagna: "España", Francia: "Francia", Germania: "Alemania", Portogallo: "Portugal", "Regno Unito": "Reino Unido", Irlanda: "Irlanda", "Paesi Bassi": "Países Bajos", Belgio: "Bélgica", Lussemburgo: "Luxemburgo", Austria: "Austria", Svizzera: "Suiza", "Stati Uniti": "Estados Unidos", Altro: "Otro" },
+  it: {},
+  en: { Italia: "Italy", Spagna: "Spain", Francia: "France", Germania: "Germany", Portogallo: "Portugal", "Regno Unito": "United Kingdom", Irlanda: "Ireland", "Paesi Bassi": "Netherlands", Belgio: "Belgium", Lussemburgo: "Luxembourg", Austria: "Austria", Svizzera: "Switzerland", "Stati Uniti": "United States", Altro: "Other" },
+};
+export const nomePaese = (paese: string, lingua: Lingua) => PAESE_L[lingua][paese] ?? paese;
