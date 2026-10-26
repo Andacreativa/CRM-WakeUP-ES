@@ -76,7 +76,7 @@ export default function ImpostazioniAbbonamentiPage() {
   const aggiungiPiano = (prodotto: string) =>
     setPiani((p) => [
       ...p,
-      { id: 0, prodotto, codice: "", nome: "", descrizione: "", prezzo: 0, prezzoLibero: false, tipoIva: "igic7", attivo: true, ordine: p.filter((x) => x.prodotto === prodotto).length + 1 },
+      { id: 0, prodotto, codice: "", nome: "", descrizione: "", descrizioneIt: "", descrizioneEn: "", prezzo: 0, prezzoLibero: false, tipoIva: "igic7", attivo: true, ordine: p.filter((x) => x.prodotto === prodotto).length + 1 },
     ]);
 
   const copia = async (t: string) => {
@@ -224,7 +224,7 @@ export default function ImpostazioniAbbonamentiPage() {
                   <tr>
                     <th className="w-10">#</th>
                     <th>Nome</th>
-                    <th>Descrizione (modulo pubblico)</th>
+                    <th>Descrizione nel modulo (ES / IT / EN)</th>
                     <th className="text-right">€/mese</th>
                     <th>Imposta</th>
                     <th>Concordato</th>
@@ -242,8 +242,10 @@ export default function ImpostazioniAbbonamentiPage() {
                           <input value={x.nome} onChange={(e) => setPiano(i, { nome: e.target.value })} className={inputCls} placeholder="Base" />
                           {!x.id && <input value={x.codice} onChange={(e) => setPiano(i, { codice: e.target.value })} className={cn(inputCls, "mt-1 font-mono text-[11px]")} placeholder="codice (es. base)" />}
                         </td>
-                        <td>
-                          <input value={x.descrizione ?? ""} onChange={(e) => setPiano(i, { descrizione: e.target.value })} className={inputCls} />
+                        <td className="space-y-1">
+                          <input value={x.descrizione ?? ""} onChange={(e) => setPiano(i, { descrizione: e.target.value })} className={inputCls} placeholder="ES" title="Spagnolo" />
+                          <input value={x.descrizioneIt ?? ""} onChange={(e) => setPiano(i, { descrizioneIt: e.target.value })} className={inputCls} placeholder="IT" title="Italiano" />
+                          <input value={x.descrizioneEn ?? ""} onChange={(e) => setPiano(i, { descrizioneEn: e.target.value })} className={inputCls} placeholder="EN" title="Inglese" />
                         </td>
                         <td>
                           <input value={x.prezzo} onChange={(e) => setPiano(i, { prezzo: parseFloat(e.target.value.replace(",", ".")) || 0 })} className={cn(inputCls, "w-24 text-right")} inputMode="decimal" />

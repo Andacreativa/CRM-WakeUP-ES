@@ -101,7 +101,9 @@ export interface Piano {
   prodotto: string;
   codice: string;
   nome: string;
-  descrizione: string | null;
+  descrizione: string | null; // spagnolo
+  descrizioneIt: string | null;
+  descrizioneEn: string | null;
   prezzo: number;
   prezzoLibero: boolean;
   tipoIva: string;

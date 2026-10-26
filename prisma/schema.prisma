@@ -647,7 +647,9 @@ model PianoAbbonamento {
   prodotto     String // boogo | cobrea
   codice       String // base | medium | pro
   nome         String
-  descrizione  String?
+  descrizione  String? // spagnolo (modulo pubblico)
+  descrizioneIt String?
+  descrizioneEn String?
   prezzo       Float    @default(0) // imponibile al mese
   prezzoLibero Boolean  @default(false)
   tipoIva      String   @default("igic7") // igic7 | igic_exenta | iva

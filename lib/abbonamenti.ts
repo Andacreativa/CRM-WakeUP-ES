@@ -52,28 +52,74 @@ type Tx = Prisma.TransactionClient;
 // Prezzi della presentazione Boogo (ottobre 2026) e della proposta Cobrea:
 // Base 20, Medium 40, Pro «da 60» (concordato). La configurazione iniziale
 // resta fuori: si preventiva e si fattura a mano.
-const PIANI_DEFAULT: Record<string, { codice: string; nome: string; prezzo: number; prezzoLibero: boolean; ordine: number; descrizione: string }[]> = {
+const PIANI_DEFAULT: Record<
+  string,
+  { codice: string; nome: string; prezzo: number; prezzoLibero: boolean; ordine: number; descrizione: string; descrizioneIt: string; descrizioneEn: string }[]
+> = {
   boogo: [
-    { codice: "base", nome: "Base", prezzo: 20, prezzoLibero: false, ordine: 1, descrizione: "Para empezar: sitio de reservas y panel." },
-    { codice: "medium", nome: "Medium", prezzo: 40, prezzoLibero: false, ordine: 2, descrizione: "Más módulos, más reservas y la administración incluida." },
-    { codice: "pro", nome: "Pro", prezzo: 60, prezzoLibero: true, ordine: 3, descrizione: "Para quien usa muchos módulos y un volumen alto de reservas." },
+    {
+      codice: "base", nome: "Base", prezzo: 20, prezzoLibero: false, ordine: 1,
+      descrizione: "Para empezar: sitio de reservas y panel.",
+      descrizioneIt: "Per iniziare: sito di prenotazione e pannello.",
+      descrizioneEn: "To get started: booking site and dashboard.",
+    },
+    {
+      codice: "medium", nome: "Medium", prezzo: 40, prezzoLibero: false, ordine: 2,
+      descrizione: "Más módulos, más reservas y la administración incluida.",
+      descrizioneIt: "Più moduli, più prenotazioni e l'amministrazione inclusa.",
+      descrizioneEn: "More modules, more bookings and administration included.",
+    },
+    {
+      codice: "pro", nome: "Pro", prezzo: 60, prezzoLibero: true, ordine: 3,
+      descrizione: "Para quien usa muchos módulos y un volumen alto de reservas.",
+      descrizioneIt: "Per chi usa molti moduli e un volume alto di prenotazioni.",
+      descrizioneEn: "For those using many modules and a high volume of bookings.",
+    },
   ],
   cobrea: [
-    { codice: "base", nome: "Base", prezzo: 20, prezzoLibero: false, ordine: 1, descrizione: "Administración completa: facturas con VeriFactu, presupuestos, gastos, banco, vencimientos, envío al gestor y asistente." },
-    { codice: "medium", nome: "Medium", prezzo: 40, prezzoLibero: false, ordine: 2, descrizione: "Base más los módulos comercial (clientes, presupuestos, contratos) y agenda con citas." },
-    { codice: "pro", nome: "Pro", prezzo: 60, prezzoLibero: true, ordine: 3, descrizione: "Todos los módulos, también gestión del trabajo y WhatsApp, y módulos a medida." },
+    {
+      codice: "base", nome: "Base", prezzo: 20, prezzoLibero: false, ordine: 1,
+      descrizione: "Administración completa: facturas con VeriFactu, presupuestos, gastos, banco, vencimientos, envío al gestor y asistente.",
+      descrizioneIt: "Amministrazione completa: fatture con VeriFactu, preventivi, spese, banca, scadenze, invio al commercialista e assistente.",
+      descrizioneEn: "Complete administration: VeriFactu invoices, quotes, expenses, bank, due dates, reports to your accountant and assistant.",
+    },
+    {
+      codice: "medium", nome: "Medium", prezzo: 40, prezzoLibero: false, ordine: 2,
+      descrizione: "Base más los módulos comercial (clientes, presupuestos, contratos) y agenda con citas.",
+      descrizioneIt: "Base più i moduli commerciale (clienti, preventivi, contratti) e agenda con appuntamenti.",
+      descrizioneEn: "Base plus the sales modules (customers, quotes, contracts) and an agenda with appointments.",
+    },
+    {
+      codice: "pro", nome: "Pro", prezzo: 60, prezzoLibero: true, ordine: 3,
+      descrizione: "Todos los módulos, también gestión del trabajo y WhatsApp, y módulos a medida.",
+      descrizioneIt: "Tutti i moduli, anche gestione del lavoro e WhatsApp, e moduli su misura.",
+      descrizioneEn: "All modules, including work management and WhatsApp, plus custom modules.",
+    },
   ],
 };
 
-// Se un prodotto non ha piani, nascono quelli standard (idempotente).
+// Se un prodotto non ha piani, nascono quelli standard; ai piani standard
+// già nati senza le descrizioni in italiano e inglese si aggiungono quelle
+// di default (idempotente).
 export async function assicuraPiani(db: Db) {
   for (const p of PRODOTTI) {
-    const n = await db.pianoAbbonamento.count({ where: { prodotto: p.value } });
-    if (n > 0) continue;
-    await db.pianoAbbonamento.createMany({
-      data: PIANI_DEFAULT[p.value].map((x) => ({ ...x, prodotto: p.value, tipoIva: "igic7", attivo: true })),
-      skipDuplicates: true,
-    });
+    const esistenti = await db.pianoAbbonamento.findMany({ where: { prodotto: p.value } });
+    if (esistenti.length === 0) {
+      await db.pianoAbbonamento.createMany({
+        data: PIANI_DEFAULT[p.value].map((x) => ({ ...x, prodotto: p.value, tipoIva: "igic7", attivo: true })),
+        skipDuplicates: true,
+      });
+      continue;
+    }
+    for (const e of esistenti) {
+      if (e.descrizioneIt && e.descrizioneEn) continue;
+      const d = PIANI_DEFAULT[p.value].find((x) => x.codice === e.codice);
+      if (!d) continue;
+      await db.pianoAbbonamento.update({
+        where: { id: e.id },
+        data: { descrizioneIt: e.descrizioneIt ?? d.descrizioneIt, descrizioneEn: e.descrizioneEn ?? d.descrizioneEn },
+      });
+    }
   }
 }
 

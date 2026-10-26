@@ -20,6 +20,8 @@ export async function PUT(request: Request) {
       const data = {
         nome: String(p.nome ?? "").trim().slice(0, 60),
         descrizione: String(p.descrizione ?? "").trim().slice(0, 400) || null,
+        descrizioneIt: String(p.descrizioneIt ?? "").trim().slice(0, 400) || null,
+        descrizioneEn: String(p.descrizioneEn ?? "").trim().slice(0, 400) || null,
         prezzo: Number.isFinite(prezzo) && prezzo >= 0 ? Math.round(prezzo * 100) / 100 : 0,
         prezzoLibero: p.prezzoLibero === true,
         tipoIva: tipoIvaValido(p.tipoIva),

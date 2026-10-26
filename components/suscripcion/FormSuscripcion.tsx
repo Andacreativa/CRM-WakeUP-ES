@@ -24,7 +24,7 @@ import {
 interface PianoPub {
   codice: string;
   nome: string;
-  descrizione: string | null;
+  descrizione: Record<Lingua, string | null>; // nella lingua del modulo, con lo spagnolo di riserva
   prezzo: number;
   prezzoLibero: boolean;
   tipoIva: string;
@@ -500,7 +500,9 @@ export default function FormSuscripcion({
                       {euro(p.prezzo, lingua)} <span className="text-xs font-normal text-gray-500">{t("alMes")}</span>
                     </div>
                     <div className="text-[11px] text-gray-500">{t("masImp")}</div>
-                    {p.descrizione && <p className="text-xs text-gray-600 mt-2 leading-snug">{p.descrizione}</p>}
+                    {(p.descrizione[lingua] || p.descrizione.es) && (
+                      <p className="text-xs text-gray-600 mt-2 leading-snug">{p.descrizione[lingua] || p.descrizione.es}</p>
+                    )}
                     {p.prezzoLibero && (
                       <p className="text-[11px] text-brand mt-2">
                         {t("contactanos", { email: dati.creditore.email })}

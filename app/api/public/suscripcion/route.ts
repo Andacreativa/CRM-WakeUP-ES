@@ -72,7 +72,12 @@ export async function GET(request: Request) {
   const prodotto = searchParams.get("prodotto") || "";
   if (!prodottoValido(prodotto)) return NextResponse.json({ error: "prodotto_sconosciuto" }, { status: 404 });
   const piani = (await listaPiani(prisma, prodotto, true)).map((p) => ({
-    codice: p.codice, nome: p.nome, descrizione: p.descrizione, prezzo: p.prezzo, prezzoLibero: p.prezzoLibero, tipoIva: p.tipoIva,
+    codice: p.codice,
+    nome: p.nome,
+    descrizione: { es: p.descrizione, it: p.descrizioneIt, en: p.descrizioneEn },
+    prezzo: p.prezzo,
+    prezzoLibero: p.prezzoLibero,
+    tipoIva: p.tipoIva,
   }));
   return NextResponse.json({ ...comune, prodotto, piani, firma: null });
 }
