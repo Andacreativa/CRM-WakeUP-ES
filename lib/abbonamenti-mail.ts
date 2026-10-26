@@ -7,7 +7,7 @@ import { logoServer, pdfFatturaServer } from "@/lib/pdf-server";
 import { messaggioFattura } from "@/lib/fattura-pdf";
 import { fmt } from "@/lib/constants";
 import { dataTesto, euroTesto, type AbbonamentoConRelazioni } from "@/lib/abbonamenti";
-import { CAMBIO_CONTO_TESTI, MESI_L } from "@/lib/abbonamenti-testi";
+import { CAMBIO_CONTO_TESTI, DISDETTA_TESTI, LOCALE, MESI_L } from "@/lib/abbonamenti-testi";
 import { DURATA_LINK_ACCESSO, linkArea } from "@/lib/area-token";
 import { formattaIban, mascheraIban } from "@/lib/sepa";
 import type { Modifica } from "@/lib/abbonamenti-area";
@@ -238,4 +238,33 @@ export async function inviaAvvisoDatiArea(a: AbbonamentoConRelazioni, modifiche:
       nomeMittente: "Anda Finance",
     });
   });
+}
+
+// Dopo la disdetta dall'area: conferma al cliente con le date, avviso all'agenzia
+export async function inviaConfermaDisdetta(a: AbbonamentoConRelazioni, base: string) {
+  const [cfg, , cred] = await getCreditore(prisma);
+  const lingua = linguaValida(a.lingua);
+  const t = DISDETTA_TESTI[lingua];
+  const fine = a.dataFine ?? new Date();
+  const meseDopo = new Date(Date.UTC(fine.getUTCFullYear(), fine.getUTCMonth() + 1, 1));
+  const v = segnaposto(a, cred.nome, {
+    fecha_fin: dataTesto(fine, lingua),
+    mes_siguiente: meseDopo.toLocaleDateString(LOCALE[lingua], { month: "long", year: "numeric", timeZone: "UTC" }),
+    email: cred.email,
+  });
+  const cliente = await esito(a.email, async () => {
+    await inviaMail({ a: a.email, oggetto: compilaTesto(t.oggetto, v), testo: compilaTesto(t.testo, v), nomeMittente: cred.nome });
+  });
+  const agenzia = await esito(cfg.notificaEmail.trim() || null, async () => {
+    await inviaMail({
+      a: cfg.notificaEmail.trim(),
+      oggetto: `Disdetta ${nomeProdotto(a.prodotto)} — ${a.intestatario} (${a.codice})`,
+      testo:
+        `${a.intestatario} ha disdetto l'abbonamento ${a.codice} (${nomeProdotto(a.prodotto)}, piano ${a.pianoNome}) dall'area cliente.\n` +
+        `Vale fino al ${fine.toLocaleDateString("it-IT", { timeZone: "UTC" })}: niente addebiti né fatture dal mese dopo. Riattivabile da Sales.\n\n` +
+        `Scheda: ${base}/sales/abbonamenti/${a.id}\n`,
+      nomeMittente: "Anda Finance",
+    });
+  });
+  return { cliente, agenzia };
 }

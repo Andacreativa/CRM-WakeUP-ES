@@ -14,6 +14,8 @@ import {
   type Creditore,
   type ImpostazioniAbbonamenti,
 } from "@/lib/abbonamenti-impostazioni";
+import { ambienteAttivo, creaRegistroAlta, ErroreFattura } from "@/lib/verifactu/catena";
+import type { Ambiente } from "@/lib/verifactu/registro";
 import { LOCALE, MESI_L } from "@/lib/abbonamenti-testi";
 import {
   bicValido,
@@ -615,30 +617,34 @@ export async function generaAddebitiMese(db: Db, anno: number, mese: number) {
 export interface EsitoRemessa {
   remessa: { id: number; codice: string; nomeFile: string; numero: number; totale: number; dataAddebito: Date };
   fattureIds: number[];
+  verifactuInCoda: number; // registri VeriFactu nati con le fatture, da mandare all'AEAT da Fatture
   saltati: { id: number; motivo: string }[];
 }
 
-// Fattura della quota: numerata subito (VeriFactu spento) oppure bozza da
-// emettere dal pannello, come per le richieste.
+// Fattura della quota: emessa e numerata subito. Con VeriFactu acceso nasce
+// anche il suo registro, concatenato al precedente, che resta in coda:
+// l'invio all'AEAT si fa dal pannello Fatture (scelta dell'agenzia finché
+// gli abbonati sono pochi). Un errore sui dati (es. NIF mancante) ferma
+// tutta la remessa, così non resta nulla a metà.
 async function creaFatturaAddebito(
   tx: Tx,
   ad: { anno: number; mese: number; importo: number },
   a: { prodotto: string; pianoNome: string; prezzo: number; tipoIva: string; iva: number; clienteId: number | null; lingua: string },
   fatt: ImpostazioniFatture,
+  ambiente: Ambiente | null,
   dataAddebito: Date,
   oggi: Date,
 ) {
-  const bozza = fatt.vfModo !== "spento";
   const data = new Date(Date.UTC(oggi.getUTCFullYear(), oggi.getUTCMonth(), oggi.getUTCDate()));
-  const numero = bozza ? null : await prossimoNumeroFattura(tx, data.getUTCFullYear(), fatt);
+  const numero = await prossimoNumeroFattura(tx, data.getUTCFullYear(), fatt);
   const lingua = linguaValida(a.lingua);
   const descrizione = `${nomeProdotto(a.prodotto)} ${a.pianoNome} — ${MESI_L[lingua][ad.mese - 1]} ${ad.anno}`;
   const f = await tx.fattura.create({
     data: {
       numero,
       data,
-      stato: bozza ? "bozza" : "emessa",
-      emessaIl: bozza ? null : data,
+      stato: "emessa",
+      emessaIl: data,
       descrizione,
       voci: JSON.stringify([{ descrizione, quantita: 1, prezzo: a.prezzo }]),
       clienteId: a.clienteId,
@@ -657,6 +663,7 @@ async function creaFatturaAddebito(
     },
     select: { id: true },
   });
+  if (ambiente) await creaRegistroAlta(tx, f.id, fatt, ambiente);
   return f.id;
 }
 
@@ -672,6 +679,13 @@ export async function creaRemessa(opz: {
     async (tx) => {
       await bloccaCodici(tx);
       const [cfg, fatt, cred] = await getCreditore(tx);
+      let ambiente: Ambiente | null = null;
+      try {
+        ambiente = cfg.fatturaAutomatica ? ambienteAttivo(fatt) : null;
+      } catch (e) {
+        if (e instanceof ErroreFattura) throw new ErroreAbbonamento(e.message, e.status);
+        throw e;
+      }
       const candidati = await tx.addebitoSepa.findMany({
         where: {
           stato: "previsto",
@@ -755,7 +769,14 @@ export async function creaRemessa(opz: {
       for (const ad of buoni) {
         let fatturaId: number | null = ad.fatturaId;
         if (cfg.fatturaAutomatica && !fatturaId) {
-          fatturaId = await creaFatturaAddebito(tx, ad, ad.abbonamento, fatt, dataAddebito, oggi);
+          try {
+            fatturaId = await creaFatturaAddebito(tx, ad, ad.abbonamento, fatt, ambiente, dataAddebito, oggi);
+          } catch (e) {
+            if (e instanceof ErroreFattura) {
+              throw new ErroreAbbonamento(`Fattura di ${ad.abbonamento.intestatario} (${ad.abbonamento.codice}): ${e.message} Nessuna remessa creata.`, 422);
+            }
+            throw e;
+          }
           fattureIds.push(fatturaId);
         }
         await tx.addebitoSepa.update({
@@ -766,6 +787,7 @@ export async function creaRemessa(opz: {
       return {
         remessa: { id: remessa.id, codice, nomeFile: remessa.nomeFile, numero: addebiti.length, totale, dataAddebito },
         fattureIds,
+        verifactuInCoda: ambiente ? fattureIds.length : 0,
         saltati,
       };
     },

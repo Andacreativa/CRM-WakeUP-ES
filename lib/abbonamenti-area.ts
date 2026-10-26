@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import {
   ABBONAMENTO_INCLUDE,
   ErroreAbbonamento,
+  cambiaStato,
   dataAddebitoMese,
   mandatoRef as mandatoRefBase,
   primoDelMese,
@@ -259,4 +260,15 @@ export async function cambiaContoArea(
     }
     return { a: agg, precedente: { mandatoRef: a.mandatoRef, iban: a.iban } };
   });
+}
+
+// Disdetta dall'area: come «Cancella (fine mese)» in Sales. L'abbonamento
+// passa subito a «cancellato» con fine = ultimo giorno del mese in corso;
+// il mese in corso si paga (se l'addebito non è già incassato parte lo
+// stesso), gli addebiti previsti dei mesi dopo si annullano e non nascono
+// più fatture. Riattivare si può solo da Sales.
+export async function disdiciArea(db: Db, id: number, email: string, oggi = new Date()) {
+  const a = await abbonamentoArea(db, id, email);
+  if (a.stato === "cancellato") throw new ErroreAbbonamento("gia_cancellato", 409);
+  return cambiaStato(db, a.id, "cancellato", { oggi });
 }

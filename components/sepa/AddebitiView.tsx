@@ -127,7 +127,8 @@ export default function AddebitiView() {
     if (!j) return;
     setModale(false);
     const parti = [`Remessa ${j.remessa.codice}: ${j.remessa.numero} addebiti, ${fmt(j.remessa.totale)}, addebito il ${dataIt(j.remessa.dataAddebito)}.`];
-    if (j.fattureIds?.length) parti.push(`${j.fattureIds.length} fatture create.`);
+    if (j.fattureIds?.length) parti.push(`${j.fattureIds.length} fatture emesse.`);
+    if (j.verifactuInCoda) parti.push(`${j.verifactuInCoda} registri VeriFactu in coda: mandali all'AEAT da Fatture.`);
     if (j.email) parti.push(`Email inviate: ${j.email.inviate}${j.email.nonInviate?.length ? `, non inviate: ${j.email.nonInviate.length}` : ""}.`);
     if (j.saltati?.length) parti.push(`Saltati ${j.saltati.length} (${j.saltati.map((s: { motivo: string }) => s.motivo).join(", ")}).`);
     notify(parti.join(" "));

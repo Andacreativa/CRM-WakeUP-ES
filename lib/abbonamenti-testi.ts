@@ -296,3 +296,23 @@ export const CAMBIO_CONTO_TESTI: Record<Lingua, { oggetto: string; testo: string
       "Hi {nombre},\n\nwe have registered the new account to be debited for your {producto} subscription ({codigo}). Attached are the agreement and the new SEPA direct debit mandate (reference {ref}), which replaces the previous one ({refPrecedente}).\n\nThe next collections will be debited from account {iban}. Collections already sent to the bank will still be debited from the previous account.\n\nKind regards,\n{azienda}",
   },
 };
+
+// Email dopo la disdetta dall'area (testo fisso): vale fino a fine mese,
+// niente addebiti dal mese dopo
+export const DISDETTA_TESTI: Record<Lingua, { oggetto: string; testo: string }> = {
+  es: {
+    oggetto: "Baja de tu suscripción a {producto} — {azienda}",
+    testo:
+      "Hola {nombre},\n\nhemos registrado la baja de tu suscripción a {producto}, plan {plan} ({codigo}).\n\nEl servicio sigue activo hasta el {fecha_fin}. A partir de {mes_siguiente} no se harán más cargos ni se emitirán más facturas; las cuotas ya cobradas no se devuelven. Durante 30 días puedes exportar tus datos; después se eliminan.\n\nSi cambias de idea, escríbenos a {email} y la reactivamos.\n\nGracias por haber confiado en nosotros.\n{azienda}",
+  },
+  it: {
+    oggetto: "Disdetta del tuo abbonamento a {producto} — {azienda}",
+    testo:
+      "Ciao {nombre},\n\nabbiamo registrato la disdetta del tuo abbonamento a {producto}, piano {plan} ({codigo}).\n\nIl servizio resta attivo fino al {fecha_fin}. Da {mes_siguiente} non ci saranno più addebiti né fatture; le quote già incassate non si rimborsano. Per 30 giorni puoi esportare i tuoi dati; poi vengono cancellati.\n\nSe cambi idea scrivici a {email} e lo riattiviamo.\n\nGrazie per la fiducia.\n{azienda}",
+  },
+  en: {
+    oggetto: "Cancellation of your {producto} subscription — {azienda}",
+    testo:
+      "Hi {nombre},\n\nwe have registered the cancellation of your {producto} subscription, {plan} plan ({codigo}).\n\nThe service stays active until {fecha_fin}. From {mes_siguiente} there will be no further debits or invoices; fees already collected are not refunded. You can export your data for 30 days; afterwards it is deleted.\n\nIf you change your mind, write to {email} and we will reactivate it.\n\nThank you for your trust.\n{azienda}",
+  },
+};

@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { Check, FileText, Loader2, LogOut, Pencil, RefreshCw, ShieldCheck, X } from "lucide-react";
+import { Ban, Check, FileText, Loader2, LogOut, Pencil, RefreshCw, ShieldCheck, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { compilaTesto } from "@/lib/impostazioni";
 import { LOCALE, MANDATO_LEGALE, MESI_L } from "@/lib/abbonamenti-testi";
@@ -133,6 +133,13 @@ const T: Record<Lingua, Record<string, string>> = {
     stessoConto: "La cuenta es la misma que la actual.",
     mandatiPrecedenti: "Órdenes anteriores",
     sostituita: "sustituida el {data}",
+    baja: "Dar de baja la suscripción",
+    bajaTitolo: "Baja de la suscripción",
+    bajaTesto: "La baja tiene efecto el {fecha_fin}: el servicio sigue activo hasta entonces y a partir de {mes_siguiente} no habrá más cargos ni facturas. Las cuotas ya cobradas no se devuelven. Durante 30 días podrás exportar tus datos.",
+    bajaConferma: "Confirmar la baja",
+    bajaOk: "Baja registrada: la suscripción sigue activa hasta el {fecha_fin}.",
+    finoAl: "activa hasta el {data}",
+    giaCancellato: "Esta suscripción ya está cancelada.",
     caricamento: "Cargando…",
     lingua: "Idioma",
   },
@@ -206,6 +213,13 @@ const T: Record<Lingua, Record<string, string>> = {
     stessoConto: "Il conto è lo stesso di adesso.",
     mandatiPrecedenti: "Mandati precedenti",
     sostituita: "sostituito il {data}",
+    baja: "Disdici l'abbonamento",
+    bajaTitolo: "Disdetta dell'abbonamento",
+    bajaTesto: "La disdetta ha effetto il {fecha_fin}: il servizio resta attivo fino ad allora e da {mes_siguiente} non ci saranno più addebiti né fatture. Le quote già incassate non si rimborsano. Per 30 giorni potrai esportare i tuoi dati.",
+    bajaConferma: "Conferma la disdetta",
+    bajaOk: "Disdetta registrata: l'abbonamento resta attivo fino al {fecha_fin}.",
+    finoAl: "attivo fino al {data}",
+    giaCancellato: "Questo abbonamento è già cancellato.",
     caricamento: "Caricamento…",
     lingua: "Lingua",
   },
@@ -279,6 +293,13 @@ const T: Record<Lingua, Record<string, string>> = {
     stessoConto: "This is the same account as the current one.",
     mandatiPrecedenti: "Previous mandates",
     sostituita: "replaced on {data}",
+    baja: "Cancel the subscription",
+    bajaTitolo: "Subscription cancellation",
+    bajaTesto: "The cancellation takes effect on {fecha_fin}: the service stays active until then and from {mes_siguiente} there will be no further debits or invoices. Fees already collected are not refunded. You can export your data for 30 days.",
+    bajaConferma: "Confirm the cancellation",
+    bajaOk: "Cancellation registered: the subscription stays active until {fecha_fin}.",
+    finoAl: "active until {data}",
+    giaCancellato: "This subscription is already cancelled.",
     caricamento: "Loading…",
     lingua: "Language",
   },
@@ -306,6 +327,7 @@ export default function AreaCliente({ linguaIniziale, errore }: { linguaIniziale
   const [editId, setEditId] = useState<number | null>(null);
   const [formDati, setFormDati] = useState(vuotoDati);
   const [contoId, setContoId] = useState<number | null>(null);
+  const [bajaId, setBajaId] = useState<number | null>(null);
   const [formConto, setFormConto] = useState(vuotoConto);
   const [accetto, setAccetto] = useState(false);
   const [errori, setErrori] = useState<Record<string, string>>({});
@@ -382,6 +404,7 @@ export default function AreaCliente({ linguaIniziale, errore }: { linguaIniziale
 
   const apriDati = (a: Abb) => {
     setContoId(null);
+    setBajaId(null);
     setErrori({});
     setMsg(null);
     setFormDati({ email: a.email, telefono: a.telefono ?? "", via: a.via ?? "", cap: a.cap ?? "", citta: a.citta ?? "", provincia: a.provincia ?? "" });
@@ -389,6 +412,7 @@ export default function AreaCliente({ linguaIniziale, errore }: { linguaIniziale
   };
   const apriConto = (a: Abb) => {
     setEditId(null);
+    setBajaId(null);
     setErrori({});
     setMsg(null);
     setAccetto(false);
@@ -450,6 +474,31 @@ export default function AreaCliente({ linguaIniziale, errore }: { linguaIniziale
       }
       setContoId(null);
       setMsg({ id: a.id, testo: j.emailInviata ? t("contoOk", { ref: j.mandatoRef, email: a.email }) : t("contoOkNoMail", { ref: j.mandatoRef }), kind: "ok" });
+      await carica();
+    } catch {
+      setMsg({ id: a.id, testo: t("errGenerico"), kind: "err" });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  // Fine del mese in corso e mese dopo, per il testo della disdetta
+  const oggi = new Date();
+  const fineMese = new Date(Date.UTC(oggi.getFullYear(), oggi.getMonth() + 1, 0));
+  const meseDopo = new Date(Date.UTC(oggi.getFullYear(), oggi.getMonth() + 1, 1));
+  const disdici = async (a: Abb) => {
+    setBusy(true);
+    try {
+      const r = await fetch(`/api/public/area/abbonamenti/${a.id}/baja`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ conferma: true }),
+      });
+      const j = await r.json().catch(() => ({}));
+      if (r.status === 401) return carica();
+      if (!r.ok) return setMsg({ id: a.id, testo: j.error === "gia_cancellato" ? t("giaCancellato") : t("errGenerico"), kind: "err" });
+      setBajaId(null);
+      setMsg({ id: a.id, testo: t("bajaOk", { fecha_fin: dataLunga(j.dataFine) }), kind: "ok" });
       await carica();
     } catch {
       setMsg({ id: a.id, testo: t("errGenerico"), kind: "err" });
@@ -569,6 +618,7 @@ export default function AreaCliente({ linguaIniziale, errore }: { linguaIniziale
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="inline-flex items-center rounded-full bg-brand text-white text-[11px] font-bold px-2.5 py-0.5">{nomeProdotto(a.prodotto)}</span>
                     <span className={STATO_PILL[a.stato] ?? "pill-off"}>{statoLabel(a.stato)}</span>
+                    {a.stato === "cancellato" && a.dataFine && <span className="text-[11px] text-gray-500">{t("finoAl", { data: dataLunga(a.dataFine) })}</span>}
                     <span className="text-[11px] text-gray-400 font-mono">{a.codice}</span>
                   </div>
                   <div className="text-xl font-bold mt-1.5">
@@ -630,6 +680,11 @@ export default function AreaCliente({ linguaIniziale, errore }: { linguaIniziale
                     <button type="button" onClick={() => (editId === a.id ? setEditId(null) : apriDati(a))} className="btn btn-secondary btn-sm">
                       <Pencil className="w-3.5 h-3.5" /> {t("modificaDati")}
                     </button>
+                    {a.stato !== "cancellato" && (
+                      <button type="button" onClick={() => { setMsg(null); setBajaId(bajaId === a.id ? null : a.id); }} className="btn btn-secondary btn-sm text-bad hover:text-bad">
+                        <Ban className="w-3.5 h-3.5" /> {t("baja")}
+                      </button>
+                    )}
                   </div>
                   <p className="text-[11px] text-gray-400 mt-2">{t("datiNota", { email: d.creditore.email })}</p>
                 </div>
@@ -661,6 +716,26 @@ export default function AreaCliente({ linguaIniziale, errore }: { linguaIniziale
                     </button>
                     <button type="button" onClick={() => salvaDati(a)} disabled={busy} className="btn btn-primary disabled:opacity-60">
                       {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />} {t("salva")}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {bajaId === a.id && (
+                <div className="rounded-xl border border-bad/40 bg-bad/5 p-4 space-y-3">
+                  <div className="text-sm font-bold">{t("bajaTitolo")}</div>
+                  <p className="text-sm text-gray-700">
+                    {t("bajaTesto", {
+                      fecha_fin: dataLunga(fineMese.toISOString()),
+                      mes_siguiente: meseDopo.toLocaleDateString(LOCALE[lingua], { month: "long", year: "numeric", timeZone: "UTC" }),
+                    })}
+                  </p>
+                  <div className="flex gap-2 justify-end flex-wrap">
+                    <button type="button" onClick={() => setBajaId(null)} className="btn btn-secondary">
+                      {t("annulla")}
+                    </button>
+                    <button type="button" onClick={() => disdici(a)} disabled={busy} className="btn btn-primary !bg-bad hover:!bg-bad/90 disabled:opacity-60">
+                      {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Ban className="w-4 h-4" />} {t("bajaConferma")}
                     </button>
                   </div>
                 </div>

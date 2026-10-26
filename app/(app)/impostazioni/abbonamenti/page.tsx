@@ -202,7 +202,7 @@ export default function ImpostazioniAbbonamentiPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           {spunta("inizioMeseSuccessivo", "Il primo addebito è il mese dopo la firma", "Spento: si addebita già il mese della firma (se la remessa non è ancora partita).")}
           {spunta("batchBooking", "Una sola entrata in banca per remessa", "Spento: un movimento per ogni addebito sull'estratto conto.")}
-          {spunta("fatturaAutomatica", "La remessa crea una fattura per ogni addebito", "Numerata subito con VeriFactu spento; bozza da emettere con VeriFactu acceso.")}
+          {spunta("fatturaAutomatica", "La remessa crea una fattura per ogni addebito", "Emessa e numerata subito. Con VeriFactu acceso nasce anche il registro, che resta in coda: l'invio all'AEAT lo fai tu da Fatture.")}
           {spunta("emailFattura", "…e la manda per email al cliente con il PDF", "All'email dell'abbonamento, nella sua lingua, con la data dell'addebito e il link all'area cliente.")}
         </div>
       </section>
