@@ -241,15 +241,16 @@ const PAESE_L: Record<Lingua, Record<string, string>> = {
 
 // Colore del prodotto al posto del rosa Anda: i token --brand / --color-brand
 // valgono solo dentro la pagina (bottoni, pill, card attiva, link, focus).
-// Boogo = teal del suo tema di default; Cobrea = verde «cobro» del logo.
+// Boogo = blu della presentazione e della landing (navy #0a2540 + blu);
+// Cobrea = verde «cobro» del logo.
 const TEMI: Record<string, React.CSSProperties> = {
   boogo: {
-    "--brand": "#0d9488",
-    "--brand-hover": "#0f766e",
-    "--brand-soft": "#ccfbf1",
-    "--brand-ink": "#115e59",
-    "--color-brand": "#0d9488",
-    "--color-brand-hover": "#0f766e",
+    "--brand": "#2563eb",
+    "--brand-hover": "#1d4ed8",
+    "--brand-soft": "#dbeafe",
+    "--brand-ink": "#1e40af",
+    "--color-brand": "#2563eb",
+    "--color-brand-hover": "#1d4ed8",
   } as React.CSSProperties,
   cobrea: {
     "--brand": "#0fa07a",
