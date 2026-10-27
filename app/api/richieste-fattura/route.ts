@@ -6,8 +6,9 @@ import {
   aggiungiMesi,
   avanzaMese,
   calcolaImporti,
+  contatoreCodiciRichiesta,
+  creaRichieste,
   leggiRicorrenza,
-  nextCodiceRichiesta,
   parseVoci,
   serializzaRichiesta,
   tettoRate,
@@ -110,48 +111,45 @@ export async function POST(request: Request) {
     const dataInvio = body.dataInvio ? new Date(body.dataInvio) : null;
 
     const created = await prisma.$transaction(async (tx) => {
-      const rows = [];
+      const prossimoCodice = contatoreCodiciRichiesta(tx);
+      const righe: Prisma.RichiestaFatturaCreateManyInput[] = [];
       let serieCodice: string | null = null;
       let periodo = { mese, anno };
       for (let i = 0; i < n; i++) {
-        const codice = await nextCodiceRichiesta(tx, periodo.anno);
+        const codice = await prossimoCodice(periodo.anno);
         if (n > 1 && i === 0) serieCodice = codice;
         // Stesso giorno a ogni rata, ultimo del mese se quel giorno non c'è
         const invio = dataInvio && i > 0 ? aggiungiMesi(dataInvio, step * i) : dataInvio;
-        const row = await tx.richiestaFattura.create({
-          data: {
-            codice,
-            clienteId: body.clienteId ? parseInt(body.clienteId, 10) : null,
-            nomeCliente: body.nomeCliente?.trim() || null,
-            contrattoId: body.contrattoId ? parseInt(body.contrattoId, 10) : null,
-            azienda: body.azienda || "Spagna",
-            aziendaNota: body.azienda === "Altro" ? body.aziendaNota || null : null,
-            descrizione,
-            voci: JSON.stringify(voci),
-            imponibile,
-            tipoIva,
-            iva,
-            totale,
-            mese: periodo.mese,
-            anno: periodo.anno,
-            dataInvio: invio,
-            serieCodice,
-            serieIndice: n > 1 ? i + 1 : null,
-            serieTotale: n > 1 ? n : null,
-            ricorrenza,
-            passoMesi,
-            responsabile: body.responsabile?.trim() || null,
-            validazione,
-            validataIl: validazione === "ok" ? new Date() : null,
-            note: body.note?.trim() || null,
-            origine: "manuale",
-          },
-          include: RICHIESTA_INCLUDE,
+        righe.push({
+          codice,
+          clienteId: body.clienteId ? parseInt(body.clienteId, 10) : null,
+          nomeCliente: body.nomeCliente?.trim() || null,
+          contrattoId: body.contrattoId ? parseInt(body.contrattoId, 10) : null,
+          azienda: body.azienda || "Spagna",
+          aziendaNota: body.azienda === "Altro" ? body.aziendaNota || null : null,
+          descrizione,
+          voci: JSON.stringify(voci),
+          imponibile,
+          tipoIva,
+          iva,
+          totale,
+          mese: periodo.mese,
+          anno: periodo.anno,
+          dataInvio: invio,
+          serieCodice,
+          serieIndice: n > 1 ? i + 1 : null,
+          serieTotale: n > 1 ? n : null,
+          ricorrenza,
+          passoMesi,
+          responsabile: body.responsabile?.trim() || null,
+          validazione,
+          validataIl: validazione === "ok" ? new Date() : null,
+          note: body.note?.trim() || null,
+          origine: "manuale",
         });
-        rows.push(row);
         periodo = avanzaMese(periodo.mese, periodo.anno, step);
       }
-      return rows;
+      return creaRichieste(tx, righe);
     });
 
     return NextResponse.json(created.map(serializzaRichiesta));

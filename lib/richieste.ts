@@ -153,11 +153,10 @@ export function aggiungiMesi(data: Date, mesi: number): Date {
   );
 }
 
-// Codice progressivo per anno: RF-2026-0001 (max esistente + 1).
-export async function nextCodiceRichiesta(
+async function ultimoNumeroRichiesta(
   tx: Prisma.TransactionClient,
   anno: number,
-): Promise<string> {
+): Promise<number> {
   const prefix = `RF-${anno}-`;
   const rows = await tx.richiestaFattura.findMany({
     where: { codice: { startsWith: prefix } },
@@ -168,7 +167,44 @@ export async function nextCodiceRichiesta(
     const n = parseInt(r.codice.slice(prefix.length), 10);
     if (!isNaN(n) && n > max) max = n;
   }
-  return `${prefix}${String(max + 1).padStart(4, "0")}`;
+  return max;
+}
+
+const codiceRichiesta = (anno: number, n: number) =>
+  `RF-${anno}-${String(n).padStart(4, "0")}`;
+
+// Codice progressivo per anno: RF-2026-0001 (max esistente + 1).
+export async function nextCodiceRichiesta(
+  tx: Prisma.TransactionClient,
+  anno: number,
+): Promise<string> {
+  return codiceRichiesta(anno, (await ultimoNumeroRichiesta(tx, anno)) + 1);
+}
+
+// Per le serie: legge il massimo di ogni anno una volta sola e poi conta in
+// memoria. Una lettura per rata, con 12+ rate, sforava i 5 s della transazione.
+export function contatoreCodiciRichiesta(tx: Prisma.TransactionClient) {
+  const ultimi = new Map<number, number>();
+  return async (anno: number): Promise<string> => {
+    const n = (ultimi.get(anno) ?? (await ultimoNumeroRichiesta(tx, anno))) + 1;
+    ultimi.set(anno, n);
+    return codiceRichiesta(anno, n);
+  };
+}
+
+// Crea tutte le righe con una sola INSERT e le rilegge con le relazioni,
+// nello stesso ordine.
+export async function creaRichieste(
+  tx: Prisma.TransactionClient,
+  righe: Prisma.RichiestaFatturaCreateManyInput[],
+): Promise<RichiestaConRelazioni[]> {
+  await tx.richiestaFattura.createMany({ data: righe });
+  const codici = righe.map((r) => r.codice);
+  const rows = await tx.richiestaFattura.findMany({
+    where: { codice: { in: codici } },
+    include: RICHIESTA_INCLUDE,
+  });
+  return rows.sort((a, b) => codici.indexOf(a.codice) - codici.indexOf(b.codice));
 }
 
 export const RICHIESTA_INCLUDE = {

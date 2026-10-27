@@ -1,10 +1,11 @@
 import { NextResponse } from "next/server";
+import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import {
-  RICHIESTA_INCLUDE,
   avanzaMese,
   calcolaImporti,
-  nextCodiceRichiesta,
+  contatoreCodiciRichiesta,
+  creaRichieste,
   serializzaRichiesta,
 } from "@/lib/richieste";
 
@@ -80,7 +81,8 @@ export async function POST(request: Request) {
     };
 
     const created = await prisma.$transaction(async (tx) => {
-      const rows = [];
+      const prossimoCodice = contatoreCodiciRichiesta(tx);
+      const righe: Prisma.RichiestaFatturaCreateManyInput[] = [];
       let periodo = { mese: dec.getMonth() + 1, anno: dec.getFullYear() };
 
       if (unaTantum > 0) {
@@ -88,48 +90,38 @@ export async function POST(request: Request) {
           descrUnaTantum.length ? ` (${descrUnaTantum.join(", ")})` : ""
         }`;
         const voci = [{ descrizione, importo: unaTantum }];
-        rows.push(
-          await tx.richiestaFattura.create({
-            data: {
-              ...base,
-              codice: await nextCodiceRichiesta(tx, periodo.anno),
-              descrizione,
-              voci: JSON.stringify(voci),
-              ...calcolaImporti(voci, 0, tipoIva),
-              mese: periodo.mese,
-              anno: periodo.anno,
-              dataInvio: new Date(periodo.anno, periodo.mese - 1, giorno),
-              ricorrenza: "una_tantum",
-            },
-            include: RICHIESTA_INCLUDE,
-          }),
-        );
+        righe.push({
+          ...base,
+          codice: await prossimoCodice(periodo.anno),
+          descrizione,
+          voci: JSON.stringify(voci),
+          ...calcolaImporti(voci, 0, tipoIva),
+          mese: periodo.mese,
+          anno: periodo.anno,
+          dataInvio: new Date(periodo.anno, periodo.mese - 1, giorno),
+          ricorrenza: "una_tantum",
+        });
       }
 
       for (let i = 0; i < n; i++) {
         const descrizione = `${c.oggetto} — Rata ${i + 1}/${n}`;
         const voci = [{ descrizione, importo: c.importoMensile }];
-        rows.push(
-          await tx.richiestaFattura.create({
-            data: {
-              ...base,
-              codice: await nextCodiceRichiesta(tx, periodo.anno),
-              descrizione,
-              voci: JSON.stringify(voci),
-              ...calcolaImporti(voci, 0, tipoIva),
-              mese: periodo.mese,
-              anno: periodo.anno,
-              dataInvio: new Date(periodo.anno, periodo.mese - 1, giorno),
-              serieIndice: i + 1,
-              serieTotale: n,
-              ricorrenza: "mensile",
-            },
-            include: RICHIESTA_INCLUDE,
-          }),
-        );
+        righe.push({
+          ...base,
+          codice: await prossimoCodice(periodo.anno),
+          descrizione,
+          voci: JSON.stringify(voci),
+          ...calcolaImporti(voci, 0, tipoIva),
+          mese: periodo.mese,
+          anno: periodo.anno,
+          dataInvio: new Date(periodo.anno, periodo.mese - 1, giorno),
+          serieIndice: i + 1,
+          serieTotale: n,
+          ricorrenza: "mensile",
+        });
         periodo = avanzaMese(periodo.mese, periodo.anno, 1);
       }
-      return rows;
+      return creaRichieste(tx, righe);
     });
 
     return NextResponse.json(created.map(serializzaRichiesta));
