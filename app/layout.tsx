@@ -11,6 +11,9 @@ const roboto = Roboto({
 export const metadata: Metadata = {
   title: "Anda Dashboard",
   description: "Dashboard — Leonardo Mestre",
+  // In public/ e non in app/: un favicon in app/ non si sostituisce pagina per
+  // pagina, e il modulo pubblico mette l'icona del prodotto.
+  icons: { icon: "/favicon.ico" },
 };
 
 export default function RootLayout({

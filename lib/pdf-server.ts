@@ -12,6 +12,11 @@ type Db = PrismaClient | Prisma.TransactionClient;
 // letto da disco; le misure si leggono dall'intestazione del file.
 // Solo da codice server: usa il file system.
 const LOGO_SERVER = path.join(process.cwd(), "public", "logo-anda-pdf.jpg");
+// Contratto e mandato portano il logo del kit del prodotto; le fatture restano
+// col logo di Anda, che le emette. Niente percorsi calcolati a runtime: Next
+// finirebbe per portare tutto il progetto nel pacchetto della funzione.
+const LOGO_BOOGO = path.join(process.cwd(), "public", "boogo", "boogo-logo-pdf.jpg");
+const LOGO_COBREA = path.join(process.cwd(), "public", "cobrea", "cobrea-logo-pdf.jpg");
 
 function misureJpeg(buf: Buffer): { width: number; height: number } | null {
   let i = 2;
@@ -34,17 +39,21 @@ function misureJpeg(buf: Buffer): { width: number; height: number } | null {
   return null;
 }
 
-let logoCache: LogoPdf | null | undefined;
-export async function logoServer(): Promise<LogoPdf | null> {
-  if (logoCache !== undefined) return logoCache;
+const logoCache = new Map<string, LogoPdf | null>();
+export async function logoServer(prodotto?: string): Promise<LogoPdf | null> {
+  const file = prodotto === "boogo" ? LOGO_BOOGO : prodotto === "cobrea" ? LOGO_COBREA : LOGO_SERVER;
+  const inCache = logoCache.get(file);
+  if (inCache !== undefined) return inCache;
+  let logo: LogoPdf | null = null;
   try {
-    const buf = await readFile(LOGO_SERVER);
+    const buf = await readFile(file);
     const m = misureJpeg(buf);
-    logoCache = m ? { dataUrl: `data:image/jpeg;base64,${buf.toString("base64")}`, ...m } : null;
+    logo = m ? { dataUrl: `data:image/jpeg;base64,${buf.toString("base64")}`, ...m } : null;
   } catch {
-    logoCache = null;
+    logo = null;
   }
-  return logoCache;
+  logoCache.set(file, logo);
+  return logo;
 }
 
 // La scheda fattura nella stessa forma di GET /api/fatture/[id] (date come

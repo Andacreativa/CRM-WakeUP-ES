@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
 import { compilaTesto } from "@/lib/impostazioni";
 import { LOCALE, MANDATO_LEGALE, MESI_L } from "@/lib/abbonamenti-testi";
 import { formattaIban, ibanValido, pulisciIban } from "@/lib/sepa";
-import { IMPOSTA_LABEL, LINGUE, TEMI_PRODOTTO, type Lingua, linguaValida, nomePaese, nomeProdotto } from "@/components/abbonamenti/tipi";
+import { IMPOSTA_LABEL, LINGUE, MARCHI_PRODOTTO, TEMI_PRODOTTO, type Lingua, linguaValida, nomePaese, nomeProdotto } from "@/components/abbonamenti/tipi";
 
 // Area cliente degli abbonati (es / it / en): entra dal link delle email o
 // chiedendo un link con la propria email (niente password). Mostra ogni
@@ -371,6 +371,7 @@ export default function AreaCliente({ linguaIniziale, errore }: { linguaIniziale
   const fatturaLabel = (s: FatturaArea["stato"]) => (s === "pagata" ? t("fatPagata") : s === "devuelta" ? t("fatDevuelta") : t("fatPendiente"));
 
   const tema = (dati?.abbonamenti[0] ? TEMI_PRODOTTO[dati.abbonamenti[0].prodotto] : undefined) as React.CSSProperties | undefined;
+  const marchio = dati?.abbonamenti[0] ? MARCHI_PRODOTTO[dati.abbonamenti[0].prodotto] : undefined;
 
   const chiediLink = async () => {
     setErrLogin(null);
@@ -511,9 +512,14 @@ export default function AreaCliente({ linguaIniziale, errore }: { linguaIniziale
   const testata = () => (
     <div className="flex items-center justify-between gap-3 flex-wrap mb-6">
       <div className="flex items-center gap-3">
-        <span className="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-brand text-white font-bold text-lg">
-          {(dati?.abbonamenti[0] ? nomeProdotto(dati.abbonamenti[0].prodotto) : nomeCreditore).slice(0, 1)}
-        </span>
+        {marchio && dati?.abbonamenti[0] ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={marchio.icona} alt={nomeProdotto(dati.abbonamenti[0].prodotto)} className="w-10 h-10" />
+        ) : (
+          <span className="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-brand text-white font-bold text-lg">
+            {(dati?.abbonamenti[0] ? nomeProdotto(dati.abbonamenti[0].prodotto) : nomeCreditore).slice(0, 1)}
+          </span>
+        )}
         <div>
           <div className="text-lg font-bold leading-tight">{t("titolo")}</div>
           <div className="text-[11px] text-gray-500">

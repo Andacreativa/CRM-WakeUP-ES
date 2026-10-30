@@ -1,6 +1,14 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import FormSuscripcion from "@/components/suscripcion/FormSuscripcion";
-import { linguaValida, prodottoValido } from "@/components/abbonamenti/tipi";
+import { MARCHI_PRODOTTO, linguaValida, prodottoValido } from "@/components/abbonamenti/tipi";
+
+// Icona del prodotto nella scheda del browser, al posto di quella del CRM
+export async function generateMetadata({ params }: { params: Promise<{ prodotto: string }> }): Promise<Metadata> {
+  const { prodotto } = await params;
+  const icona = MARCHI_PRODOTTO[prodotto]?.icona;
+  return icona ? { icons: { icon: icona } } : {};
+}
 
 // /suscripcion/boogo?plan=medium&lang=es
 export default async function SuscripcionPage({

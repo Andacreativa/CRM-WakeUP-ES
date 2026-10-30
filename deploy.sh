@@ -20,4 +20,4 @@ echo "→ Deploy su Vercel..."
 vercel deploy --prod --yes
 
 echo ""
-echo "✅ Online su https://crm-wake-up-es.vercel.app"
+echo "✅ Online su https://andacreativa.vercel.app"

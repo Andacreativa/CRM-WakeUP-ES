@@ -244,25 +244,32 @@ export const labelCls = "text-xs font-medium text-gray-600 block mb-1";
 
 // Colore del prodotto al posto del rosa Anda nelle pagine pubbliche: i
 // token --brand / --color-brand valgono solo dentro la pagina (bottoni,
-// pill, card attiva, link, focus). Boogo = blu della presentazione e della
-// landing (navy #0a2540 + blu); Cobrea = verde «cobro» del logo.
+// pill, card attiva, link, focus). Colori dei marchi in corekit: Boogo in
+// apps/boogo/config/marchio.js, Cobrea in apps/cobrea/config/temi/cobrea.js.
 export const TEMI_PRODOTTO: Record<string, Record<string, string>> = {
   boogo: {
     "--brand": "#2563eb",
     "--brand-hover": "#1d4ed8",
-    "--brand-soft": "#dbeafe",
+    "--brand-soft": "#eff6ff",
     "--brand-ink": "#1e40af",
     "--color-brand": "#2563eb",
     "--color-brand-hover": "#1d4ed8",
   },
   cobrea: {
     "--brand": "#0fa07a",
-    "--brand-hover": "#0c8565",
-    "--brand-soft": "#d6f5ea",
-    "--brand-ink": "#0b6b52",
+    "--brand-hover": "#0b7a5d",
+    "--brand-soft": "#e7f6f1",
+    "--brand-ink": "#0b7a5d",
     "--color-brand": "#0fa07a",
-    "--color-brand-hover": "#0c8565",
+    "--color-brand-hover": "#0b7a5d",
   },
+};
+
+// Logo e icona del prodotto nelle pagine pubbliche: copie dei file del kit
+// (corekit, apps/<prodotto>/public/img/<prodotto>), da non ritoccare.
+export const MARCHI_PRODOTTO: Record<string, { logo: string; icona: string }> = {
+  boogo: { logo: "/boogo/boogo-logo.svg", icona: "/boogo/boogo-icon.svg" },
+  cobrea: { logo: "/cobrea/cobrea-logo.svg", icona: "/cobrea/cobrea-icon.svg" },
 };
 
 // Nome del paese nella lingua del modulo pubblico e dell'area cliente

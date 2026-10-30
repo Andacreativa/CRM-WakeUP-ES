@@ -36,7 +36,7 @@ const esito = async (a: string | null, fn: () => Promise<void>): Promise<EsitoIn
 
 export async function pdfMandato(a: AbbonamentoConRelazioni): Promise<{ buffer: Buffer; nomeFile: string }> {
   const [cfg, , cred] = await getCreditore(prisma);
-  const buffer = await pdfContrattoMandato(a, cred, cfg.giornoAddebito, await logoServer());
+  const buffer = await pdfContrattoMandato(a, cred, cfg.giornoAddebito, await logoServer(a.prodotto));
   return { buffer, nomeFile: `contrato_mandato_${a.codice}.pdf` };
 }
 

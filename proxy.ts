@@ -1,8 +1,23 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { verifySession, SESSION_COOKIE } from "@/lib/auth";
 
+// Indirizzi vecchi del CRM: portano a quello ufficiale (APP_URL), così non
+// tornano nei link che l'app costruisce dall'indirizzo del browser. Cron e feed
+// iCal restano dove sono: i cron di Vercel non seguono i redirect.
+const HOST_VECCHI = new Set(["crm-wake-up-es.vercel.app", "crm-andacreativa.vercel.app"]);
+
 export async function proxy(req: NextRequest) {
   const { pathname, search } = req.nextUrl;
+
+  const ufficiale = process.env.APP_URL?.replace(/\/$/, "");
+  if (
+    ufficiale &&
+    HOST_VECCHI.has(req.headers.get("host") ?? "") &&
+    !pathname.startsWith("/api/cron/") &&
+    pathname !== "/api/calendario/ical"
+  ) {
+    return NextResponse.redirect(`${ufficiale}${pathname}${search}`);
+  }
 
   const token = req.cookies.get(SESSION_COOKIE)?.value;
   const session = await verifySession(token);

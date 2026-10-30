@@ -39,6 +39,12 @@ type RGB = [number, number, number];
 const DARK: RGB = [40, 40, 40];
 const GRAY: RGB = [95, 95, 95];
 const LINEA: RGB = [210, 210, 210];
+// Titoli e filetto della testata col colore del marchio (corekit: Boogo in
+// apps/boogo/config/marchio.js, Cobrea in apps/cobrea/config/temi/cobrea.js).
+const ACCENTI: Record<string, { titolo: RGB; filetto: RGB }> = {
+  boogo: { titolo: [30, 64, 175], filetto: [37, 99, 235] },
+  cobrea: { titolo: [11, 122, 93], filetto: [15, 160, 122] },
+};
 
 const euro = (n: number, lingua: string) =>
   `${n.toLocaleString(LOCALE[linguaValida(lingua)], { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €`;
@@ -62,6 +68,7 @@ export async function pdfContrattoMandato(
 ): Promise<Buffer> {
   const lingua = linguaValida(a.lingua);
   const L = ETICHETTE[lingua];
+  const accento = ACCENTI[a.prodotto];
   const { default: jsPDF } = await import("jspdf");
   const { default: autoTable } = await import("jspdf-autotable");
   const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
@@ -96,7 +103,7 @@ export async function pdfContrattoMandato(
       24.5,
       { align: "right" },
     );
-    doc.setDrawColor(...LINEA);
+    doc.setDrawColor(...(accento?.filetto ?? LINEA));
     doc.line(ML, 29, W - MR, 29);
   };
   const piede = () => {
@@ -116,7 +123,7 @@ export async function pdfContrattoMandato(
   let y = 38;
   doc.setFont("helvetica", "bold");
   doc.setFontSize(13);
-  doc.setTextColor(...DARK);
+  doc.setTextColor(...(accento?.titolo ?? DARK));
   doc.text(L.contratto, ML, y);
   y += 4;
   doc.setFont("helvetica", "normal");
@@ -150,7 +157,7 @@ export async function pdfContrattoMandato(
   y = 38;
   doc.setFont("helvetica", "bold");
   doc.setFontSize(13);
-  doc.setTextColor(...DARK);
+  doc.setTextColor(...(accento?.titolo ?? DARK));
   doc.text(L.mandato, ML, y);
   doc.setFont("helvetica", "normal");
   doc.setFontSize(9);

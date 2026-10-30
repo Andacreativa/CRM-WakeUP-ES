@@ -11,6 +11,7 @@ import {
   IMPOSTA_LABEL,
   LINGUE,
   type Lingua,
+  MARCHI_PRODOTTO,
   PAESE_L,
   TEMI_PRODOTTO,
   importiMensili,
@@ -296,6 +297,7 @@ export default function FormSuscripcion({
   const prodottoChiave = firma?.prodotto ?? dati?.prodotto ?? prodotto ?? "";
   const prodottoNome = nomeProdotto(prodottoChiave);
   const tema = TEMI_PRODOTTO[prodottoChiave] as React.CSSProperties | undefined;
+  const marchio = MARCHI_PRODOTTO[prodottoChiave];
   useEffect(() => {
     if (prodottoNome) document.title = `${prodottoNome} · ${lingua === "it" ? "Abbonamento" : lingua === "en" ? "Subscription" : "Suscripción"}`;
   }, [prodottoNome, lingua]);
@@ -393,9 +395,16 @@ export default function FormSuscripcion({
   const testata = () => (
     <div className="flex items-center justify-between gap-3 flex-wrap mb-6">
       <div className="flex items-center gap-3">
-        <span className="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-brand text-white font-bold text-lg">{prodottoNome.slice(0, 1)}</span>
+        {!marchio && (
+          <span className="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-brand text-white font-bold text-lg">{prodottoNome.slice(0, 1)}</span>
+        )}
         <div>
-          <div className="text-lg font-bold leading-tight">{prodottoNome}</div>
+          {marchio ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={marchio.logo} alt={prodottoNome} className="h-9 w-auto mb-1" />
+          ) : (
+            <div className="text-lg font-bold leading-tight">{prodottoNome}</div>
+          )}
           <div className="text-[11px] text-gray-500">
             {t("per")} {dati?.creditore.nome ?? "Anda Agencia de Publicidad SL"}
           </div>
