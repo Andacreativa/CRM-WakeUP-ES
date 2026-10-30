@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Check, Loader2, ShieldCheck } from "lucide-react";
+import { Check, Loader2, Send, ShieldCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { PAESI } from "@/lib/constants";
 import { compilaTesto } from "@/lib/impostazioni";
@@ -23,6 +23,8 @@ import {
 // dell'intestatario, conto, contratto e mandato SEPA con due spunte. Alla
 // firma l'abbonamento nasce attivo e partono le email. Con `token` è la
 // firma di un abbonamento già creato da Sales (Pro, prezzi concordati).
+// Scegliendo un piano a prezzo libero (Pro) conto e contratto lasciano il posto
+// a un messaggio: parte per email all'agenzia e non crea nessun abbonamento.
 
 interface PianoPub {
   codice: string;
@@ -51,16 +53,24 @@ const T: Record<Lingua, Record<string, string>> = {
   es: {
     titolo: "Suscripción a {producto}",
     sotto: "Elige tu plan, indica tus datos y la cuenta de cargo, y acepta el contrato y la orden de domiciliación. La suscripción se activa al momento.",
+    sottoPreventivo: "Cuéntanos qué necesitas y te prepararemos un presupuesto a medida.",
     firmaTitolo: "Tu suscripción a {producto}",
     firmaSotto: "Revisa tus datos, indica la cuenta de cargo y acepta el contrato y la orden de domiciliación SEPA.",
     passo1: "1. Plan",
     passo2: "2. Titular",
     passo3: "3. Cuenta de cargo",
     passo4: "4. Contrato y orden de domiciliación",
+    passoPreventivo: "3. Tu solicitud",
+    messaggio: "Mensaje",
+    messaggioPh: "Cuéntanos qué necesitas para preparar tu presupuesto.",
+    bottonePreventivo: "Enviar solicitud",
+    okPreventivoTitolo: "¡Solicitud enviada!",
+    okPreventivoTesto: "Hemos recibido tu solicitud del plan {piano}. Te responderemos a {email}.",
+    errPreventivo: "No se ha podido enviar la solicitud. Inténtalo de nuevo o escríbenos a {email}.",
     alMes: "al mes",
     masImp: "más impuestos",
     daPrezzo: "desde",
-    contactanos: "Precio según presupuesto: escríbenos a {email}",
+    contactanos: "Precio según presupuesto: pídelo aquí",
     pianoScelto: "Plan",
     intestatario: "Empresa o nombre y apellidos",
     nif: "NIF / CIF",
@@ -113,16 +123,24 @@ const T: Record<Lingua, Record<string, string>> = {
   it: {
     titolo: "Abbonamento a {producto}",
     sotto: "Scegli il piano, inserisci i tuoi dati e il conto da addebitare, accetta il contratto e il mandato. L'abbonamento si attiva subito.",
+    sottoPreventivo: "Raccontaci di cosa hai bisogno e ti prepariamo un preventivo su misura.",
     firmaTitolo: "Il tuo abbonamento a {producto}",
     firmaSotto: "Controlla i tuoi dati, indica il conto da addebitare e accetta il contratto e il mandato SEPA.",
     passo1: "1. Piano",
     passo2: "2. Intestatario",
     passo3: "3. Conto da addebitare",
     passo4: "4. Contratto e mandato",
+    passoPreventivo: "3. La tua richiesta",
+    messaggio: "Messaggio",
+    messaggioPh: "Raccontaci di cosa hai bisogno per preparare il tuo preventivo.",
+    bottonePreventivo: "Invia la richiesta",
+    okPreventivoTitolo: "Richiesta inviata!",
+    okPreventivoTesto: "Abbiamo ricevuto la tua richiesta per il piano {piano}. Ti risponderemo a {email}.",
+    errPreventivo: "Non siamo riusciti a inviare la richiesta. Riprova o scrivici a {email}.",
     alMes: "al mese",
     masImp: "più imposte",
     daPrezzo: "da",
-    contactanos: "Prezzo su preventivo: scrivici a {email}",
+    contactanos: "Prezzo su preventivo: richiedilo qui",
     pianoScelto: "Piano",
     intestatario: "Azienda oppure nome e cognome",
     nif: "P.IVA / NIF",
@@ -175,16 +193,24 @@ const T: Record<Lingua, Record<string, string>> = {
   en: {
     titolo: "Subscribe to {producto}",
     sotto: "Choose your plan, enter your details and the account to be debited, and accept the agreement and the mandate. The subscription is activated right away.",
+    sottoPreventivo: "Tell us what you need and we will prepare a tailored quote.",
     firmaTitolo: "Your {producto} subscription",
     firmaSotto: "Check your details, enter the account to be debited and accept the agreement and the SEPA mandate.",
     passo1: "1. Plan",
     passo2: "2. Account holder",
     passo3: "3. Bank account",
     passo4: "4. Agreement and mandate",
+    passoPreventivo: "3. Your request",
+    messaggio: "Message",
+    messaggioPh: "Tell us what you need so we can prepare your quote.",
+    bottonePreventivo: "Send request",
+    okPreventivoTitolo: "Request sent!",
+    okPreventivoTesto: "We have received your request for the {piano} plan. We will reply to {email}.",
+    errPreventivo: "We could not send your request. Please try again or write to {email}.",
     alMes: "per month",
     masImp: "plus taxes",
     daPrezzo: "from",
-    contactanos: "Price on quote: write to {email}",
+    contactanos: "Price on quote: request it here",
     pianoScelto: "Plan",
     intestatario: "Company or full name",
     nif: "Tax ID",
@@ -265,7 +291,9 @@ export default function FormSuscripcion({
   const [erroreGen, setErroreGen] = useState<string | null>(null);
   const [invio, setInvio] = useState(false);
   const [fatto, setFatto] = useState<{ codice: string; mandatoRef: string; email: string; emailInviata: boolean } | null>(null);
-  const t = (k: string, v: Record<string, string> = {}) => compilaTesto(T[lingua][k] ?? k, v);
+  const [messaggio, setMessaggio] = useState("");
+  const [preventivoInviato, setPreventivoInviato] = useState(false);
+  const t =(k: string, v: Record<string, string> = {}) => compilaTesto(T[lingua][k] ?? k, v);
 
   useEffect(() => {
     const url = token ? `/api/public/suscripcion?token=${encodeURIComponent(token)}` : `/api/public/suscripcion?prodotto=${prodotto}`;
@@ -294,7 +322,8 @@ export default function FormSuscripcion({
   const set = (k: keyof typeof form, v: string) => setForm((f) => ({ ...f, [k]: v }));
   const pianoSel = useMemo(() => dati?.piani.find((p) => p.codice === piano) ?? null, [dati, piano]);
   const firma = dati?.firma ?? null;
-  const prodottoChiave = firma?.prodotto ?? dati?.prodotto ?? prodotto ?? "";
+  const preventivo = !firma && !!pianoSel?.prezzoLibero;
+  const prodottoChiave =firma?.prodotto ?? dati?.prodotto ?? prodotto ?? "";
   const prodottoNome = nomeProdotto(prodottoChiave);
   const tema = TEMI_PRODOTTO[prodottoChiave] as React.CSSProperties | undefined;
   const marchio = MARCHI_PRODOTTO[prodottoChiave];
@@ -338,6 +367,44 @@ export default function FormSuscripcion({
 
   const ibanOk = !form.iban.trim() || ibanValido(form.iban);
 
+  const erroriCampi = (lista: { campo: string; codice: string }[]) => {
+    const m: Record<string, string> = {};
+    for (const e of lista) {
+      m[e.campo] = t(e.codice === "obbligatorio" ? "errObbligatorio" : e.codice === "email" ? "errEmail" : e.codice === "nif" ? "errNif" : e.codice === "iban" ? "errIban" : "errBic");
+    }
+    return m;
+  };
+
+  const inviaPreventivo = async () => {
+    setErroreGen(null);
+    setErrori({});
+    const locali: Record<string, string> = {};
+    if (!form.intestatario.trim()) locali.intestatario = t("errObbligatorio");
+    if (!form.email.trim()) locali.email = t("errObbligatorio");
+    if (!messaggio.trim()) locali.messaggio = t("errObbligatorio");
+    if (Object.keys(locali).length) return setErrori(locali);
+    setInvio(true);
+    try {
+      const res = await fetch("/api/public/suscripcion", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...form, messaggio, tipo: "preventivo", prodotto: dati?.prodotto, pianoCodice: piano, lingua }),
+      });
+      const j = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        if (res.status === 429) return setErroreGen(t("errTroppi"));
+        if (Array.isArray(j.errori) && j.errori.length) return setErrori(erroriCampi(j.errori));
+        return setErroreGen(t("errPreventivo", { email: dati?.creditore.email ?? "" }));
+      }
+      setPreventivoInviato(true);
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    } catch {
+      setErroreGen(t("errPreventivo", { email: dati?.creditore.email ?? "" }));
+    } finally {
+      setInvio(false);
+    }
+  };
+
   const invia = async () => {
     setErroreGen(null);
     setErrori({});
@@ -373,13 +440,7 @@ export default function FormSuscripcion({
         if (j.error === "link_non_valido") return setErroreGen(t("linkNonValido"));
         if (j.error === "Link scaduto") return setErroreGen(t("linkScaduto"));
         if (j.error === "Abbonamento già firmato") return setErroreGen(t("giaFirmato"));
-        if (Array.isArray(j.errori) && j.errori.length) {
-          const m: Record<string, string> = {};
-          for (const e of j.errori as { campo: string; codice: string }[]) {
-            m[e.campo] = t(e.codice === "obbligatorio" ? "errObbligatorio" : e.codice === "email" ? "errEmail" : e.codice === "nif" ? "errNif" : e.codice === "iban" ? "errIban" : "errBic");
-          }
-          return setErrori(m);
-        }
+        if (Array.isArray(j.errori) && j.errori.length) return setErrori(erroriCampi(j.errori));
         return setErroreGen(t("errGenerico"));
       }
       setFatto(j);
@@ -449,6 +510,20 @@ export default function FormSuscripcion({
       </div>
     );
   }
+  if (preventivoInviato) {
+    return (
+      <div className="max-w-2xl mx-auto px-4 py-10" style={tema}>
+        {testata()}
+        <div className="glass-card rounded-2xl p-8 text-center space-y-3">
+          <span className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-ok/15 text-ok">
+            <Check className="w-7 h-7" />
+          </span>
+          <h1 className="text-xl font-bold">{t("okPreventivoTitolo")}</h1>
+          <p className="text-sm text-gray-700">{t("okPreventivoTesto", { piano: pianoSel?.nome ?? "", email: form.email.trim() })}</p>
+        </div>
+      </div>
+    );
+  }
   if (firma && (firma.stato !== "in_attesa" || firma.scaduto)) {
     return (
       <div className="max-w-2xl mx-auto px-4 py-10" style={tema}>
@@ -476,7 +551,7 @@ export default function FormSuscripcion({
     <div className="max-w-3xl mx-auto px-4 py-8" style={tema}>
       {testata()}
       <h1 className="text-2xl font-bold mb-1">{firma ? t("firmaTitolo", { producto: prodottoNome }) : t("titolo", { producto: prodottoNome })}</h1>
-      <p className="text-sm text-gray-600 mb-6">{firma ? t("firmaSotto") : t("sotto")}</p>
+      <p className="text-sm text-gray-600 mb-6">{firma ? t("firmaSotto") : preventivo ? t("sottoPreventivo") : t("sotto")}</p>
 
       <div className="space-y-5">
         {/* 1. Piano */}
@@ -497,9 +572,12 @@ export default function FormSuscripcion({
                   <button
                     key={p.codice}
                     type="button"
-                    disabled={p.prezzoLibero}
-                    onClick={() => setPiano(p.codice)}
-                    className={cn("text-left rounded-xl border p-4 transition-all disabled:cursor-default", active ? "border-brand bg-brand/5 ring-2 ring-brand/20" : "border-gray-200 bg-white hover:border-gray-300", p.prezzoLibero && "opacity-80")}
+                    onClick={() => {
+                      setPiano(p.codice);
+                      setErrori({});
+                      setErroreGen(null);
+                    }}
+                    className={cn("text-left rounded-xl border p-4 transition-all", active ? "border-brand bg-brand/5 ring-2 ring-brand/20" : "border-gray-200 bg-white hover:border-gray-300")}
                   >
                     <div className="flex items-center justify-between">
                       <span className="text-sm font-bold">{p.nome}</span>
@@ -514,9 +592,7 @@ export default function FormSuscripcion({
                       <p className="text-xs text-gray-600 mt-2 leading-snug">{p.descrizione[lingua] || p.descrizione.es}</p>
                     )}
                     {p.prezzoLibero && (
-                      <p className="text-[11px] text-brand mt-2">
-                        {t("contactanos", { email: dati.creditore.email })}
-                      </p>
+                      <p className="text-[11px] text-brand mt-2">{t("contactanos")}</p>
                     )}
                   </button>
                 );
@@ -550,104 +626,132 @@ export default function FormSuscripcion({
           </div>
         </section>
 
-        {/* 3. Conto */}
-        <section className="glass-card rounded-2xl p-5">
-          <h2 className="text-sm font-bold mb-3">{t("passo3")}</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        {/* campo trappola per i bot: invisibile */}
+        <div className="absolute -left-[9999px] top-0" aria-hidden="true">
+          <label>
+            Website
+            <input value={form.sitio_web} onChange={(e) => set("sitio_web", e.target.value)} tabIndex={-1} autoComplete="off" />
+          </label>
+        </div>
+
+        {preventivo ? (
+          /* 3. Richiesta di preventivo (piano Pro) */
+          <section className="glass-card rounded-2xl p-5 space-y-4">
+            <h2 className="text-sm font-bold">{t("passoPreventivo")}</h2>
             <div>
-              <label className={labelCls}>{t("titolareConto")}</label>
-              <input value={form.titolareConto} onChange={(e) => set("titolareConto", e.target.value)} onFocus={() => !form.titolareConto && set("titolareConto", form.intestatario)} className={cn(inputCls, errori.titolareConto && "border-bad")} />
-              {errori.titolareConto && <p className="text-[11px] text-bad mt-1">{errori.titolareConto}</p>}
-            </div>
-            <div>
-              <label className={labelCls}>{t("iban")}</label>
-              <input
-                value={form.iban}
-                onChange={(e) => set("iban", e.target.value)}
-                onBlur={() => set("iban", form.iban.trim() ? formattaIban(form.iban) : "")}
-                className={cn(inputCls, "font-mono", (!ibanOk || errori.iban) && "border-bad")}
-                placeholder="ES00 0000 0000 0000 0000 0000"
-                inputMode="text"
-                autoComplete="off"
+              <label className={labelCls}>{t("messaggio")}</label>
+              <textarea
+                value={messaggio}
+                onChange={(e) => setMessaggio(e.target.value)}
+                rows={6}
+                maxLength={4000}
+                placeholder={t("messaggioPh")}
+                className={cn(inputCls, "resize-y", errori.messaggio && "border-bad")}
               />
-              {(errori.iban || !ibanOk) && <p className="text-[11px] text-bad mt-1">{errori.iban ?? t("ibanErr")}</p>}
+              {errori.messaggio && <p className="text-[11px] text-bad mt-1">{errori.messaggio}</p>}
             </div>
-            {campo("bic", t("bic"), { mono: true })}
-          </div>
-          {/* campo trappola per i bot: invisibile */}
-          <div className="absolute -left-[9999px] top-0" aria-hidden="true">
-            <label>
-              Website
-              <input value={form.sitio_web} onChange={(e) => set("sitio_web", e.target.value)} tabIndex={-1} autoComplete="off" />
-            </label>
-          </div>
-        </section>
 
-        {/* 4. Contratto e mandato */}
-        <section className="glass-card rounded-2xl p-5 space-y-4">
-          <h2 className="text-sm font-bold">{t("passo4")}</h2>
-          {importi ? (
-            <div className="rounded-xl bg-gray-50 p-4 text-sm">
-              <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">{t("riepilogo")}</div>
-              <div className="flex justify-between">
-                <span>
-                  {t("pianoScelto")}: {firma?.pianoNome ?? pianoSel?.nome}
-                </span>
-                <span>{euro(importi.prezzo, lingua)}</span>
-              </div>
-              <div className="flex justify-between text-gray-600">
-                <span>
-                  {t("imposta")}: {IMPOSTA_LABEL[lingua][importi.tipoIva]}
-                </span>
-                <span>{euro(importi.totale - importi.prezzo, lingua)}</span>
-              </div>
-              <div className="flex justify-between font-bold text-base mt-1 pt-1 border-t border-gray-200">
-                <span>{t("totale")}</span>
-                <span>{euro(importi.totale, lingua)}</span>
-              </div>
-              <div className="text-[11px] text-gray-500 mt-2">
-                {t("giorno", { giorno: String(dati.giornoAddebito) })} · {t("primoMese", { mese: primoMese })}
-              </div>
-            </div>
-          ) : (
-            <p className="text-xs text-gray-500">{t("errPiano")}</p>
-          )}
+            {erroreGen && <div className="text-sm text-bad bg-bad/10 border border-bad/30 rounded-lg px-3 py-2">{erroreGen}</div>}
 
-          <div>
-            <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">{t("contratto")}</div>
-            <pre className="text-[12px] leading-relaxed whitespace-pre-wrap font-sans bg-white border border-gray-200 rounded-lg p-3 max-h-64 overflow-y-auto text-gray-700">{testoContratto || "…"}</pre>
-          </div>
+            <button type="button" onClick={inviaPreventivo} disabled={invio} className="btn btn-primary w-full h-11 text-base disabled:opacity-60">
+              {invio ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />} {invio ? t("inviando") : t("bottonePreventivo")}
+            </button>
+          </section>
+        ) : (
+          <>
+            {/* 3. Conto */}
+            <section className="glass-card rounded-2xl p-5">
+              <h2 className="text-sm font-bold mb-3">{t("passo3")}</h2>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div>
+                  <label className={labelCls}>{t("titolareConto")}</label>
+                  <input value={form.titolareConto} onChange={(e) => set("titolareConto", e.target.value)} onFocus={() => !form.titolareConto && set("titolareConto", form.intestatario)} className={cn(inputCls, errori.titolareConto && "border-bad")} />
+                  {errori.titolareConto && <p className="text-[11px] text-bad mt-1">{errori.titolareConto}</p>}
+                </div>
+                <div>
+                  <label className={labelCls}>{t("iban")}</label>
+                  <input
+                    value={form.iban}
+                    onChange={(e) => set("iban", e.target.value)}
+                    onBlur={() => set("iban", form.iban.trim() ? formattaIban(form.iban) : "")}
+                    className={cn(inputCls, "font-mono", (!ibanOk || errori.iban) && "border-bad")}
+                    placeholder="ES00 0000 0000 0000 0000 0000"
+                    inputMode="text"
+                    autoComplete="off"
+                  />
+                  {(errori.iban || !ibanOk) && <p className="text-[11px] text-bad mt-1">{errori.iban ?? t("ibanErr")}</p>}
+                </div>
+                {campo("bic", t("bic"), { mono: true })}
+              </div>
+            </section>
 
-          <div>
-            <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">{t("mandato")}</div>
-            <div className="bg-white border border-gray-200 rounded-lg p-3 text-[12px] text-gray-700 space-y-1">
+            {/* 4. Contratto e mandato */}
+            <section className="glass-card rounded-2xl p-5 space-y-4">
+              <h2 className="text-sm font-bold">{t("passo4")}</h2>
+              {importi ? (
+                <div className="rounded-xl bg-gray-50 p-4 text-sm">
+                  <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">{t("riepilogo")}</div>
+                  <div className="flex justify-between">
+                    <span>
+                      {t("pianoScelto")}: {firma?.pianoNome ?? pianoSel?.nome}
+                    </span>
+                    <span>{euro(importi.prezzo, lingua)}</span>
+                  </div>
+                  <div className="flex justify-between text-gray-600">
+                    <span>
+                      {t("imposta")}: {IMPOSTA_LABEL[lingua][importi.tipoIva]}
+                    </span>
+                    <span>{euro(importi.totale - importi.prezzo, lingua)}</span>
+                  </div>
+                  <div className="flex justify-between font-bold text-base mt-1 pt-1 border-t border-gray-200">
+                    <span>{t("totale")}</span>
+                    <span>{euro(importi.totale, lingua)}</span>
+                  </div>
+                  <div className="text-[11px] text-gray-500 mt-2">
+                    {t("giorno", { giorno: String(dati.giornoAddebito) })} · {t("primoMese", { mese: primoMese })}
+                  </div>
+                </div>
+              ) : (
+                <p className="text-xs text-gray-500">{t("errPiano")}</p>
+              )}
+
               <div>
-                <strong>{t("acreedor")}:</strong> {dati.creditore.nome} · NIF {dati.creditore.nif} · {dati.creditore.indirizzo}
+                <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">{t("contratto")}</div>
+                <pre className="text-[12px] leading-relaxed whitespace-pre-wrap font-sans bg-white border border-gray-200 rounded-lg p-3 max-h-64 overflow-y-auto text-gray-700">{testoContratto || "…"}</pre>
               </div>
+
               <div>
-                <strong>{t("identificador")}:</strong> <span className="font-mono">{dati.creditore.identificador}</span>
+                <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">{t("mandato")}</div>
+                <div className="bg-white border border-gray-200 rounded-lg p-3 text-[12px] text-gray-700 space-y-1">
+                  <div>
+                    <strong>{t("acreedor")}:</strong> {dati.creditore.nome} · NIF {dati.creditore.nif} · {dati.creditore.indirizzo}
+                  </div>
+                  <div>
+                    <strong>{t("identificador")}:</strong> <span className="font-mono">{dati.creditore.identificador}</span>
+                  </div>
+                  <div className="text-gray-500">{t("ref")}</div>
+                  <p className="pt-2 leading-relaxed">{MANDATO_LEGALE[lingua]}</p>
+                </div>
               </div>
-              <div className="text-gray-500">{t("ref")}</div>
-              <p className="pt-2 leading-relaxed">{MANDATO_LEGALE[lingua]}</p>
-            </div>
-          </div>
 
-          <label className="flex items-start gap-2 text-sm cursor-pointer">
-            <input type="checkbox" checked={accettoContratto} onChange={(e) => setAccettoContratto(e.target.checked)} className="mt-1" />
-            <span>{t("accettoContratto")}</span>
-          </label>
-          <label className="flex items-start gap-2 text-sm cursor-pointer">
-            <input type="checkbox" checked={accettoMandato} onChange={(e) => setAccettoMandato(e.target.checked)} className="mt-1" />
-            <span>{t("accettoMandato", { azienda: dati.creditore.nome })}</span>
-          </label>
+              <label className="flex items-start gap-2 text-sm cursor-pointer">
+                <input type="checkbox" checked={accettoContratto} onChange={(e) => setAccettoContratto(e.target.checked)} className="mt-1" />
+                <span>{t("accettoContratto")}</span>
+              </label>
+              <label className="flex items-start gap-2 text-sm cursor-pointer">
+                <input type="checkbox" checked={accettoMandato} onChange={(e) => setAccettoMandato(e.target.checked)} className="mt-1" />
+                <span>{t("accettoMandato", { azienda: dati.creditore.nome })}</span>
+              </label>
 
-          {erroreGen && <div className="text-sm text-bad bg-bad/10 border border-bad/30 rounded-lg px-3 py-2">{erroreGen}</div>}
+              {erroreGen && <div className="text-sm text-bad bg-bad/10 border border-bad/30 rounded-lg px-3 py-2">{erroreGen}</div>}
 
-          <button type="button" onClick={invia} disabled={invio} className="btn btn-primary w-full h-11 text-base disabled:opacity-60">
-            {invio ? <Loader2 className="w-4 h-4 animate-spin" /> : <ShieldCheck className="w-4 h-4" />} {invio ? t("inviando") : t("bottone")}
-          </button>
-          <p className="text-[11px] text-gray-500 text-center">{t("firmaNota")}</p>
-        </section>
+              <button type="button" onClick={invia} disabled={invio} className="btn btn-primary w-full h-11 text-base disabled:opacity-60">
+                {invio ? <Loader2 className="w-4 h-4 animate-spin" /> : <ShieldCheck className="w-4 h-4" />} {invio ? t("inviando") : t("bottone")}
+              </button>
+              <p className="text-[11px] text-gray-500 text-center">{t("firmaNota")}</p>
+            </section>
+          </>
+        )}
       </div>
     </div>
   );

@@ -15,6 +15,7 @@ export async function inviaMail(m: {
   oggetto: string;
   testo: string;
   nomeMittente?: string;
+  rispondiA?: string;
   allegati?: { filename: string; content: Buffer; contentType?: string }[];
 }) {
   if (!mailConfigurata()) throw new Error("Posta non configurata");
@@ -28,6 +29,7 @@ export async function inviaMail(m: {
   await trasporto.sendMail({
     from: m.nomeMittente ? { name: m.nomeMittente, address: mittenteMail() } : mittenteMail(),
     to: m.a,
+    replyTo: m.rispondiA,
     subject: m.oggetto,
     text: m.testo,
     attachments: m.allegati,

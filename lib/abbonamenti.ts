@@ -186,6 +186,10 @@ export interface DatiAbbonamento {
   bic: string | null;
   lingua: Lingua;
 }
+export type RichiestaPreventivo = Pick<
+  DatiAbbonamento,
+  "intestatario" | "nif" | "email" | "telefono" | "via" | "cap" | "citta" | "provincia" | "paese" | "lingua"
+> & { messaggio: string };
 export interface ErroreCampo {
   campo: string;
   codice: "obbligatorio" | "email" | "nif" | "iban" | "bic";
@@ -235,6 +239,30 @@ export function leggiDatiAbbonamento(
     if (dati.bic && !bicValido(dati.bic)) errori.push({ campo: "bic", codice: "bic" });
   }
   return { dati, errori };
+}
+
+// Richiesta di preventivo per un piano a prezzo libero (Pro): obbligatori solo
+// nome, email e messaggio, il resto serve a chi risponde. Niente abbonamento.
+export function leggiRichiestaPreventivo(body: Record<string, unknown>): { richiesta: RichiestaPreventivo; errori: ErroreCampo[] } {
+  const richiesta: RichiestaPreventivo = {
+    intestatario: str(body.intestatario, 140),
+    nif: strNull(body.nif, 30),
+    email: str(body.email, 160).toLowerCase(),
+    telefono: strNull(body.telefono, 40),
+    via: strNull(body.via, 140),
+    cap: strNull(body.cap, 16),
+    citta: strNull(body.citta, 80),
+    provincia: strNull(body.provincia, 80),
+    paese: PAESI.includes(str(body.paese)) ? str(body.paese) : "Spagna",
+    messaggio: str(body.messaggio, 4000),
+    lingua: linguaValida(body.lingua),
+  };
+  const errori: ErroreCampo[] = [];
+  if (!richiesta.intestatario) errori.push({ campo: "intestatario", codice: "obbligatorio" });
+  if (!richiesta.email) errori.push({ campo: "email", codice: "obbligatorio" });
+  else if (!emailValida(richiesta.email)) errori.push({ campo: "email", codice: "email" });
+  if (!richiesta.messaggio) errori.push({ campo: "messaggio", codice: "obbligatorio" });
+  return { richiesta, errori };
 }
 
 // ── Cliente CRM: stessa P.IVA, poi stessa email, altrimenti nuovo ────────

@@ -2,11 +2,11 @@ import { prisma } from "@/lib/prisma";
 import { inviaMail, mailConfigurata } from "@/lib/mail";
 import { compilaTesto } from "@/lib/impostazioni";
 import { getCreditore } from "@/lib/abbonamenti-impostazioni";
-import { pdfContrattoMandato } from "@/lib/mandato-pdf";
+import { indirizzoRiga, pdfContrattoMandato } from "@/lib/mandato-pdf";
 import { logoServer, pdfFatturaServer } from "@/lib/pdf-server";
 import { messaggioFattura } from "@/lib/fattura-pdf";
 import { fmt } from "@/lib/constants";
-import { dataTesto, euroTesto, type AbbonamentoConRelazioni } from "@/lib/abbonamenti";
+import { dataTesto, euroTesto, type AbbonamentoConRelazioni, type RichiestaPreventivo } from "@/lib/abbonamenti";
 import { CAMBIO_CONTO_TESTI, DISDETTA_TESTI, LOCALE, MESI_L } from "@/lib/abbonamenti-testi";
 import { DURATA_LINK_ACCESSO, linkArea } from "@/lib/area-token";
 import { formattaIban, mascheraIban } from "@/lib/sepa";
@@ -87,6 +87,30 @@ export async function inviaConfermaFirma(a: AbbonamentoConRelazioni, base: strin
     });
   });
   return { cliente, agenzia };
+}
+
+// Richiesta di preventivo dal modulo pubblico (piano Pro): solo all'agenzia,
+// con il «rispondi» sull'email del cliente. Nel gestionale non resta nulla.
+export async function inviaRichiestaPreventivo(r: RichiestaPreventivo & { prodotto: string; pianoNome: string }): Promise<EsitoInvio> {
+  const [cfg] = await getCreditore(prisma);
+  const prodotto = nomeProdotto(r.prodotto);
+  return esito(cfg.notificaEmail.trim() || null, async () => {
+    await inviaMail({
+      a: cfg.notificaEmail.trim(),
+      oggetto: `Richiesta preventivo ${prodotto} ${r.pianoNome} — ${r.intestatario.replace(/\s+/g, " ")}`,
+      testo:
+        `${r.intestatario} chiede un preventivo per ${prodotto}, piano ${r.pianoNome}.\n\n` +
+        `Messaggio:\n${r.messaggio}\n\n` +
+        `Email: ${r.email}\n` +
+        `Telefono: ${r.telefono ?? "—"}\n` +
+        `NIF: ${r.nif ?? "—"}\n` +
+        `Indirizzo: ${indirizzoRiga(r) || "—"}\n` +
+        `Lingua del modulo: ${r.lingua}\n\n` +
+        `Per rispondere usa «Rispondi»: va a ${r.email}.\n`,
+      nomeMittente: "Anda Finance",
+      rispondiA: r.email,
+    });
+  });
 }
 
 // Link di firma per l'abbonamento creato da Sales

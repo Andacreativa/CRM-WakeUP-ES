@@ -7,10 +7,11 @@ import {
   creaAbbonamento,
   firmaConToken,
   leggiDatiAbbonamento,
+  leggiRichiestaPreventivo,
   listaPiani,
 } from "@/lib/abbonamenti";
 import { getCreditore } from "@/lib/abbonamenti-impostazioni";
-import { inviaConfermaFirma } from "@/lib/abbonamenti-mail";
+import { inviaConfermaFirma, inviaRichiestaPreventivo } from "@/lib/abbonamenti-mail";
 import { linguaValida, prodottoValido } from "@/components/abbonamenti/tipi";
 
 export const runtime = "nodejs";
@@ -82,13 +83,32 @@ export async function GET(request: Request) {
   return NextResponse.json({ ...comune, prodotto, piani, firma: null });
 }
 
+// Piano a prezzo libero (Pro): niente firma né abbonamento, solo l'email
+// all'agenzia. Se non parte il cliente deve saperlo: la richiesta non resta altrove.
+async function richiestaPreventivo(body: Record<string, unknown>) {
+  if (!prodottoValido(body.prodotto)) return NextResponse.json({ error: "prodotto_sconosciuto" }, { status: 404 });
+  const piani = await listaPiani(prisma, body.prodotto, true);
+  const piano = piani.find((p) => p.codice === body.pianoCodice && p.prezzoLibero);
+  if (!piano) return NextResponse.json({ error: "piano_non_valido" }, { status: 400 });
+  const { richiesta, errori } = leggiRichiestaPreventivo(body);
+  if (errori.length) return NextResponse.json({ error: "dati", errori }, { status: 400 });
+  const invio = await inviaRichiestaPreventivo({ ...richiesta, prodotto: body.prodotto, pianoNome: piano.nome });
+  if (!invio.inviata) {
+    console.error("[POST /api/public/suscripcion] preventivo non inviato:", invio.errore);
+    return NextResponse.json({ error: "invio_fallito" }, { status: 502 });
+  }
+  return NextResponse.json({ ok: true });
+}
+
 // Firma: crea l'abbonamento (Base / Medium) oppure completa quello del link.
+// Con tipo=preventivo manda la richiesta del piano Pro.
 export async function POST(request: Request) {
   const ip = ipDi(request);
   try {
     const body = (await request.json().catch(() => ({}))) as Record<string, unknown>;
     if (String(body.sitio_web ?? "").trim()) return NextResponse.json({ ok: true }); // trappola per i bot
     if (troppiTentativi(ip)) return NextResponse.json({ error: "troppi_tentativi" }, { status: 429 });
+    if (body.tipo === "preventivo") return await richiestaPreventivo(body);
     if (body.accettoContratto !== true || body.accettoMandato !== true) {
       return NextResponse.json({ error: "consensi", errori: [] }, { status: 400 });
     }
