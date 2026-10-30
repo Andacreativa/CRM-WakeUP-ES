@@ -21,7 +21,7 @@ import { exportPDF } from "@/lib/export";
 import { useAnno } from "@/lib/anno-context";
 import { messaggioSollecito } from "@/lib/fattura-pdf";
 import { type ImpostazioniFatture } from "@/lib/impostazioni";
-import { cn, matchQ } from "@/lib/utils";
+import { cn, linkGmail, matchQ } from "@/lib/utils";
 
 interface Fattura {
   id: number;
@@ -163,7 +163,7 @@ export default function ScadenzePage() {
   };
 
   // Con la casella aziendale collegata parte da lì (e il sollecito si registra
-  // solo se l'invio riesce); altrimenti si apre il programma di posta.
+  // solo se l'invio riesce); altrimenti si apre Gmail con il messaggio pronto.
   const sollecita = async (f: Fattura) => {
     const mail = cfg && messaggioSollecito(f, cfg);
     if (!mail) return;
@@ -171,7 +171,7 @@ export default function ScadenzePage() {
       .then((r) => (r.ok ? r.json() : null))
       .catch(() => null)) as { configurata: boolean; mittente: string | null } | null;
     if (!posta?.configurata) {
-      window.location.href = `mailto:${mail.a}?subject=${encodeURIComponent(mail.oggetto)}&body=${encodeURIComponent(mail.testo)}`;
+      window.open(linkGmail(mail.a, mail.oggetto, mail.testo), "_blank");
       registraSollecito(f, "email");
       return;
     }

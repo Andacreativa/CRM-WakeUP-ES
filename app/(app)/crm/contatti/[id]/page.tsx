@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { ArrowLeft, Check, Copy, Mail, Pencil, Phone, Star, Trash2 } from "lucide-react";
 import { STATO_LEAD } from "@/lib/lead";
+import { linkGmail } from "@/lib/utils";
 import ContattoFormModal, { type ContattoBase } from "@/components/crm/ContattoFormModal";
 
 // Scheda del contatto: dati della persona, a chi è collegato; le azioni
@@ -103,7 +104,7 @@ export default function ContattoPage() {
           <Trash2 /> Elimina
         </button>
         {c.email && (
-          <a href={`mailto:${c.email}`} className="btn btn-primary">
+          <a href={linkGmail(c.email)} target="_blank" rel="noreferrer" className="btn btn-primary">
             <Mail /> Scrivi
           </a>
         )}
@@ -123,7 +124,7 @@ export default function ContattoPage() {
             <div className="v">
               {c.email ? (
                 <>
-                  <a href={`mailto:${c.email}`} className="hover:text-brand hover:underline">{c.email}</a>
+                  <a href={linkGmail(c.email)} target="_blank" rel="noreferrer" className="hover:text-brand hover:underline">{c.email}</a>
                   {copiaBtn("email", c.email)}
                 </>
               ) : (

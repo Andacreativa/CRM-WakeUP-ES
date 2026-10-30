@@ -1,5 +1,6 @@
 import { fmt, MESI } from "./constants";
 import { IMPOSTAZIONI_FATTURE_DEFAULT, compilaTesto, togliInciso, type ImpostazioniFatture } from "./impostazioni";
+import { linkGmail } from "./utils";
 import { leggiVoci, nonSoggetta, residuo, type FatturaDettaglio, type ImportiFattura } from "./fatture";
 
 // PDF della singola fattura e messaggio email. I dati dell'emittente, la
@@ -679,8 +680,8 @@ export async function scaricaFatturaPDF(id: number) {
 
 // Manda la fattura al cliente e la segna come inviata; restituisce la data
 // d'invio (null se non parte). Con la casella aziendale collegata l'email
-// parte da lì con il PDF allegato; altrimenti si scarica il PDF e si apre il
-// programma di posta con il messaggio pronto.
+// parte da lì con il PDF allegato; altrimenti si scarica il PDF e si apre
+// Gmail nel browser con il messaggio pronto.
 export async function inviaFatturaMail(id: number): Promise<string | null> {
   const [[f, cfg], posta] = await Promise.all([
     caricaFatturaECfg(id),
@@ -712,12 +713,12 @@ export async function inviaFatturaMail(id: number): Promise<string | null> {
 
   if (
     !confirm(
-      `Inviare la fattura ${f.numero ?? ""} a ${msg.a}?\n\nSi scarica il PDF da allegare e si apre il programma di posta con il messaggio pronto.`,
+      `Inviare la fattura ${f.numero ?? ""} a ${msg.a}?\n\nSi scarica il PDF da allegare e si apre Gmail con il messaggio pronto.`,
     )
   )
     return null;
   await exportFatturaPDF(f, cfg);
-  window.location.href = `mailto:${msg.a}?subject=${encodeURIComponent(msg.oggetto)}&body=${encodeURIComponent(msg.testo)}`;
+  window.open(linkGmail(msg.a, msg.oggetto, msg.testo), "_blank");
   const dataInvio = new Date().toISOString();
   await fetch(`/api/fatture/${id}`, {
     method: "PATCH",

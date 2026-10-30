@@ -13,8 +13,8 @@ export async function GET(_: Request, { params }: Ctx) {
   return NextResponse.json(rows);
 }
 
-// Registra un sollecito fatto altrove (telefono, programma di posta
-// dell'utente): qui resta solo la traccia. L'invio vero è in ./email.
+// Registra un sollecito fatto altrove (telefono, Gmail aperto dal browser):
+// qui resta solo la traccia. L'invio vero è in ./email.
 export async function POST(request: Request, { params }: Ctx) {
   const { id } = await params;
   const fatturaId = parseInt(id, 10);
