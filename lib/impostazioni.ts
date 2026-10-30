@@ -111,18 +111,18 @@ export const IMPOSTAZIONI_FATTURE_DEFAULT: ImpostazioniFatture = {
   smhNome: "SocialMediaHouse S.R.L.",
   smhCompensoMensile: 2700,
   smhRitenuta: 15,
-  invioOggettoIt: "Fattura {numero} — {azienda}",
+  invioOggettoIt: "Fattura {numero} — Anda Agencia de Publicidad SL",
   invioTestoIt:
-    "Gentile {cliente},\n\nin allegato la fattura {numero} del {data} di {importo}, con scadenza {scadenza}.\nPagamento con bonifico sull'IBAN {iban}.\n\nCordiali saluti,\n{azienda}",
-  invioOggettoEs: "Factura {numero} — {azienda}",
+    "Gentile {cliente},\n\nle inviamo in allegato la fattura {numero} del {data}.\n\n{riepilogo}\n\nPuò effettuare il pagamento con bonifico bancario, indicando il numero della fattura nella causale.\n\nPer qualsiasi chiarimento può rispondere direttamente a questa email.\n\nUn cordiale saluto,\n\nAmministrazione\nAnda Agencia de Publicidad SL",
+  invioOggettoEs: "Factura {numero} — Anda Agencia de Publicidad SL",
   invioTestoEs:
-    "Estimado/a {cliente},\n\nadjuntamos la factura {numero} del {data} por importe de {importo}, con vencimiento {scadenza}.\nPago mediante transferencia al IBAN {iban}.\n\nUn cordial saludo,\n{azienda}",
+    "Estimado/a {cliente}:\n\nle enviamos adjunta la factura {numero} del {data}.\n\n{riepilogo}\n\nPuede realizar el pago mediante transferencia bancaria, indicando el número de factura en el concepto.\n\nPara cualquier aclaración, puede responder directamente a este correo.\n\nUn cordial saludo,\n\nAdministración\nAnda Agencia de Publicidad SL",
   sollecitoOggettoIt: "Sollecito pagamento fattura {numero}",
   sollecitoTestoIt:
-    "Gentile {cliente},\n\nle ricordiamo che la fattura {numero} di {importo}, con scadenza {scadenza}, risulta a oggi non saldata.\nLa preghiamo di provvedere al pagamento con bonifico sull'IBAN {iban}.\n\nCordiali saluti,\n{azienda}",
+    "Gentile {cliente},\n\nle ricordiamo che la fattura {numero} risulta a oggi non saldata.\n\n{riepilogo}\n\nLa preghiamo di provvedere al pagamento con bonifico bancario, indicando il numero della fattura nella causale.\n\nSe ha già effettuato il pagamento, non tenga conto di questo messaggio. Per qualsiasi chiarimento può rispondere direttamente a questa email.\n\nUn cordiale saluto,\n\nAmministrazione\nAnda Agencia de Publicidad SL",
   sollecitoOggettoEs: "Recordatorio de pago factura {numero}",
   sollecitoTestoEs:
-    "Estimado/a {cliente},\n\nle recordamos que la factura {numero} de {importo}, con vencimiento {scadenza}, a día de hoy no consta como pagada.\nLe rogamos realice el pago mediante transferencia al IBAN {iban}.\n\nUn cordial saludo,\n{azienda}",
+    "Estimado/a {cliente}:\n\nle recordamos que la factura {numero} a día de hoy no consta como pagada.\n\n{riepilogo}\n\nLe rogamos realice el pago mediante transferencia bancaria, indicando el número de factura en el concepto.\n\nSi ya ha efectuado el pago, no tenga en cuenta este mensaje. Para cualquier aclaración, puede responder directamente a este correo.\n\nUn cordial saludo,\n\nAdministración\nAnda Agencia de Publicidad SL",
   commercialistaNome: "",
   commercialistaEmail: "",
   informeOggetto: "Informe {periodo} — {azienda}",
@@ -135,6 +135,15 @@ export const CAUSE_IGIC = ["E1", "E2", "E3", "E4", "E5", "E6", "E7", "E8", "N1",
 
 const CHIAVE = "fatture";
 
+// Testi standard salvati nel 2026 prima del riquadro {riepilogo}: non sono una
+// scelta dell'utente, quindi valgono i nuovi. Un testo cambiato a mano resta.
+const SOLLECITI_SUPERATI = {
+  sollecitoTestoIt:
+    "Gentile {cliente},\n\nle ricordiamo che la fattura {numero} di {importo}, con scadenza {scadenza}, risulta a oggi non saldata.\nLa preghiamo di provvedere al pagamento con bonifico sull'IBAN {iban}.\n\nCordiali saluti,\n{azienda}",
+  sollecitoTestoEs:
+    "Estimado/a {cliente},\n\nle recordamos que la factura {numero} de {importo}, con vencimiento {scadenza}, a día de hoy no consta como pagada.\nLe rogamos realice el pago mediante transferencia al IBAN {iban}.\n\nUn cordial saludo,\n{azienda}",
+} as const;
+
 export async function getImpostazioniFatture(db: Db): Promise<ImpostazioniFatture> {
   const row = await db.impostazione.findUnique({ where: { chiave: CHIAVE } });
   let saved: Partial<ImpostazioniFatture> = {};
@@ -144,6 +153,9 @@ export async function getImpostazioniFatture(db: Db): Promise<ImpostazioniFattur
     } catch {
       saved = {};
     }
+  }
+  for (const k of ["sollecitoTestoIt", "sollecitoTestoEs"] as const) {
+    if (saved[k] === SOLLECITI_SUPERATI[k]) delete saved[k];
   }
   return { ...IMPOSTAZIONI_FATTURE_DEFAULT, ...saved };
 }

@@ -19,13 +19,16 @@ import {
 import { fmt, MESI, paeseGruppo } from "@/lib/constants";
 import { exportPDF } from "@/lib/export";
 import { useAnno } from "@/lib/anno-context";
-import { compilaTesto, type ImpostazioniFatture } from "@/lib/impostazioni";
+import { messaggioSollecito } from "@/lib/fattura-pdf";
+import { type ImpostazioniFatture } from "@/lib/impostazioni";
 import { cn, matchQ } from "@/lib/utils";
 
 interface Fattura {
   id: number;
   numero: string | null;
   importo: number;
+  iva?: number | null;
+  tipoIva?: string | null;
   pagato: boolean;
   mese: number;
   anno: number;
@@ -159,27 +162,28 @@ export default function ScadenzePage() {
     } else notify(j.error ?? "Registrazione non riuscita");
   };
 
-  const mailtoSollecito = (f: Fattura) => {
-    if (!cfg || !f.cliente?.email) return null;
-    const es = (f.cliente.paese ?? "").toLowerCase() === "spagna";
-    const v = {
-      cliente: f.cliente.nome,
-      numero: f.numero ?? "",
-      importo: fmt(residuo(f)),
-      scadenza: f.scadenza ? new Date(f.scadenza).toLocaleDateString(es ? "es-ES" : "it-IT") : "",
-      iban: cfg.iban,
-      azienda: cfg.ragioneSociale,
-    };
-    const subject = compilaTesto(es ? cfg.sollecitoOggettoEs : cfg.sollecitoOggettoIt, v);
-    const body = compilaTesto(es ? cfg.sollecitoTestoEs : cfg.sollecitoTestoIt, v);
-    return `mailto:${f.cliente.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-  };
-
-  const sollecita = (f: Fattura) => {
-    const href = mailtoSollecito(f);
-    if (!href) return;
-    window.location.href = href;
-    registraSollecito(f, "email");
+  // Con la casella aziendale collegata parte da lì (e il sollecito si registra
+  // solo se l'invio riesce); altrimenti si apre il programma di posta.
+  const sollecita = async (f: Fattura) => {
+    const mail = cfg && messaggioSollecito(f, cfg);
+    if (!mail) return;
+    const posta = (await fetch("/api/mail")
+      .then((r) => (r.ok ? r.json() : null))
+      .catch(() => null)) as { configurata: boolean; mittente: string | null } | null;
+    if (!posta?.configurata) {
+      window.location.href = `mailto:${mail.a}?subject=${encodeURIComponent(mail.oggetto)}&body=${encodeURIComponent(mail.testo)}`;
+      registraSollecito(f, "email");
+      return;
+    }
+    if (!confirm(`Inviare il sollecito della fattura ${f.numero ?? ""} a ${mail.a}?\n\nParte da ${posta.mittente}.`)) return;
+    const res = await fetch(`/api/fatture/${f.id}/solleciti/email`, { method: "POST" });
+    const j = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      notify(j.error ?? "Invio non riuscito");
+      return;
+    }
+    notify(j.totale === 1 ? `Primo sollecito inviato a ${mail.a}` : `Sollecito inviato a ${mail.a} (è il n° ${j.totale})`);
+    load();
   };
 
   const telefonata = (f: Fattura) => {
@@ -399,7 +403,7 @@ export default function ScadenzePage() {
                             onClick={() => sollecita(f)}
                             disabled={!email || !cfg}
                             className="p-1.5 rounded-lg text-gray-400 hover:text-brand hover:bg-brand/10 disabled:opacity-30 disabled:cursor-not-allowed"
-                            title={email ? "Sollecita via email (apre la posta e registra il sollecito)" : "Il cliente non ha un'email"}
+                            title={email ? "Sollecita via email e registra il sollecito" : "Il cliente non ha un'email"}
                           >
                             <Send className="w-4 h-4" />
                           </button>

@@ -1,6 +1,6 @@
 import { fmt, MESI } from "./constants";
-import { compilaTesto, togliInciso, type ImpostazioniFatture } from "./impostazioni";
-import { leggiVoci, nonSoggetta, type FatturaDettaglio } from "./fatture";
+import { IMPOSTAZIONI_FATTURE_DEFAULT, compilaTesto, togliInciso, type ImpostazioniFatture } from "./impostazioni";
+import { leggiVoci, nonSoggetta, residuo, type FatturaDettaglio, type ImportiFattura } from "./fatture";
 
 // PDF della singola fattura e messaggio email. I dati dell'emittente, la
 // lingua, il colore e i testi arrivano da Impostazioni › Fatture.
@@ -505,7 +505,79 @@ export async function creaFatturaPDF(
 // ── Email ────────────────────────────────────────────────────────────────
 // Destinatario, oggetto e testo del messaggio che accompagna la fattura.
 // I testi si cambiano in Impostazioni › Email di invio fattura. Spagnolo per
-// i clienti spagnoli, italiano per gli altri (come i solleciti).
+// i clienti spagnoli, italiano per gli altri (come i solleciti). {riepilogo}
+// nel testo è il riquadro con importo, scadenza e dati del bonifico; la
+// versione solo testo serve al fallback mailto e a chi non legge l'HTML.
+const esc = (s: string) =>
+  s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+
+type Riepilogo = { importo: string[]; scadenza: string[] | null; bonifico: string[][] };
+
+function riepilogoTesto(r: Riepilogo) {
+  return [r.importo, r.scadenza, ...r.bonifico]
+    .filter((x): x is string[] => !!x)
+    .map(([etichetta, valore]) => `${etichetta}: ${valore}`)
+    .join("\n");
+}
+
+function riepilogoHtml(r: Riepilogo, colore: string) {
+  const etichetta = "font-size:12px;line-height:18px;color:#6b7280;text-transform:uppercase;letter-spacing:0.5px";
+  const scadenza = r.scadenza
+    ? `<td align="right" valign="bottom" style="padding-bottom:3px">` +
+      `<div style="${etichetta}">${esc(r.scadenza[0])}</div>` +
+      `<div style="font-size:17px;line-height:24px;font-weight:bold;color:#111827">${esc(r.scadenza[1])}</div></td>`
+    : "";
+  // inline-block: sul telefono il valore scende intero sotto l'etichetta e
+  // l'IBAN non si spezza a metà
+  const bonifico = r.bonifico
+    .map(
+      ([e, v]) =>
+        `<div style="padding:5px 0"><span style="display:inline-block;min-width:112px;font-size:13px;line-height:21px;color:#6b7280">${esc(e)}</span>` +
+        `<span style="display:inline-block;font-size:15px;line-height:21px;font-weight:bold;color:#111827">${esc(v)}</span></div>`,
+    )
+    .join("");
+  return (
+    `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" ` +
+    `style="border-collapse:collapse;margin:24px 0;background:#f7f7f8;border-top:3px solid ${colore}">` +
+    `<tr><td style="padding:20px 24px"><table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>` +
+    `<td valign="bottom"><div style="${etichetta}">${esc(r.importo[0])}</div>` +
+    `<div style="font-size:28px;line-height:36px;font-weight:bold;color:#111827">${esc(r.importo[1])}</div></td>` +
+    scadenza +
+    `</tr></table></td></tr>` +
+    (bonifico
+      ? `<tr><td style="padding:14px 24px 16px;border-top:1px solid #e5e7eb">${bonifico}</td></tr>`
+      : "") +
+    `</table>`
+  );
+}
+
+const paragrafiHtml = (testo: string) =>
+  testo
+    .trim()
+    .split(/\n\s*\n/)
+    .filter(Boolean)
+    .map((p) => `<p style="margin:0 0 16px">${esc(p).replace(/\n/g, "<br>")}</p>`)
+    .join("");
+
+function corpoMessaggio(testo: string, v: Record<string, string>, riepilogo: Riepilogo, cfg: ImpostazioniFatture) {
+  const colore = /^#[0-9a-f]{3,8}$/i.test(cfg.colore) ? cfg.colore : IMPOSTAZIONI_FATTURE_DEFAULT.colore;
+  const parti = compilaTesto(testo, { ...v, riepilogo: "{riepilogo}" }).split("{riepilogo}");
+  return {
+    testo: parti.join(riepilogoTesto(riepilogo)),
+    html:
+      `<div style="max-width:560px;font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:24px;color:#1f2937">` +
+      parti.map(paragrafiHtml).join(riepilogoHtml(riepilogo, colore)) +
+      `</div>`,
+  };
+}
+
+const datiBonifico = (cfg: ImpostazioniFatture, numero: string, es: boolean) =>
+  [
+    ["IBAN", cfg.iban.replace(/\s+/g, "").replace(/(.{4})(?=.)/g, "$1 ")],
+    ["Beneficiario", cfg.ragioneSociale],
+    [es ? "Concepto" : "Causale", numero && `${es ? "Factura" : "Fattura"} ${numero}`],
+  ].filter(([, valore]) => valore);
+
 export function messaggioFattura(
   f: {
     numero: string | null;
@@ -516,7 +588,7 @@ export function messaggioFattura(
     cliente: { nome: string; paese: string; email?: string | null } | null;
   },
   cfg: ImpostazioniFatture,
-): { a: string; oggetto: string; testo: string } | null {
+): { a: string; oggetto: string; testo: string; html: string } | null {
   if (!f.cliente?.email) return null;
   const es = (f.cliente.paese ?? "").toLowerCase() === "spagna";
   const loc = es ? "es-ES" : "it-IT";
@@ -538,7 +610,53 @@ export function messaggioFattura(
   return {
     a: f.cliente.email,
     oggetto: compilaTesto(oggetto, v),
-    testo: compilaTesto(testo, v),
+    ...corpoMessaggio(
+      testo,
+      v,
+      {
+        importo: [es ? "Importe" : "Importo", v.importo],
+        scadenza: v.scadenza ? [es ? "Vencimiento" : "Scadenza", v.scadenza] : null,
+        bonifico: datiBonifico(cfg, v.numero, es),
+      },
+      cfg,
+    ),
+  };
+}
+
+// Sollecito: stessa impaginazione. L'importo è quanto manca da saldare, sul
+// lordo: è la cifra che il cliente deve bonificare.
+export function messaggioSollecito(
+  f: ImportiFattura & {
+    numero: string | null;
+    scadenza: string | Date | null;
+    acconti?: { importo: number }[];
+    cliente: { nome: string; paese: string; email?: string | null } | null;
+  },
+  cfg: ImpostazioniFatture,
+): { a: string; oggetto: string; testo: string; html: string } | null {
+  if (!f.cliente?.email) return null;
+  const es = (f.cliente.paese ?? "").toLowerCase() === "spagna";
+  const v = {
+    cliente: f.cliente.nome,
+    numero: f.numero ?? "",
+    importo: fmt(residuo(f, true)),
+    scadenza: f.scadenza ? new Date(f.scadenza).toLocaleDateString(es ? "es-ES" : "it-IT") : "",
+    iban: cfg.iban,
+    azienda: cfg.ragioneSociale,
+  };
+  return {
+    a: f.cliente.email,
+    oggetto: compilaTesto(es ? cfg.sollecitoOggettoEs : cfg.sollecitoOggettoIt, v),
+    ...corpoMessaggio(
+      es ? cfg.sollecitoTestoEs : cfg.sollecitoTestoIt,
+      v,
+      {
+        importo: [es ? "Importe pendiente" : "Importo da saldare", v.importo],
+        scadenza: v.scadenza ? [es ? "Vencimiento" : "Scadenza", v.scadenza] : null,
+        bonifico: datiBonifico(cfg, v.numero, es),
+      },
+      cfg,
+    ),
   };
 }
 

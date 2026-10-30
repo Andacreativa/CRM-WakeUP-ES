@@ -14,6 +14,7 @@ export async function inviaMail(m: {
   a: string;
   oggetto: string;
   testo: string;
+  html?: string;
   nomeMittente?: string;
   rispondiA?: string;
   allegati?: { filename: string; content: Buffer; contentType?: string }[];
@@ -32,6 +33,7 @@ export async function inviaMail(m: {
     replyTo: m.rispondiA,
     subject: m.oggetto,
     text: m.testo,
+    html: m.html,
     attachments: m.allegati,
   });
 }

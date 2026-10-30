@@ -144,6 +144,7 @@ export async function inviaFatturaServer(fatturaId: number): Promise<EsitoInvio>
       a: msg.a,
       oggetto: msg.oggetto,
       testo: msg.testo,
+      html: msg.html,
       nomeMittente: fatt.ragioneSociale,
       allegati: [{ filename: pdf.nomeFile, content: pdf.buffer, contentType: "application/pdf" }],
     });

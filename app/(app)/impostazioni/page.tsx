@@ -399,7 +399,7 @@ export default function ImpostazioniPage() {
 
       <Sezione
         titolo="Email di invio fattura"
-        sotto="Testi usati dal bottone Invia email nella fattura (il PDF va in allegato). Spagnolo per i clienti spagnoli, italiano per gli altri. Segnaposto: {cliente} {numero} {data} {importo} {scadenza} {iban} {azienda}. Se la fattura non ha scadenza, l'inciso fra virgole con {scadenza} viene tolto."
+        sotto="Testi usati dal bottone Invia email nella fattura (il PDF va in allegato). Spagnolo per i clienti spagnoli, italiano per gli altri. Segnaposto: {cliente} {numero} {data} {importo} {scadenza} {iban} {azienda}. {riepilogo} è il riquadro con importo, scadenza e dati del bonifico. Se la fattura non ha scadenza, l'inciso fra virgole con {scadenza} viene tolto."
       >
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-3">
@@ -410,7 +410,7 @@ export default function ImpostazioniPage() {
               <textarea
                 value={cfg.invioTestoIt}
                 onChange={(e) => set("invioTestoIt", e.target.value)}
-                className={cn(inputCls, "min-h-[180px] font-mono text-xs")}
+                className={cn(inputCls, "min-h-[280px] font-mono text-xs")}
               />
             </div>
           </div>
@@ -422,7 +422,7 @@ export default function ImpostazioniPage() {
               <textarea
                 value={cfg.invioTestoEs}
                 onChange={(e) => set("invioTestoEs", e.target.value)}
-                className={cn(inputCls, "min-h-[180px] font-mono text-xs")}
+                className={cn(inputCls, "min-h-[280px] font-mono text-xs")}
               />
             </div>
           </div>
@@ -431,7 +431,7 @@ export default function ImpostazioniPage() {
 
       <Sezione
         titolo="Solleciti"
-        sotto="Testi usati dal bottone Sollecita nelle scadenze. Segnaposto: {cliente} {numero} {importo} {scadenza} {iban} {azienda}"
+        sotto="Testi usati dal bottone Sollecita nelle scadenze. Segnaposto: {cliente} {numero} {importo} {scadenza} {iban} {azienda}. {riepilogo} è il riquadro con importo da saldare, scadenza e dati del bonifico."
       >
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-3">
@@ -442,7 +442,7 @@ export default function ImpostazioniPage() {
               <textarea
                 value={cfg.sollecitoTestoIt}
                 onChange={(e) => set("sollecitoTestoIt", e.target.value)}
-                className={cn(inputCls, "min-h-[180px] font-mono text-xs")}
+                className={cn(inputCls, "min-h-[280px] font-mono text-xs")}
               />
             </div>
           </div>
@@ -454,7 +454,7 @@ export default function ImpostazioniPage() {
               <textarea
                 value={cfg.sollecitoTestoEs}
                 onChange={(e) => set("sollecitoTestoEs", e.target.value)}
-                className={cn(inputCls, "min-h-[180px] font-mono text-xs")}
+                className={cn(inputCls, "min-h-[280px] font-mono text-xs")}
               />
             </div>
           </div>

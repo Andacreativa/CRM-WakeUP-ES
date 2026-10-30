@@ -35,6 +35,7 @@ export async function POST(
       a: msg.a,
       oggetto: msg.oggetto,
       testo: msg.testo,
+      html: msg.html,
       nomeMittente: cfg.ragioneSociale,
       allegati: [
         {
