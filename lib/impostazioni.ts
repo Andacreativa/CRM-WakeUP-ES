@@ -33,6 +33,9 @@ export interface ImpostazioniFatture {
   // Le rettificative hanno una serie a parte (art. 6 del regolamento di
   // fatturazione): stesso formato, prefisso diverso
   numeroPrefissoRettifica: string;
+  // Le proforma non sono fatture: serie loro, stesso formato, non consumano
+  // mai un numero di fattura
+  numeroPrefissoProforma: string;
   // VeriFactu: spento = le fatture si registrano a mano come prima; prova =
   // ambiente di test dell'AEAT (senza valore fiscale); produzione = invio vero
   vfModo: "spento" | "prova" | "produzione";
@@ -60,6 +63,11 @@ export interface ImpostazioniFatture {
   invioTestoIt: string;
   invioOggettoEs: string;
   invioTestoEs: string;
+  // Email di invio della proforma (bottone «Invia email» nella proforma)
+  proformaOggettoIt: string;
+  proformaTestoIt: string;
+  proformaOggettoEs: string;
+  proformaTestoEs: string;
   // Solleciti
   sollecitoOggettoIt: string;
   sollecitoTestoIt: string;
@@ -94,6 +102,7 @@ export const IMPOSTAZIONI_FATTURE_DEFAULT: ImpostazioniFatture = {
   numeroPartenza: 1,
   resetAnnuale: true,
   numeroPrefissoRettifica: "R",
+  numeroPrefissoProforma: "PF",
   vfModo: "spento",
   vfNombreSistema: "Anda Finance",
   vfIdSistema: "AF",
@@ -117,6 +126,12 @@ export const IMPOSTAZIONI_FATTURE_DEFAULT: ImpostazioniFatture = {
   invioOggettoEs: "Factura {numero} — Anda Agencia de Publicidad SL",
   invioTestoEs:
     "Estimado/a {cliente}:\n\nle enviamos adjunta la factura {numero} del {data}.\n\n{riepilogo}\n\nPuede realizar el pago mediante transferencia bancaria, indicando el número de factura en el concepto.\n\nPara cualquier aclaración, puede responder directamente a este correo.\n\nUn cordial saludo,\n\nAdministración\nAnda Agencia de Publicidad SL",
+  proformaOggettoIt: "Proforma {numero} — Anda Agencia de Publicidad SL",
+  proformaTestoIt:
+    "Gentile {cliente},\n\nle inviamo in allegato la fattura proforma {numero} del {data}.\n\n{riepilogo}\n\nLa proforma non è una fattura: la fattura le sarà inviata a parte. Può effettuare il pagamento con bonifico bancario, indicando il numero della proforma nella causale.\n\nPer qualsiasi chiarimento può rispondere direttamente a questa email.\n\nUn cordiale saluto,\n\nAmministrazione\nAnda Agencia de Publicidad SL",
+  proformaOggettoEs: "Factura proforma {numero} — Anda Agencia de Publicidad SL",
+  proformaTestoEs:
+    "Estimado/a {cliente}:\n\nle enviamos adjunta la factura proforma {numero} del {data}.\n\n{riepilogo}\n\nLa proforma no es una factura: la factura se le enviará por separado. Puede realizar el pago mediante transferencia bancaria, indicando el número de la proforma en el concepto.\n\nPara cualquier aclaración, puede responder directamente a este correo.\n\nUn cordial saludo,\n\nAdministración\nAnda Agencia de Publicidad SL",
   sollecitoOggettoIt: "Sollecito pagamento fattura {numero}",
   sollecitoTestoIt:
     "Gentile {cliente},\n\nle ricordiamo che la fattura {numero} risulta a oggi non saldata.\n\n{riepilogo}\n\nLa preghiamo di provvedere al pagamento con bonifico bancario, indicando il numero della fattura nella causale.\n\nSe ha già effettuato il pagamento, non tenga conto di questo messaggio. Per qualsiasi chiarimento può rispondere direttamente a questa email.\n\nUn cordiale saluto,\n\nAmministrazione\nAnda Agencia de Publicidad SL",
@@ -274,6 +289,25 @@ export async function prossimoNumeroFattura(
   }
   const next = Math.max(cfg.numeroPartenza || 1, max + 1);
   return formattaNumero(cfg.numeroFormato, cfg.numeroPrefisso, anno, next);
+}
+
+// Serie delle proforma: stesso formato e stesso reset delle fatture, prefisso
+// suo, contatore sulla tabella Proforma (non tocca la serie delle fatture)
+export async function prossimoNumeroProforma(
+  db: Db,
+  anno: number,
+  imp?: ImpostazioniFatture,
+): Promise<string> {
+  const cfg = imp ?? (await getImpostazioniFatture(db));
+  const prefisso = cfg.numeroPrefissoProforma.trim() || "PF";
+  const re = regexNumero(cfg.numeroFormato, prefisso, cfg.resetAnnuale ? anno : null);
+  const rows = await db.proforma.findMany({ select: { numero: true } });
+  let max = 0;
+  for (const r of rows) {
+    const m = re.exec(r.numero);
+    if (m && parseInt(m[1], 10) > max) max = parseInt(m[1], 10);
+  }
+  return formattaNumero(cfg.numeroFormato, prefisso, anno, max + 1);
 }
 
 // ── Testi con segnaposto (email di invio, solleciti) ──────────────────────

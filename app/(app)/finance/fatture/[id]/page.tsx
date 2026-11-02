@@ -14,6 +14,7 @@ import {
   Copy,
   FileDown,
   FileSignature,
+  FileText,
   Mail,
   Pencil,
   Plus,
@@ -207,7 +208,14 @@ export default function FatturaPage() {
     if (await azione("emetti", { numero: numeroScelto })) load();
   };
   const eliminaBozza = async () => {
-    if (!confirm("Eliminare questa bozza? Non è una fattura: sparisce e basta.")) return;
+    if (
+      !confirm(
+        f.proforma
+          ? `Eliminare questa bozza? Non è una fattura: sparisce e la proforma ${f.proforma.numero} torna aperta.`
+          : "Eliminare questa bozza? Non è una fattura: sparisce e basta.",
+      )
+    )
+      return;
     const res = await fetch(`/api/fatture/${f.id}`, { method: "DELETE" });
     if (!res.ok) return alert("Eliminazione non riuscita.");
     router.replace("/finance/fatture?tab=bozze");
@@ -372,7 +380,14 @@ export default function FatturaPage() {
               {f.tipoRettifica === "S" ? "Sostituisce" : "Rettifica di"} {f.rettificaDi.numero ?? "—"}
             </Link>
           )}
-          {!f.richiesta && !f.rettificaDi && <span className="tag tag-soft-warn">Creata manualmente</span>}
+          {f.proforma && (
+            <Link href={`/finance/fatture/proforma/${f.proforma.id}`} className="tag tag-brand hover:underline">
+              Da proforma {f.proforma.numero}
+            </Link>
+          )}
+          {!f.richiesta && !f.rettificaDi && !f.proforma && (
+            <span className="tag tag-soft-warn">Creata manualmente</span>
+          )}
         </div>
       </div>
 
@@ -657,8 +672,24 @@ export default function FatturaPage() {
                 </span>
                 <ArrowRight className="w-4 h-4 text-gray-400 shrink-0" />
               </Link>
-            ) : (
+            ) : f.proforma ? null : (
               <p className="text-xs text-gray-400">Nessuna richiesta collegata (fattura manuale).</p>
+            )}
+            {f.proforma && (
+              <Link
+                href={`/finance/fatture/proforma/${f.proforma.id}`}
+                className={cn(
+                  "flex items-center gap-2.5 rounded-lg bg-gray-50 px-3 py-2.5 text-[13px] text-gray-900 hover:bg-brand/10",
+                  f.richiesta && "mt-2",
+                )}
+              >
+                <FileText className="w-4 h-4 text-brand shrink-0" />
+                <span className="flex-1 min-w-0">
+                  Proforma {f.proforma.numero}
+                  <span className="block text-[11px] text-gray-500">La fattura nasce da questa proforma</span>
+                </span>
+                <ArrowRight className="w-4 h-4 text-gray-400 shrink-0" />
+              </Link>
             )}
             {f.rettifiche.map((r) => (
               <Link

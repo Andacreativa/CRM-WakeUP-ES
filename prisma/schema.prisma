@@ -25,6 +25,7 @@ model Cliente {
   smh          Boolean   @default(false)
   createdAt    DateTime    @default(now())
   fatture      Fattura[]
+  proforma     Proforma[]
   contratti    Contratto[]
   richiesteFattura RichiestaFattura[]
   rinnoviSiti  RinnovoSito[]
@@ -97,10 +98,49 @@ model Fattura {
   abbinamentiBancari AbbinamentoBancario[]
   registriVerifactu  RegistroVerifactu[]
   addebitoSepa       AddebitoSepa?
+  proforma           Proforma?
 
   @@index([contrattoId])
   @@index([commercialeId])
   @@index([rettificaDiId])
+}
+
+// Proforma: il documento con gli importi che si manda al cliente prima della
+// fattura. Non ha valore fiscale, non va a VeriFactu e non entra nel
+// fatturato: per questo vive in una tabella sua (Dashboard, Banca, Informe e
+// Bilancio leggono solo Fattura) e ha una serie di numeri sua, così non
+// consuma mai un numero di fattura. «Crea fattura» ne fa una bozza collegata.
+model Proforma {
+  id             Int         @id @default(autoincrement())
+  numero         String      @unique
+  data           DateTime
+  validaFino     DateTime?
+  clienteId      Int?
+  cliente        Cliente?    @relation(fields: [clienteId], references: [id], onDelete: SetNull)
+  mese           Int
+  anno           Int
+  descrizione    String?
+  voci           String      @default("[]") // JSON [{ descrizione, quantita, prezzo }], come Fattura
+  importo        Float // imponibile
+  tipoIva        String      @default("igic_exenta") // igic_exenta | igic7
+  iva            Float       @default(0)
+  causaIgic      String?
+  commercialeId  Int?
+  commercialeRef Dipendente? @relation("ProformaCommerciale", fields: [commercialeId], references: [id], onDelete: SetNull)
+  note           String?
+  stato          String      @default("aperta") // aperta | convertita | annullata
+  annullataIl    DateTime?
+  convertitaIl   DateTime?
+  fatturaId      Int?        @unique
+  fattura        Fattura?    @relation(fields: [fatturaId], references: [id], onDelete: SetNull)
+  inviata        Boolean     @default(false)
+  dataInvio      DateTime?
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  @@index([clienteId])
+  @@index([anno])
+  @@index([commercialeId])
 }
 
 // Registri di fatturazione VERI*FACTU: uno per ogni emissione, correzione o
@@ -295,6 +335,7 @@ model Dipendente {
   pagamenti        PagamentoDipendente[]
   pagamentiMensili PagamentoMensile[]
   fattureCommerciale Fattura[] @relation("FatturaCommerciale")
+  proformaCommerciale Proforma[] @relation("ProformaCommerciale")
 }
 
 // Registro pagamenti mensili per persona: una riga per voce (stipendio,

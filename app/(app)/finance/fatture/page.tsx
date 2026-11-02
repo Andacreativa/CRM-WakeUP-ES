@@ -38,6 +38,9 @@ import {
 import { PageSizeSelect, PageNav } from "@/components/Pagination";
 import ImportFattureModal from "@/components/ImportFattureModal";
 import FatturaFormModal from "@/components/fatture/FatturaFormModal";
+import ProformaFormModal from "@/components/fatture/ProformaFormModal";
+import ProformaLista from "@/components/fatture/ProformaLista";
+import type { Proforma } from "@/lib/proforma";
 import StatoVf from "@/components/fatture/StatoVf";
 import RowMenu from "@/components/RowMenu";
 import Spunta from "@/components/Spunta";
@@ -69,7 +72,8 @@ const numeroKey = (n: string | null): number => {
 
 // Sotto-tab della pagina (come "Fatture emesse" di Northstar). Le bozze
 // sono fatture senza numero, da completare ed emettere; le proforma sono
-// ancora un segnaposto. Le fatture da emettere stanno solo in Sales ›
+// documenti senza valore fiscale, in una tabella loro (con «Crea fattura»
+// diventano una bozza). Le fatture da emettere stanno solo in Sales ›
 // Richieste fattura.
 type TabFatture = "emesse" | "bozze" | "proforma";
 const TAB_VALIDE: TabFatture[] = ["emesse", "bozze", "proforma"];
@@ -83,6 +87,8 @@ export default function FatturePage() {
   const router = useRouter();
   const [fatture, setFatture] = useState<Fattura[]>([]);
   const [bozze, setBozze] = useState<Fattura[]>([]);
+  const [proforma, setProforma] = useState<Proforma[]>([]);
+  const [showProforma, setShowProforma] = useState(false);
   const [clienti, setClienti] = useState<Cliente[]>([]);
   const [commerciali, setCommerciali] = useState<
     { id: number; nome: string; cognome: string | null; percentualeCommissione: number }[]
@@ -204,13 +210,15 @@ export default function FatturePage() {
   const load = async () => {
     const params = new URLSearchParams({ annullate: "1" });
     if (anno > 0) params.set("anno", String(anno));
-    const [f, b, c] = await Promise.all([
+    const [f, b, c, pf] = await Promise.all([
       (await fetch(`/api/fatture?${params}`)).json() as Promise<unknown>,
       (await fetch("/api/fatture?bozze=1")).json() as Promise<unknown>,
       (await fetch("/api/clienti")).json() as Promise<unknown>,
+      (await fetch(`/api/proforma${anno > 0 ? `?anno=${anno}` : ""}`)).json() as Promise<unknown>,
     ]);
     setFatture(Array.isArray(f) ? (f as Fattura[]) : []);
     setBozze(Array.isArray(b) ? (b as Fattura[]) : []);
+    setProforma(Array.isArray(pf) ? (pf as Proforma[]) : []);
     setClienti(Array.isArray(c) ? (c as Cliente[]) : []);
   };
   useEffect(() => {
@@ -463,10 +471,16 @@ export default function FatturePage() {
         <div>
           <h1 className="page-title">Fatture</h1>
           <p className="page-sub">
-            Fatture emesse e bozze da completare: una bozza non ha numero finché non la emetti.
+            {tab === "proforma"
+              ? "Proforma: gli importi da mandare al cliente prima della fattura. Senza valore fiscale, fuori dal fatturato."
+              : "Fatture emesse e bozze da completare: una bozza non ha numero finché non la emetti."}
           </p>
         </div>
-        {tab !== "proforma" && (
+        {tab === "proforma" ? (
+          <button onClick={() => setShowProforma(true)} className="btn btn-primary">
+            <Plus className="w-4 h-4" /> Nuova proforma
+          </button>
+        ) : (
           <div className="flex items-center gap-3 flex-wrap">
             {tab === "emesse" && (
               <>
@@ -501,7 +515,13 @@ export default function FatturePage() {
         options={[
           { val: "emesse", label: "Emesse" },
           { val: "bozze", label: bozze.length ? `Bozze (${bozze.length})` : "Bozze" },
-          { val: "proforma", label: "Proforma" },
+          {
+            val: "proforma",
+            label: (() => {
+              const aperte = proforma.filter((p) => p.stato === "aperta").length;
+              return aperte ? `Proforma (${aperte})` : "Proforma";
+            })(),
+          },
         ]}
       />
 
@@ -1005,11 +1025,18 @@ export default function FatturePage() {
           </div>
         ))}
 
-      {tab === "proforma" && (
-        <div className="glass-card rounded-2xl p-12 text-center text-sm text-gray-400">
-          <FileText className="w-10 h-10 mx-auto mb-2 text-gray-400" />
-          Le proforma non ci sono ancora.
-        </div>
+      {tab === "proforma" && <ProformaLista proforma={proforma} />}
+
+      {showProforma && (
+        <ProformaFormModal
+          clienti={clienti}
+          commerciali={commerciali}
+          onClose={() => setShowProforma(false)}
+          onSaved={(p) => {
+            setShowProforma(false);
+            router.push(`/finance/fatture/proforma/${p.id}`);
+          }}
+        />
       )}
 
       {showForm && (

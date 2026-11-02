@@ -46,6 +46,11 @@ const T = {
     swift: "Codice SWIFT",
     qr: "QR tributario",
     prova: "Ambiente di prova AEAT — senza valore fiscale",
+    proforma: "FATTURA PROFORMA",
+    numeroProforma: "N. proforma",
+    dataProforma: "Data",
+    validita: "Valida fino al",
+    dicituraProforma: "Documento senza valore fiscale: non sostituisce la fattura.",
     locale: "it-IT",
   },
   es: {
@@ -69,6 +74,11 @@ const T = {
     swift: "Código SWIFT",
     qr: "QR tributario",
     prova: "Entorno de pruebas AEAT — sin validez fiscal",
+    proforma: "FACTURA PROFORMA",
+    numeroProforma: "Nº de proforma",
+    dataProforma: "Fecha",
+    validita: "Válida hasta",
+    dicituraProforma: "Documento sin validez fiscal: no sustituye a la factura.",
     locale: "es-ES",
   },
   en: {
@@ -92,6 +102,11 @@ const T = {
     swift: "SWIFT code",
     qr: "QR tributario",
     prova: "AEAT test environment — no fiscal validity",
+    proforma: "PROFORMA INVOICE",
+    numeroProforma: "Proforma no.",
+    dataProforma: "Date",
+    validita: "Valid until",
+    dicituraProforma: "Not a tax document: it does not replace the invoice.",
     locale: "en-GB",
   },
 };
@@ -124,10 +139,22 @@ export interface VoceFattura {
 
 const nomeImposta = (tipoIva: string) => (tipoIva.startsWith("igic") ? "IGIC" : "IVA");
 
+// Quello che il PDF legge: una fattura (FatturaDettaglio) o una proforma
+// portata in questa forma da lib/proforma-pdf.ts
+export type DatiPdf = Pick<
+  FatturaDettaglio,
+  | "numero" | "data" | "scadenza" | "cliente" | "mese" | "anno" | "importo" | "tipoIva" | "iva"
+  | "causaIgic" | "descrizione" | "voci" | "stato" | "vfQr" | "tipoFattura" | "tipoRettifica"
+> &
+  Partial<Pick<FatturaDettaglio, "richiesta" | "contratto" | "rettificaDi">>;
+
 // Le righe sono quelle della fattura. Le fatture di prima non ne hanno: si
 // leggono dalla richiesta collegata quando i conti tornano con l'importo,
 // altrimenti la fattura è una riga sola.
-export function vociFattura(f: FatturaDettaglio, lingua: Lingua = "it"): VoceFattura[] {
+export function vociFattura(
+  f: Pick<DatiPdf, "mese" | "anno" | "voci" | "importo" | "richiesta" | "contratto">,
+  lingua: Lingua = "it",
+): VoceFattura[] {
   const periodo = `${MESI_L[lingua][f.mese - 1] ?? ""} ${f.anno}`.trim();
   const generica =
     f.richiesta?.descrizione?.trim() || f.contratto?.oggetto?.trim() || T[lingua].servizi;
@@ -247,9 +274,11 @@ export interface LogoPdf {
 }
 
 export async function creaFatturaPDF(
-  f: FatturaDettaglio,
+  f: DatiPdf,
   cfg: ImpostazioniFatture,
-  opts: { logo?: LogoPdf | null } = {},
+  // proforma: stesso foglio, con titolo suo, «valida fino al» al posto della
+  // scadenza e la dicitura che non è una fattura
+  opts: { logo?: LogoPdf | null; proforma?: boolean } = {},
 ) {
   const lingua: Lingua = cfg.linguaDefault === "es" || cfg.linguaDefault === "en" ? cfg.linguaDefault : "it";
   const L = T[lingua];
@@ -270,6 +299,7 @@ export async function creaFatturaPDF(
   const data = (d: string | null) =>
     d ? new Date(d).toLocaleDateString(L.locale, { day: "2-digit", month: "2-digit", year: "numeric" }) : "—";
   const bozza = f.stato === "bozza";
+  const proforma = !!opts.proforma;
   const c = f.cliente;
 
   // ── Logo e azienda a sinistra ──────────────────────────────────────────
@@ -303,7 +333,7 @@ export async function creaFatturaPDF(
   // ── QR tributario a destra (30×30 mm, dicitura sopra e sotto) ──────────
   // Solo per le fatture trasmesse da qui: quelle registrate a mano hanno il
   // loro PDF ufficiale altrove.
-  if (f.vfQr && !bozza) {
+  if (f.vfQr && !bozza && !proforma) {
     const { default: QRCode } = await import("qrcode");
     const png = await QRCode.toDataURL(f.vfQr, { errorCorrectionLevel: "M", margin: 0, scale: 8 });
     const lato = 30,
@@ -329,7 +359,7 @@ export async function creaFatturaPDF(
   doc.setFontSize(13);
   doc.setTextColor(...NAVY);
   doc.text(L.cliente, ML, 76);
-  doc.text(rett ? L.rettificativa : L.titolo, xD, 76);
+  doc.text(proforma ? L.proforma : rett ? L.rettificativa : L.titolo, xD, 76);
   if (bozza) {
     doc.setTextColor(...ACCENT);
     doc.text(L.bozza, W - MR, 76, { align: "right" });
@@ -366,9 +396,17 @@ export async function creaFatturaPDF(
     doc.text(valore, W - MR, yd, { align: "right" });
     yd += 6.8;
   };
-  rigaDato(L.numero, f.numero ?? "—", true);
-  rigaDato(L.data, data(f.data));
-  if (f.scadenza) rigaDato(L.scadenza, data(f.scadenza));
+  rigaDato(proforma ? L.numeroProforma : L.numero, f.numero ?? "—", true);
+  rigaDato(proforma ? L.dataProforma : L.data, data(f.data));
+  if (f.scadenza) rigaDato(proforma ? L.validita : L.scadenza, data(f.scadenza));
+  if (proforma) {
+    doc.setFont("helvetica", "italic");
+    doc.setFontSize(8.5);
+    doc.setTextColor(...GRAY);
+    const righe = doc.splitTextToSize(L.dicituraProforma, W - MR - xD) as string[];
+    doc.text(righe, xD, yd - 1);
+    yd += righe.length * 3.6 + 2;
+  }
   if (rett && f.rettificaDi?.numero) {
     doc.setFont("helvetica", "italic");
     doc.setFontSize(8.5);
@@ -512,7 +550,7 @@ export async function creaFatturaPDF(
 const esc = (s: string) =>
   s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 
-type Riepilogo = { importo: string[]; scadenza: string[] | null; bonifico: string[][] };
+export type Riepilogo = { importo: string[]; scadenza: string[] | null; bonifico: string[][] };
 
 function riepilogoTesto(r: Riepilogo) {
   return [r.importo, r.scadenza, ...r.bonifico]
@@ -560,7 +598,7 @@ const paragrafiHtml = (testo: string) =>
     .map((p) => `<p style="margin:0 0 16px">${esc(p).replace(/\n/g, "<br>")}</p>`)
     .join("");
 
-function corpoMessaggio(testo: string, v: Record<string, string>, riepilogo: Riepilogo, cfg: ImpostazioniFatture) {
+export function corpoMessaggio(testo: string, v: Record<string, string>, riepilogo: Riepilogo, cfg: ImpostazioniFatture) {
   const colore = /^#[0-9a-f]{3,8}$/i.test(cfg.colore) ? cfg.colore : IMPOSTAZIONI_FATTURE_DEFAULT.colore;
   const parti = compilaTesto(testo, { ...v, riepilogo: "{riepilogo}" }).split("{riepilogo}");
   return {
@@ -572,11 +610,16 @@ function corpoMessaggio(testo: string, v: Record<string, string>, riepilogo: Rie
   };
 }
 
-const datiBonifico = (cfg: ImpostazioniFatture, numero: string, es: boolean) =>
+export const datiBonifico = (
+  cfg: ImpostazioniFatture,
+  numero: string,
+  es: boolean,
+  documento = es ? "Factura" : "Fattura",
+) =>
   [
     ["IBAN", cfg.iban.replace(/\s+/g, "").replace(/(.{4})(?=.)/g, "$1 ")],
     ["Beneficiario", cfg.ragioneSociale],
-    [es ? "Concepto" : "Causale", numero && `${es ? "Factura" : "Fattura"} ${numero}`],
+    [es ? "Concepto" : "Causale", numero && `${documento} ${numero}`],
   ].filter(([, valore]) => valore);
 
 export function messaggioFattura(

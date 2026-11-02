@@ -62,6 +62,7 @@ export interface FatturaDettaglio extends Fattura {
   solleciti: { id: number; data: string; canale: string; nota: string | null }[];
   richiesta: { id: number; codice: string; descrizione: string; voci: string } | null;
   contratto: { id: number; numero: string; oggetto: string } | null;
+  proforma?: { id: number; numero: string } | null;
   commercialeRef: {
     id: number;
     nome: string;

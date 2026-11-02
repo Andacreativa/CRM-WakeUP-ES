@@ -25,6 +25,7 @@ export async function GET(
         select: { id: true, codice: true, descrizione: true, voci: true },
       },
       contratto: { select: { id: true, numero: true, oggetto: true } },
+      proforma: { select: { id: true, numero: true } },
       commercialeRef: {
         select: { id: true, nome: true, cognome: true, email: true },
       },
@@ -294,6 +295,13 @@ export async function DELETE(
       { status: 409 },
     );
   }
-  await prisma.fattura.delete({ where: { id: fatturaId } });
+  // Nata da una proforma: la proforma torna aperta, si può riconvertire
+  await prisma.$transaction([
+    prisma.proforma.updateMany({
+      where: { fatturaId },
+      data: { stato: "aperta", fatturaId: null, convertitaIl: null },
+    }),
+    prisma.fattura.delete({ where: { id: fatturaId } }),
+  ]);
   return NextResponse.json({ ok: true });
 }

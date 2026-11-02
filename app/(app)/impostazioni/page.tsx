@@ -203,6 +203,10 @@ export default function ImpostazioniPage() {
             <Testo cfg={cfg} set={set} k="numeroPrefissoRettifica" label="Prefisso rettificative" placeholder="R" />
             <p className="text-[11px] text-gray-400 mt-1">Serie a parte, stesso formato</p>
           </div>
+          <div>
+            <Testo cfg={cfg} set={set} k="numeroPrefissoProforma" label="Prefisso proforma" placeholder="PF" />
+            <p className="text-[11px] text-gray-400 mt-1">Serie sua: non consuma numeri di fattura</p>
+          </div>
           <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer md:col-span-3">
             <input
               type="checkbox"
@@ -422,6 +426,38 @@ export default function ImpostazioniPage() {
               <textarea
                 value={cfg.invioTestoEs}
                 onChange={(e) => set("invioTestoEs", e.target.value)}
+                className={cn(inputCls, "min-h-[280px] font-mono text-xs")}
+              />
+            </div>
+          </div>
+        </div>
+      </Sezione>
+
+      <Sezione
+        titolo="Email di invio proforma"
+        sotto="Testi usati dal bottone Invia email nella proforma (il PDF va in allegato). Spagnolo per i clienti spagnoli, italiano per gli altri. Segnaposto: {cliente} {numero} {data} {importo} {validita} {iban} {azienda}. {riepilogo} è il riquadro con importo, validità e dati del bonifico. Se la proforma non ha validità, l'inciso fra virgole con {validita} viene tolto."
+      >
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="space-y-3">
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Italiano</p>
+            <Testo cfg={cfg} set={set} k="proformaOggettoIt" label="Oggetto" />
+            <div>
+              <label className={labelCls}>Testo</label>
+              <textarea
+                value={cfg.proformaTestoIt}
+                onChange={(e) => set("proformaTestoIt", e.target.value)}
+                className={cn(inputCls, "min-h-[280px] font-mono text-xs")}
+              />
+            </div>
+          </div>
+          <div className="space-y-3">
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Español</p>
+            <Testo cfg={cfg} set={set} k="proformaOggettoEs" label="Asunto" />
+            <div>
+              <label className={labelCls}>Texto</label>
+              <textarea
+                value={cfg.proformaTestoEs}
+                onChange={(e) => set("proformaTestoEs", e.target.value)}
                 className={cn(inputCls, "min-h-[280px] font-mono text-xs")}
               />
             </div>
