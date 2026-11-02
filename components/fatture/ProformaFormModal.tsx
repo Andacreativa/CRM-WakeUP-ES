@@ -95,25 +95,33 @@ export default function ProformaFormModal({
         { ...formDa(duplicaDa), data: oggiISO(), validaFino: "", mese: new Date().getMonth() + 1 },
   );
   const [righe, setRighe] = useState<Riga[]>(() => righeDa(editing ?? duplicaDa));
-  const [clienti, setClienti] = useState<ClienteMin[]>(clientiProp ?? []);
-  const [commerciali, setCommerciali] = useState<Commerciale[]>(commercialiProp ?? []);
+  // Le liste della pagina possono arrivare dopo l'apertura del modulo: si
+  // seguono quando ci sono, e intanto il modulo carica le sue
+  const [clientiPropri, setClientiPropri] = useState<ClienteMin[]>([]);
+  const [commercialiPropri, setCommercialiPropri] = useState<Commerciale[]>([]);
+  const clienti = clientiProp?.length ? clientiProp : clientiPropri;
+  const commerciali = commercialiProp?.length ? commercialiProp : commercialiPropri;
+  const senzaClienti = !clientiProp?.length;
+  const senzaCommerciali = !commercialiProp?.length;
   const [cfg, setCfg] = useState<ImpostazioniFatture | null>(null);
   const [numero, setNumero] = useState(editing?.numero ?? "");
   const [saving, setSaving] = useState(false);
   const [errori, setErrori] = useState<string[]>([]);
 
   useEffect(() => {
-    if (!clientiProp)
+    if (senzaClienti)
       fetch("/api/clienti?min=1")
         .then((r) => r.json())
-        .then((d) => setClienti(Array.isArray(d) ? d : []))
+        .then((d) => setClientiPropri(Array.isArray(d) ? d : []))
         .catch(() => {});
-    if (!commercialiProp)
+  }, [senzaClienti]);
+  useEffect(() => {
+    if (senzaCommerciali)
       fetch("/api/dipendenti?tipo=commerciale")
         .then((r) => r.json())
-        .then((d) => setCommerciali(Array.isArray(d) ? d : []))
+        .then((d) => setCommercialiPropri(Array.isArray(d) ? d : []))
         .catch(() => {});
-  }, [clientiProp, commercialiProp]);
+  }, [senzaCommerciali]);
 
   // Impostazioni; per una nuova anche il numero che prenderà, la validità
   // (giorni di scadenza delle Impostazioni) e l'imposta di default

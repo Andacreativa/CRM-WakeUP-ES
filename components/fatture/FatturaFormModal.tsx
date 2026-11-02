@@ -127,25 +127,33 @@ export default function FatturaFormModal({
         },
   );
   const [righe, setRighe] = useState<Riga[]>(() => righeDa(fattura ?? duplicaDa));
-  const [clienti, setClienti] = useState<ClienteMin[]>(clientiProp ?? []);
-  const [commerciali, setCommerciali] = useState<Commerciale[]>(commercialiProp ?? []);
+  // Le liste della pagina possono arrivare dopo l'apertura del modulo: si
+  // seguono quando ci sono, e intanto il modulo carica le sue
+  const [clientiPropri, setClientiPropri] = useState<ClienteMin[]>([]);
+  const [commercialiPropri, setCommercialiPropri] = useState<Commerciale[]>([]);
+  const clienti = clientiProp?.length ? clientiProp : clientiPropri;
+  const commerciali = commercialiProp?.length ? commercialiProp : commercialiPropri;
+  const senzaClienti = !clientiProp?.length;
+  const senzaCommerciali = !commercialiProp?.length;
   const [cfg, setCfg] = useState<ImpostazioniFatture | null>(null);
   const [saving, setSaving] = useState(false);
   const [errori, setErrori] = useState<string[]>([]);
   const vfAttivo = !!cfg && cfg.vfModo !== "spento";
 
   useEffect(() => {
-    if (!clientiProp)
+    if (senzaClienti)
       fetch("/api/clienti?min=1")
         .then((r) => r.json())
-        .then((d) => setClienti(Array.isArray(d) ? d : []))
+        .then((d) => setClientiPropri(Array.isArray(d) ? d : []))
         .catch(() => {});
-    if (!commercialiProp)
+  }, [senzaClienti]);
+  useEffect(() => {
+    if (senzaCommerciali)
       fetch("/api/dipendenti?tipo=commerciale")
         .then((r) => r.json())
-        .then((d) => setCommerciali(Array.isArray(d) ? d : []))
+        .then((d) => setCommercialiPropri(Array.isArray(d) ? d : []))
         .catch(() => {});
-  }, [clientiProp, commercialiProp]);
+  }, [senzaCommerciali]);
 
   // Impostazioni fatture; per una nuova anche numero, scadenza e imposta proposti
   useEffect(() => {
