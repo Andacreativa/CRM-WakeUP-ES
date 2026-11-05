@@ -314,7 +314,9 @@ export default function PreventivoFormModal({
             </button>
           </div>
           <div className="border border-gray-200 rounded-xl overflow-hidden">
-            <table className="tbl">
+            {/* Celle più strette di quelle delle liste: qui ci sono campi da
+                scrivere e con 16 px per lato la Q.tà non mostrava il numero. */}
+            <table className="tbl [&_tbody_td]:px-2 [&_tbody_td]:py-2">
               <thead className="bg-gray-50">
                 <tr>
                   <th className="text-xs font-semibold text-gray-500 px-3 py-2 text-left w-[26%]">

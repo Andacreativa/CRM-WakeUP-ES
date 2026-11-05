@@ -301,6 +301,7 @@ export function fattureToPDF(
 // ── Preventivo PDF ────────────────────────────────────────────────────────
 const PREVENTIVO_T = {
   it: {
+    documento: "Proposta Commerciale",
     title: "PROPOSTA COMMERCIALE",
     preparatoDa: "PREPARATO DA",
     destinatario: "DESTINATARIO",
@@ -339,6 +340,7 @@ const PREVENTIVO_T = {
     locale: "it-IT",
   },
   es: {
+    documento: "Propuesta Comercial",
     title: "PROPUESTA COMERCIAL",
     preparatoDa: "PREPARADO POR",
     destinatario: "DESTINATARIO",
@@ -382,6 +384,7 @@ const PREVENTIVO_T = {
     locale: "es-ES",
   },
   en: {
+    documento: "Commercial Proposal",
     title: "COMMERCIAL PROPOSAL",
     preparatoDa: "PREPARED BY",
     destinatario: "RECIPIENT",
@@ -585,19 +588,14 @@ export async function exportPreventivoPDF(p: PreventivoPDFData) {
   doc.rect(0, H - 7, W, 7, "F");
 
   // ── PAGE 2: DETAILS + PRICING ──────────────────────────────────────────
+  // La barra scura in alto (azienda | oggetto | Pag. N) si disegna alla fine
+  // su tutte le pagine dopo la copertina, anche su quelle aggiunte dalle
+  // tabelle lunghe: vedi disegnaTestata.
   doc.addPage();
 
-  // Header bar scura
-  doc.setFillColor(...DARK);
-  doc.rect(0, 0, W, 14, "F");
-
-  doc.setFontSize(7);
-  doc.setFont("helvetica", "normal");
-  doc.setTextColor(200, 200, 200);
-  const hTitle =
-    p.oggetto.length > 55 ? p.oggetto.substring(0, 52) + "..." : p.oggetto;
-  doc.text(`ANDA AGENCIA DE PUBLICIDAD SL  |  ${hTitle}`, ML, 9);
-  doc.text(`${T.pag} 2`, W - MR, 9, { align: "right" });
+  // Pagine nuove delle tabelle: si parte sotto la barra scura.
+  const MARGINI = { left: ML, right: MR, top: 22 };
+  const pageBottom = H - 14;
 
   let y = 26;
 
@@ -627,7 +625,7 @@ export async function exportPreventivoPDF(p: PreventivoPDFData) {
       1: { cellWidth: 58 },
       2: { cellWidth: "auto" },
     },
-    margin: { left: ML, right: MR },
+    margin: MARGINI,
   });
 
   y =
@@ -682,7 +680,7 @@ export async function exportPreventivoPDF(p: PreventivoPDFData) {
         2: { cellWidth: 38, halign: "right" },
         3: { cellWidth: 38, halign: "right" },
       },
-      margin: { left: ML, right: MR },
+      margin: MARGINI,
     });
     y =
       (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable
@@ -713,7 +711,7 @@ export async function exportPreventivoPDF(p: PreventivoPDFData) {
         2: { cellWidth: 38, halign: "right" },
         3: { cellWidth: 38, halign: "right" },
       },
-      margin: { left: ML, right: MR },
+      margin: MARGINI,
     });
     y =
       (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable
@@ -747,7 +745,7 @@ export async function exportPreventivoPDF(p: PreventivoPDFData) {
       1: { cellWidth: 50, halign: "right", textColor: [110, 110, 110] },
       2: { cellWidth: 38, halign: "right", fontStyle: "bold" },
     },
-    margin: { left: ML, right: MR },
+    margin: MARGINI,
   });
 
   y =
@@ -756,7 +754,15 @@ export async function exportPreventivoPDF(p: PreventivoPDFData) {
 
   // Section: CONDIZIONI COMMERCIALI
   const condText = p.condizioni || p.note;
-  if (condText && y < 250) {
+  if (condText) {
+    doc.setFontSize(8.5);
+    doc.setFont("helvetica", "normal");
+    const lines = doc.splitTextToSize(condText, CW);
+    // Prima venivano saltate se la pagina era già piena: ora vanno a capo pagina.
+    if (y + 6 + lines.length * 4.5 > pageBottom) {
+      doc.addPage();
+      y = 26;
+    }
     doc.setFontSize(10);
     doc.setFont("helvetica", "bold");
     doc.setTextColor(...ACCENT);
@@ -766,7 +772,6 @@ export async function exportPreventivoPDF(p: PreventivoPDFData) {
     doc.setFontSize(8.5);
     doc.setFont("helvetica", "normal");
     doc.setTextColor(...DGRAY);
-    const lines = doc.splitTextToSize(condText, CW);
     doc.text(lines, ML, y);
     y += lines.length * 4.5 + 10;
   }
@@ -777,19 +782,8 @@ export async function exportPreventivoPDF(p: PreventivoPDFData) {
     ? firmaWidthMm * (firmaCanvas.height / firmaCanvas.width)
     : 14;
   const sectionH = 6 + 6 + firmaHeightMm + 1 + 14; // titolo + desc + firma + gap + linea/label
-  const pageBottom = H - 14;
   if (y + sectionH > pageBottom) {
     doc.addPage();
-    doc.setFillColor(...DARK);
-    doc.rect(0, 0, W, 14, "F");
-    doc.setFontSize(7);
-    doc.setFont("helvetica", "normal");
-    doc.setTextColor(200, 200, 200);
-    const hT =
-      p.oggetto.length > 55 ? p.oggetto.substring(0, 52) + "..." : p.oggetto;
-    const pageN = doc.getNumberOfPages();
-    doc.text(`ANDA AGENCIA DE PUBLICIDAD SL  |  ${hT}`, ML, 9);
-    doc.text(`${T.pag} ${pageN}`, W - MR, 9, { align: "right" });
     y = 26;
   }
 
@@ -853,7 +847,41 @@ export async function exportPreventivoPDF(p: PreventivoPDFData) {
     { align: "center" },
   );
 
-  doc.save(`preventivo_${p.numero}_${lang}.pdf`);
+  // Barra scura in alto sulle pagine dopo la copertina. L'oggetto si scrive
+  // intero (prima era tagliato a 52 caratteri con «...»): se non sta su una
+  // riga va a capo su due, e solo se è lunghissimo si rimpicciolisce.
+  const disegnaTestata = (pageN: number) => {
+    doc.setPage(pageN);
+    doc.setFillColor(...DARK);
+    doc.rect(0, 0, W, 14, "F");
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(200, 200, 200);
+    doc.setFontSize(7);
+    const pagTxt = `${T.pag} ${pageN}`;
+    doc.text(pagTxt, W - MR, 8.5, { align: "right" });
+    const spazio = CW - doc.getTextWidth(pagTxt) - 8;
+    const testo = `ANDA AGENCIA DE PUBLICIDAD SL  |  ${p.oggetto}`;
+    let righe: string[] = doc.splitTextToSize(testo, spazio);
+    if (righe.length > 2) {
+      doc.setFontSize(6);
+      righe = doc.splitTextToSize(testo, spazio);
+    }
+    const lh = (doc.getFontSize() * 1.15) / doc.internal.scaleFactor;
+    const y0 = 8.5 - ((righe.length - 1) * lh) / 2;
+    doc.text(righe, ML, y0);
+  };
+  for (let n = 2; n <= doc.getNumberOfPages(); n++) disegnaTestata(n);
+
+  // Nome del file come lo rinomina l'utente: titolo della copertina nella
+  // lingua del PDF, destinatario con i trattini, poi numero e lingua.
+  // Es. «Commercial Proposal Shin-Nabae_PRE-2026-015_en.pdf».
+  const pulisci = (t: string) => t.replace(/[\\/:*?"<>|]+/g, " ").replace(/\s+/g, " ").trim();
+  const destinatarioFile = pulisci(p.nomeCliente || p.aziendaCliente || "").replace(/ /g, "-");
+  const nomeFile = pulisci(
+    `${T.documento}${destinatarioFile ? ` ${destinatarioFile}` : ""}_${p.numero}_${lang}`,
+  );
+  doc.setProperties({ title: nomeFile });
+  doc.save(`${nomeFile}.pdf`);
 }
 
 // ── Spese helpers ──────────────────────────────────────────────────────────

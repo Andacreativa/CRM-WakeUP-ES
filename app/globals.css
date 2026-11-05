@@ -175,6 +175,18 @@
   html {
     @apply font-sans;
   }
+  /* Campi numerici senza le freccine su/giù: nelle caselle strette
+     coprivano il numero (Q.tà dei preventivi, prezzi, percentuali).
+     Il numero si scrive a mano; le frecce della tastiera funzionano ancora. */
+  input[type="number"] {
+    -moz-appearance: textfield;
+    appearance: textfield;
+  }
+  input[type="number"]::-webkit-inner-spin-button,
+  input[type="number"]::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
