@@ -308,15 +308,17 @@ export async function creaFatturaPDF(
   // izquierdo»); dove metterlo si sceglie in Impostazioni › PDF. Solo per le
   // fatture trasmesse da qui: quelle registrate a mano hanno il loro PDF
   // ufficiale altrove.
-  //   centro   = logo e azienda a sinistra, QR al centro, dati della fattura
-  //              (numero e date) a destra del QR, nella testata
-  //   sinistra = QR primo elemento a sinistra, logo e azienda a destra
-  //   destra   = com'era (il posto di Billin), fuori dalle posizioni delle FAQ
+  //   centro_solo = QR da solo in cima, al centro; tutto il resto scende
+  //   centro      = QR in cima al centro con il logo a fianco; azienda sotto
+  //   sinistra    = QR primo elemento a sinistra, logo e azienda a destra
+  //   destra      = com'era (il posto di Billin), fuori dalle posizioni FAQ
   const conQr = !!f.vfQr && !bozza && !proforma;
   const posQr = conQr ? cfg.pdfPosizioneQr || "destra" : null;
   const lato = 30;
-  const qx = posQr === "sinistra" ? ML : posQr === "centro" ? (W - lato) / 2 : W - MR - lato;
-  const qy = posQr === "centro" ? 20.5 : 25;
+  const qx = posQr === "sinistra" ? ML : posQr?.startsWith("centro") ? (W - lato) / 2 : W - MR - lato;
+  const qy = posQr === "centro_solo" ? 18.5 : posQr === "centro" ? 20.5 : 25;
+  // Di quanto scende il resto della testata per lasciare aria al QR
+  const dy = posQr === "centro_solo" ? 36 : posQr === "centro" ? 14 : 0;
   const aziendaDestra = posQr === "sinistra";
   const logo =
     opts.logo !== undefined ? opts.logo : cfg.logoUrl ? await caricaLogoRifilato(cfg.logoUrl) : null;
@@ -325,14 +327,14 @@ export async function creaFatturaPDF(
     const k = Math.min(34 / logo.width, 12 / logo.height);
     const lw = logo.width * k;
     const lx = aziendaDestra ? W - MR - lw : ML + 2;
-    doc.addImage(logo.dataUrl, "JPEG", lx, 24, lw, logo.height * k);
+    doc.addImage(logo.dataUrl, "JPEG", lx, 24 + (posQr === "centro_solo" ? dy : 0), lw, logo.height * k);
   }
   const xA = aziendaDestra ? W - MR : ML;
   const alA = aziendaDestra ? { align: "right" as const } : {};
   doc.setFont("helvetica", "bold");
   doc.setFontSize(11);
   doc.setTextColor(...DARK);
-  let y = aziendaDestra ? 42 : 48;
+  let y = (aziendaDestra ? 42 : 48) + dy;
   doc.text(cfg.ragioneSociale, xA, y, alA);
   doc.setFont("helvetica", "normal");
   doc.setFontSize(10);
@@ -367,25 +369,23 @@ export async function creaFatturaPDF(
     }
   }
 
-  // ── Cliente e Factura ──────────────────────────────────────────────────
-  // Affiancati sotto la testata; con il QR al centro i dati della fattura
-  // salgono nella testata, a destra del QR, e sotto resta il cliente
-  const datiInTesta = posQr === "centro";
-  const xD = datiInTesta ? 130 : 121;
+  // ── Cliente e Factura affiancati ───────────────────────────────────────
+  const xD = 121;
+  const yT = 76 + dy;
   const rett = f.tipoFattura !== "F1";
   doc.setFont("helvetica", "bold");
   doc.setFontSize(13);
   doc.setTextColor(...NAVY);
-  doc.text(L.cliente, ML, 76);
-  doc.text(proforma ? L.proforma : rett ? L.rettificativa : L.titolo, xD, datiInTesta ? 30 : 76);
+  doc.text(L.cliente, ML, yT);
+  doc.text(proforma ? L.proforma : rett ? L.rettificativa : L.titolo, xD, yT);
   if (bozza) {
     doc.setTextColor(...ACCENT);
-    doc.text(L.bozza, W - MR, 76, { align: "right" });
+    doc.text(L.bozza, W - MR, yT, { align: "right" });
   }
 
   doc.setFontSize(10.5);
   doc.setTextColor(...DARK);
-  let yc = 84.5;
+  let yc = 84.5 + dy;
   const nome = doc.splitTextToSize(c?.nome ?? "—", xD - ML - 8) as string[];
   doc.text(nome, ML, yc);
   yc += nome.length * 4.8 - 0.4;
@@ -405,7 +405,7 @@ export async function creaFatturaPDF(
     yc += parti.length * 4.5;
   }
 
-  let yd = datiInTesta ? 38.5 : 84.5;
+  let yd = 84.5 + dy;
   const rigaDato = (etichetta: string, valore: string, forte = false) => {
     doc.setFont("helvetica", forte ? "bold" : "normal");
     doc.setFontSize(10.5);
@@ -436,8 +436,6 @@ export async function creaFatturaPDF(
     doc.text(doc.splitTextToSize(t, W - MR - xD) as string[], xD, yd - 1);
     yd += 6;
   }
-  // Con i dati nella testata, sotto conta solo il blocco del cliente
-  if (datiInTesta) yd = 84.5;
 
   // ── Descrizione dell'operazione ────────────────────────────────────────
   y = Math.max(yc, yd) + 6;
@@ -495,9 +493,7 @@ export async function creaFatturaPDF(
   doc.setPage(doc.getNumberOfPages());
 
   // ── Totali ─────────────────────────────────────────────────────────────
-  // I totali tengono sempre la stessa larghezza, anche se i dati della
-  // fattura sono saliti nella testata
-  const xT = 121;
+  const xT = xD;
   y = Math.max(yTotali, doc.getNumberOfPages() > 1 ? finale + 10 : 0) + 4;
   const rigaTot = (etichetta: string, valore: string) => {
     doc.setFont("helvetica", "normal");

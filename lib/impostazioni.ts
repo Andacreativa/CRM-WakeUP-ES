@@ -53,7 +53,7 @@ export interface ImpostazioniFatture {
   linguaDefault: "it" | "es" | "en";
   // QR tributario nel PDF: le FAQ AEAT lo vogliono all'inizio della fattura,
   // «preferiblemente centrado o, si no, próximo al margen superior izquierdo»
-  pdfPosizioneQr: "destra" | "centro" | "sinistra";
+  pdfPosizioneQr: "destra" | "centro" | "centro_solo" | "sinistra";
   noteDefault: string;
   piePagina: string;
   // Canale Social Media House: compenso mensile netto da raggiungere con le
@@ -210,7 +210,7 @@ function sanifica(p: Partial<ImpostazioniFatture>): Partial<ImpostazioniFatture>
   if (out.tipoIvaDefault && out.tipoIvaDefault !== "igic7") out.tipoIvaDefault = "igic_exenta";
   if (out.linguaDefault && !["it", "es", "en"].includes(out.linguaDefault)) out.linguaDefault = "it";
   if (out.vfModo && !["prova", "produzione"].includes(out.vfModo)) out.vfModo = "spento";
-  if (out.pdfPosizioneQr && !["centro", "sinistra"].includes(out.pdfPosizioneQr)) out.pdfPosizioneQr = "destra";
+  if (out.pdfPosizioneQr && !["centro", "centro_solo", "sinistra"].includes(out.pdfPosizioneQr)) out.pdfPosizioneQr = "destra";
   for (const k of ["vfCausaSpagna", "vfCausaEstero"] as const) {
     if (out[k] && !CAUSE_IGIC.includes(out[k])) out[k] = "";
   }

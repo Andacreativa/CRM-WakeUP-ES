@@ -369,8 +369,9 @@ export default function ImpostazioniPage() {
               onChange={(e) => set("pdfPosizioneQr", e.target.value)}
               className={inputCls}
             >
-              <option value="centro">In alto al centro (preferita dall&apos;AEAT)</option>
-              <option value="sinistra">In alto a sinistra</option>
+              <option value="centro_solo">In alto al centro, da solo (preferita dall&apos;AEAT)</option>
+              <option value="centro">In alto al centro, con il logo a fianco</option>
+              <option value="sinistra">In alto a sinistra, logo e azienda a destra</option>
               <option value="destra">In alto a destra</option>
             </select>
             <p className="text-[11px] text-gray-500 mt-1 leading-snug">
