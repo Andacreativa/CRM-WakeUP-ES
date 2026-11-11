@@ -15,7 +15,8 @@ const ENDPOINT: Record<Ambiente, string> = {
 };
 
 export function certificato(): { pfx: Buffer; passphrase: string } | null {
-  const passphrase = process.env.VERIFACTU_CERT_PASSWORD ?? "";
+  // Senza gli «a capo» finali: incollando da terminale (pbcopy) ne arriva uno
+  const passphrase = (process.env.VERIFACTU_CERT_PASSWORD ?? "").replace(/[\r\n]+$/, "");
   const b64 = process.env.VERIFACTU_CERT_BASE64?.trim();
   if (b64) return { pfx: Buffer.from(b64, "base64"), passphrase };
   const path = process.env.VERIFACTU_CERT_PATH?.trim();

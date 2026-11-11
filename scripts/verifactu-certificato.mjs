@@ -12,7 +12,7 @@ const produzione = process.argv.includes("--produzione");
 const host = produzione ? "www1.agenciatributaria.gob.es" : "prewww1.aeat.es";
 const b64 = process.env.VERIFACTU_CERT_BASE64?.trim();
 const path = process.env.VERIFACTU_CERT_PATH?.trim();
-const passphrase = process.env.VERIFACTU_CERT_PASSWORD ?? "";
+const passphrase = (process.env.VERIFACTU_CERT_PASSWORD ?? "").replace(/[\r\n]+$/, "");
 
 if (!b64 && !path) {
   console.log("Certificato non configurato: manca VERIFACTU_CERT_PATH (o VERIFACTU_CERT_BASE64) nel file .env.");
