@@ -260,6 +260,28 @@ async function caricaLogoRifilato(
   }
 }
 
+// Logo per gli sfondi scuri: PNG con trasparenza, preso com'è (niente
+// rifilatura su bianco, che lo cancellerebbe)
+async function caricaLogoPng(src: string): Promise<LogoPdf | null> {
+  try {
+    const res = await fetch(src);
+    if (!res.ok) return null;
+    const blob = await res.blob();
+    const dataUrl = await new Promise<string>((ok, ko) => {
+      const r = new FileReader();
+      r.onload = () => ok(String(r.result));
+      r.onerror = () => ko(r.error);
+      r.readAsDataURL(blob);
+    });
+    const img = new Image();
+    img.src = dataUrl;
+    await img.decode();
+    return { dataUrl, width: img.naturalWidth, height: img.naturalHeight };
+  } catch {
+    return null;
+  }
+}
+
 export const nomeFilePDF = (f: { id: number; numero: string | null }) =>
   `fattura_${(f.numero ?? `bozza_${f.id}`).replace(/[^\w.-]+/g, "_")}.pdf`;
 
@@ -281,7 +303,7 @@ export async function creaFatturaPDF(
   cfg: ImpostazioniFatture,
   // proforma: stesso foglio, con titolo suo, «valida fino al» al posto della
   // scadenza e la dicitura che non è una fattura
-  opts: { logo?: LogoPdf | null; proforma?: boolean } = {},
+  opts: { logo?: LogoPdf | null; logoBianco?: LogoPdf | null; proforma?: boolean } = {},
 ) {
   const lingua: Lingua = cfg.linguaDefault === "es" || cfg.linguaDefault === "en" ? cfg.linguaDefault : "it";
   const L = T[lingua];
@@ -314,7 +336,13 @@ export async function creaFatturaPDF(
   // Stessi dati e testi, foglio disegnato in modo diverso. Il classico segue.
   const stile = cfg.pdfStile || "classico";
   if (stile !== "classico") {
-    const { disegnaStile } = await import("./fattura-pdf-stili");
+    const { disegnaStile, tonoDa } = await import("./fattura-pdf-stili");
+    const logoBianco =
+      opts.logoBianco !== undefined
+        ? opts.logoBianco
+        : cfg.logoBiancoUrl && stile !== "minimal"
+          ? await caricaLogoPng(cfg.logoBiancoUrl)
+          : null;
     const vociS = vociFattura(f, lingua);
     const totS = totaliFattura(f);
     const impS = nomeImposta(f.tipoIva);
@@ -343,10 +371,29 @@ export async function creaFatturaPDF(
           })
         : "",
     ].filter(Boolean);
+    const capCitta = [cfg.cap, cfg.citta].filter(Boolean).join(" ");
+    const provPaese = [cfg.provincia, paeseL(cfg.paese, lingua)].filter(Boolean).join(", ");
+    // Pagamenti: intro, IBAN su riga sua in grassetto (con lo SWIFT), note
+    const pagamento = [
+      ...(cfg.iban
+        ? [
+            { t: L.bonifico },
+            { t: ibanS, forte: true },
+            ...(cfg.bic ? [{ t: `${L.swift}: ${cfg.bic}` }] : []),
+          ]
+        : []),
+      ...cfg.noteDefault
+        .trim()
+        .split("\n")
+        .filter(Boolean)
+        .map((r) => ({ t: r })),
+    ];
     disegnaStile(stile, {
       doc,
       accent: ACCENT,
+      tono: tonoDa(cfg.pdfTonoBanda, ACCENT),
       logo,
+      logoBianco,
       qrPng,
       etQr: L.qr,
       prova: f.vfQr?.includes("prewww") ? L.prova : null,
@@ -357,6 +404,7 @@ export async function creaFatturaPDF(
       azienda: {
         nome: cfg.ragioneSociale,
         righe: [cfg.nif, cfg.indirizzo, rigaCitta(cfg.cap, cfg.citta, cfg.provincia, cfg.paese)].filter(Boolean),
+        righeStrette: [cfg.nif, cfg.indirizzo, capCitta, provPaese].filter(Boolean),
       },
       cliente: {
         nome: c?.nome ?? "—",
@@ -382,10 +430,7 @@ export async function creaFatturaPDF(
       totale: [L.totale, fmt(totS.totale)],
       esenzione: zeroS && cfg.testoEsenzione.trim() && !nonSoggetta(f.causaIgic) ? cfg.testoEsenzione.trim() : "",
       etPagamento: L.pagamento,
-      pagamento: [
-        cfg.iban ? `${L.bonifico} ${ibanS}${cfg.bic ? ` / ${L.swift}: ${cfg.bic}` : ""}` : "",
-        cfg.noteDefault.trim(),
-      ].filter(Boolean),
+      pagamento,
       piePagina: cfg.piePagina.trim(),
     });
     return doc;

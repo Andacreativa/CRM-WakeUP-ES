@@ -376,6 +376,17 @@ export default function ImpostazioniPage() {
             </p>
           </div>
           <div>
+            <label className={labelCls}>Colore della fascia / colonna</label>
+            <select value={cfg.pdfTonoBanda} onChange={(e) => set("pdfTonoBanda", e.target.value)} className={inputCls}>
+              <option value="notte">Blu notte</option>
+              <option value="antracite">Antracite</option>
+            </select>
+            <p className="text-[11px] text-gray-500 mt-1 leading-snug">
+              Vale per Banda e Colonna, con il logo bianco qui sotto.
+            </p>
+          </div>
+          <Testo cfg={cfg} set={set} k="logoBiancoUrl" label="Logo per sfondi scuri (PNG trasparente)" placeholder="/logo-anda-pdf-bianco.png" />
+          <div>
             <label className={labelCls}>Posizione del QR tributario</label>
             <select
               value={cfg.pdfPosizioneQr}

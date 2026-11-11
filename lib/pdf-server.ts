@@ -17,6 +17,8 @@ const LOGO_SERVER = path.join(process.cwd(), "public", "logo-anda-pdf.jpg");
 // finirebbe per portare tutto il progetto nel pacchetto della funzione.
 const LOGO_BOOGO = path.join(process.cwd(), "public", "boogo", "boogo-logo-pdf.jpg");
 const LOGO_COBREA = path.join(process.cwd(), "public", "cobrea", "cobrea-logo-pdf.jpg");
+// Logo per gli sfondi scuri delle impostazioni grafiche Banda e Colonna
+const LOGO_BIANCO = path.join(process.cwd(), "public", "logo-anda-pdf-bianco.png");
 
 function misureJpeg(buf: Buffer): { width: number; height: number } | null {
   let i = 2;
@@ -39,16 +41,29 @@ function misureJpeg(buf: Buffer): { width: number; height: number } | null {
   return null;
 }
 
+function misurePng(buf: Buffer): { width: number; height: number } | null {
+  if (buf.length < 24 || buf.toString("ascii", 1, 4) !== "PNG") return null;
+  return { width: buf.readUInt32BE(16), height: buf.readUInt32BE(20) };
+}
+
 const logoCache = new Map<string, LogoPdf | null>();
 export async function logoServer(prodotto?: string): Promise<LogoPdf | null> {
-  const file = prodotto === "boogo" ? LOGO_BOOGO : prodotto === "cobrea" ? LOGO_COBREA : LOGO_SERVER;
+  const file =
+    prodotto === "boogo"
+      ? LOGO_BOOGO
+      : prodotto === "cobrea"
+        ? LOGO_COBREA
+        : prodotto === "anda-bianco"
+          ? LOGO_BIANCO
+          : LOGO_SERVER;
   const inCache = logoCache.get(file);
   if (inCache !== undefined) return inCache;
   let logo: LogoPdf | null = null;
   try {
     const buf = await readFile(file);
-    const m = misureJpeg(buf);
-    logo = m ? { dataUrl: `data:image/jpeg;base64,${buf.toString("base64")}`, ...m } : null;
+    const png = file.endsWith(".png");
+    const m = png ? misurePng(buf) : misureJpeg(buf);
+    logo = m ? { dataUrl: `data:image/${png ? "png" : "jpeg"};base64,${buf.toString("base64")}`, ...m } : null;
   } catch {
     logo = null;
   }
@@ -103,6 +118,6 @@ export async function pdfFatturaServer(
   const f = await fatturaDettaglioServer(db, id);
   if (!f) return null;
   const cfg = await getImpostazioniFatture(db);
-  const doc = await creaFatturaPDF(f, cfg, { logo: await logoServer() });
+  const doc = await creaFatturaPDF(f, cfg, { logo: await logoServer(), logoBianco: await logoServer("anda-bianco") });
   return { buffer: Buffer.from(doc.output("arraybuffer")), nomeFile: nomeFilePDF(f), fattura: f };
 }

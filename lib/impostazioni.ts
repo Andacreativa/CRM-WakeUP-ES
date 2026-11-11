@@ -57,6 +57,10 @@ export interface ImpostazioniFatture {
   // Impostazione grafica del foglio: classico (come Billin) oppure una delle
   // alternative di lib/fattura-pdf-stili.ts
   pdfStile: "classico" | "banda" | "minimal" | "colonna";
+  // Colore della fascia (Banda) e della colonna (Colonna)
+  pdfTonoBanda: "notte" | "antracite";
+  // Logo per gli sfondi scuri (PNG trasparente, nero → bianco)
+  logoBiancoUrl: string;
   noteDefault: string;
   piePagina: string;
   // Canale Social Media House: compenso mensile netto da raggiungere con le
@@ -123,6 +127,8 @@ export const IMPOSTAZIONI_FATTURE_DEFAULT: ImpostazioniFatture = {
   linguaDefault: "it",
   pdfPosizioneQr: "centro",
   pdfStile: "classico",
+  pdfTonoBanda: "notte",
+  logoBiancoUrl: "/logo-anda-pdf-bianco.png",
   noteDefault: "",
   piePagina: "",
   smhNome: "SocialMediaHouse S.R.L.",
@@ -216,6 +222,7 @@ function sanifica(p: Partial<ImpostazioniFatture>): Partial<ImpostazioniFatture>
   if (out.vfModo && !["prova", "produzione"].includes(out.vfModo)) out.vfModo = "spento";
   if (out.pdfPosizioneQr && !["centro", "centro_solo", "sinistra"].includes(out.pdfPosizioneQr)) out.pdfPosizioneQr = "destra";
   if (out.pdfStile && !["banda", "minimal", "colonna"].includes(out.pdfStile)) out.pdfStile = "classico";
+  if (out.pdfTonoBanda && out.pdfTonoBanda !== "antracite") out.pdfTonoBanda = "notte";
   for (const k of ["vfCausaSpagna", "vfCausaEstero"] as const) {
     if (out[k] && !CAUSE_IGIC.includes(out[k])) out[k] = "";
   }

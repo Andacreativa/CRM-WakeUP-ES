@@ -7,17 +7,34 @@ import type { LogoPdf } from "./fattura-pdf";
 // lib/fattura-pdf.ts e disegnano tutto il foglio. Il QR tributario sta
 // sempre all'inizio della fattura, dove lo vogliono le FAQ AEAT: in alto a
 // sinistra (banda, colonna) o in alto al centro (minimal).
-//   banda    = fascia blu scura in testa, numero grande, tabella a righe
+//   banda    = fascia scura in testa, numero grande, tabella a righe
 //   minimal  = tipografica: righe sottili, niente riempimenti, molta aria
-//   colonna  = colonna laterale grigia con QR, logo, azienda e banca
+//   colonna  = colonna laterale scura con QR, logo, azienda e banca
+// Il colore della fascia e della colonna è il «tono»: blu notte o antracite.
 
 type RGB = [number, number, number];
 export type StilePdf = "classico" | "banda" | "minimal" | "colonna";
+export type NomeTono = "notte" | "antracite";
+export interface Tono {
+  nome: NomeTono;
+  fondo: RGB;
+  testo: RGB; // testo principale sul fondo
+  testoSoft: RGB; // testo secondario sul fondo
+  numero: RGB; // numero della fattura sul fondo
+  scuro: boolean;
+}
+// Una riga del blocco pagamenti; l'IBAN sta su una riga sua, in grassetto
+export interface RigaPagamento {
+  t: string;
+  forte?: boolean;
+}
 
 export interface DatiStile {
   doc: jsPDF;
   accent: RGB;
+  tono: Tono;
   logo: LogoPdf | null;
+  logoBianco: LogoPdf | null; // per gli sfondi scuri (PNG trasparente)
   qrPng: string | null; // null = fattura senza QR (registrata a mano, bozza, proforma)
   etQr: string;
   prova: string | null; // dicitura dell'ambiente di prova, se è il caso
@@ -25,7 +42,7 @@ export interface DatiStile {
   bozza: string | null;
   etEmittente: string;
   etCliente: string;
-  azienda: { nome: string; righe: string[] };
+  azienda: { nome: string; righe: string[]; righeStrette: string[] };
   cliente: { nome: string; righe: string[] };
   dati: [string, string][]; // numero, data, scadenza (etichetta, valore)
   note: string[]; // dicitura proforma, «rettifica la fattura…»
@@ -36,7 +53,7 @@ export interface DatiStile {
   totale: [string, string];
   esenzione: string;
   etPagamento: string;
-  pagamento: string[];
+  pagamento: RigaPagamento[]; // intro, IBAN (grassetto), note
   piePagina: string;
 }
 
@@ -50,14 +67,30 @@ const GRAY: RGB = [100, 100, 100];
 const LINE: RGB = [222, 222, 222];
 const BIANCO: RGB = [255, 255, 255];
 
+export function tonoDa(nome: NomeTono, accent: RGB): Tono {
+  if (nome === "antracite")
+    return { nome, fondo: [24, 24, 27], testo: BIANCO, testoSoft: [200, 200, 206], numero: accent, scuro: true };
+  return { nome: "notte", fondo: NAVY, testo: BIANCO, testoSoft: [203, 213, 225], numero: accent, scuro: true };
+}
+
 type Finale = { lastAutoTable: { finalY: number } };
 const finalY = (doc: jsPDF) => (doc as unknown as Finale).lastAutoTable.finalY;
+const formatoImg = (l: LogoPdf) => (l.dataUrl.startsWith("data:image/png") ? "PNG" : "JPEG");
 
-function etichetta(doc: jsPDF, testo: string, x: number, y: number, colore: RGB, align?: "right" | "center") {
+// Etichetta in maiuscolo spaziato. L'allineamento lo calcoliamo noi: jsPDF
+// non conta la spaziatura fra le lettere e a destra sforerebbe il margine.
+const SPAZIO_ET = 0.6;
+function larghezzaEt(doc: jsPDF, testo: string) {
   doc.setFont("helvetica", "bold");
   doc.setFontSize(7.5);
+  const t = testo.toUpperCase();
+  return doc.getTextWidth(t) + SPAZIO_ET * Math.max(0, t.length - 1);
+}
+function etichetta(doc: jsPDF, testo: string, x: number, y: number, colore: RGB, align?: "right" | "center") {
+  const w = larghezzaEt(doc, testo);
+  const x0 = align === "right" ? x - w : align === "center" ? x - w / 2 : x;
   doc.setTextColor(...colore);
-  doc.text(testo.toUpperCase(), x, y, { align, charSpace: 0.6 });
+  doc.text(testo.toUpperCase(), x0, y, { charSpace: SPAZIO_ET });
 }
 
 // Nome in grassetto e righe sotto; torna la y dopo l'ultima riga
@@ -67,23 +100,47 @@ function blocco(
   x: number,
   y: number,
   larghezza: number,
-  opts: { size?: number; align?: "right"; nomeColore?: RGB } = {},
+  opts: { size?: number; align?: "right"; nome?: RGB; righe?: RGB } = {},
 ) {
   const size = opts.size ?? 9.5;
   const al = opts.align ? { align: opts.align } : {};
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(size + 1);
-  doc.setTextColor(...(opts.nomeColore ?? DARK));
+  doc.setFontSize(size + 1.5);
+  doc.setTextColor(...(opts.nome ?? DARK));
   const nome = doc.splitTextToSize(b.nome, larghezza) as string[];
   doc.text(nome, x, y, al);
-  y += nome.length * (size + 1) * 0.42 + 1.2;
+  y += nome.length * (size + 1.5) * 0.42 + 1.6;
   doc.setFont("helvetica", "normal");
   doc.setFontSize(size);
-  doc.setTextColor(...GRAY);
+  doc.setTextColor(...(opts.righe ?? GRAY));
   for (const r of b.righe) {
     const parti = doc.splitTextToSize(r, larghezza) as string[];
     doc.text(parti, x, y, al);
-    y += parti.length * size * 0.45;
+    y += parti.length * size * 0.47;
+  }
+  return y;
+}
+
+// Righe del blocco pagamenti, a capo per larghezza; la riga dell'IBAN è in
+// grassetto e un filo più grande. Torna la y dopo l'ultima riga.
+function scriviPagamento(
+  doc: jsPDF,
+  righe: RigaPagamento[],
+  x: number,
+  y: number,
+  maxW: number,
+  size: number,
+  colore: RGB,
+  coloreForte: RGB = DARK,
+) {
+  for (const r of righe) {
+    const dim = r.forte ? size + 1 : size;
+    doc.setFont("helvetica", r.forte ? "bold" : "normal");
+    doc.setFontSize(dim);
+    doc.setTextColor(...(r.forte ? coloreForte : colore));
+    const parti = doc.splitTextToSize(r.t, maxW) as string[];
+    doc.text(parti, x, y);
+    y += parti.length * dim * 0.5 + (r.forte ? 0.8 : 0);
   }
   return y;
 }
@@ -140,76 +197,134 @@ function dicituraProva(doc: jsPDF, d: DatiStile, x: number, y: number) {
   doc.text(d.prova, x, y, { align: "right" });
 }
 
+// Logo su un fondo colorato: bianco se il fondo è scuro (e non del colore
+// del logo), altrimenti quello normale su una card bianca. Torna l'altezza.
+function logoSuFondo(d: DatiStile, x: number, y: number, boxW: number, boxH: number, align: "left" | "right" | "center") {
+  const { doc, tono } = d;
+  const bianco = tono.scuro && d.logoBianco ? d.logoBianco : null;
+  const img = bianco ?? d.logo;
+  if (!img) return 0;
+  const card = !bianco;
+  const pad = card ? 4 : 0;
+  const k = Math.min((boxW - pad * 2) / img.width, (boxH - pad * 2) / img.height);
+  const lw = img.width * k,
+    lh = img.height * k;
+  const cw = card ? lw + pad * 2 : lw;
+  const ch = card ? lh + pad * 2 : lh;
+  const cx = align === "right" ? x - cw : align === "center" ? x - cw / 2 : x;
+  if (card) {
+    doc.setFillColor(...BIANCO);
+    doc.roundedRect(cx, y, cw, ch, 2, 2, "F");
+  }
+  doc.addImage(img.dataUrl, formatoImg(img), cx + pad, y + pad, lw, lh);
+  return ch;
+}
+
+// QR sempre su bianco, così si legge su qualunque fondo
+function qrSuCard(d: DatiStile, x: number, y: number, suFondo: boolean) {
+  const { doc } = d;
+  if (!d.qrPng) return;
+  if (suFondo) {
+    doc.setFillColor(...BIANCO);
+    doc.roundedRect(x, y, 38, 45, 2, 2, "F");
+  }
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(7.5);
+  doc.setTextColor(...DARK);
+  doc.text(d.etQr, x + 19, y + 4.5, { align: "center" });
+  doc.addImage(d.qrPng, "PNG", x + 4, y + 6.5, 30, 30);
+  doc.text("VERI*FACTU", x + 19, y + 41, { align: "center" });
+}
+
 function allineaTestata(d: { section: string; column: { index: number }; cell: { styles: { halign: string } } }) {
   if (d.section === "head" && [1, 2, 4].includes(d.column.index)) d.cell.styles.halign = "right";
 }
 
+// Righe dei totali e riga del totale su fondo pieno
+function totali(d: DatiStile, xT: number, y: number, fondo: RGB, barra: RGB | null) {
+  const { doc } = d;
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(10);
+  for (const [e, v] of d.totali) {
+    doc.setTextColor(...GRAY);
+    doc.text(e, xT + 3, y);
+    doc.setTextColor(...DARK);
+    doc.text(v, W - MR, y, { align: "right" });
+    y += 7;
+  }
+  doc.setFillColor(...fondo);
+  doc.rect(xT, y - 2.5, W - MR - xT, 11.5, "F");
+  if (barra) {
+    doc.setFillColor(...barra);
+    doc.rect(xT, y - 2.5, 1.8, 11.5, "F");
+  }
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(11.5);
+  doc.setTextColor(...BIANCO);
+  doc.text(d.totale[0], xT + 5, y + 5);
+  doc.text(d.totale[1], W - MR - 2, y + 5, { align: "right" });
+  return y + 18;
+}
+
 // ── Banda ──────────────────────────────────────────────────────────────────
 function disegnaBanda(d: DatiStile) {
-  const { doc, accent } = d;
-  doc.setFillColor(...NAVY);
-  doc.rect(0, 0, W, 54, "F");
+  const { doc, accent, tono } = d;
+  const HB = 56;
+  doc.setFillColor(...tono.fondo);
+  doc.rect(0, 0, W, HB, "F");
+  doc.setFillColor(...accent);
+  doc.rect(0, HB, W, 1.4, "F");
   let xTesto = ML;
   if (d.qrPng) {
-    doc.setFillColor(...BIANCO);
-    doc.roundedRect(ML, 7, 38, 44, 2, 2, "F");
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(7.5);
-    doc.setTextColor(...DARK);
-    doc.text(d.etQr, ML + 19, 11.5, { align: "center" });
-    doc.addImage(d.qrPng, "PNG", ML + 4, 13.5, 30, 30);
-    doc.text("VERI*FACTU", ML + 19, 48, { align: "center" });
-    xTesto = ML + 46;
+    qrSuCard(d, ML, 6, true);
+    xTesto = ML + 47;
   }
   doc.setFont("helvetica", "bold");
   doc.setFontSize(24);
-  doc.setTextColor(...BIANCO);
-  doc.text(d.titolo, xTesto, 24);
+  doc.setTextColor(...tono.testo);
+  doc.text(d.titolo, xTesto, 22.5);
   doc.setFontSize(14);
-  doc.setTextColor(...accent);
-  doc.text(d.dati[0][1], xTesto, 33.5);
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(9.5);
-  doc.setTextColor(226, 232, 240);
+  doc.setTextColor(...tono.numero);
+  doc.text(d.dati[0][1], xTesto, 32);
   let y = 42;
+  const wEt = Math.max(0, ...d.dati.slice(1).map(([e]) => larghezzaEt(doc, e)));
   for (const [e, v] of d.dati.slice(1)) {
-    doc.text(`${e}: ${v}`, xTesto, y);
-    y += 5;
+    etichetta(doc, e, xTesto, y, tono.testoSoft);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(10);
+    doc.setTextColor(...tono.testo);
+    doc.text(v, xTesto + wEt + 5, y);
+    y += 6.2;
   }
-  if (d.logo) {
-    const k = Math.min(36 / d.logo.width, 13 / d.logo.height);
-    const lw = d.logo.width * k,
-      lh = d.logo.height * k;
-    doc.setFillColor(...BIANCO);
-    doc.roundedRect(W - MR - 44, 12, 44, 21, 2, 2, "F");
-    doc.addImage(d.logo.dataUrl, "JPEG", W - MR - 22 - lw / 2, 22.5 - lh / 2, lw, lh);
-  }
+  logoSuFondo(d, W - MR, 14, 48, 22, "right");
   if (d.bozza) {
     doc.setFont("helvetica", "bold");
     doc.setFontSize(11);
-    doc.setTextColor(...accent);
-    doc.text(d.bozza, W - MR, 44, { align: "right" });
+    doc.setTextColor(...tono.numero);
+    doc.text(d.bozza, W - MR, 48, { align: "right" });
   }
-  dicituraProva(doc, d, W - MR, 59.5);
+  dicituraProva(doc, d, W - MR, HB + 6.5);
 
   // Emittente e cliente affiancati
-  const XD = 121;
-  y = 66;
+  const XD = 118;
+  y = HB + 14;
   etichetta(doc, d.etEmittente, ML, y, accent);
   etichetta(doc, d.etCliente, XD, y, accent);
-  const y1 = blocco(doc, d.azienda, ML, y + 6.5, XD - ML - 10);
-  const y2 = blocco(doc, d.cliente, XD, y + 6.5, W - MR - XD);
-  y = Math.max(y1, y2) + 5;
+  const y1 = blocco(doc, d.azienda, ML, y + 7, XD - ML - 10);
+  const y2 = blocco(doc, d.cliente, XD, y + 7, W - MR - XD);
+  y = Math.max(y1, y2) + 6;
   y = corsivo(doc, d.note, ML, y, W - ML - MR);
   y = descrizione(doc, d.descr, ML, y, W - ML - MR);
 
+  const testa: RGB = tono.scuro ? tono.fondo : [55, 65, 81];
   autoTable(doc, {
     head: [d.colonne],
     body: d.righe,
     startY: y,
     theme: "striped",
-    styles: { fontSize: 9.5, cellPadding: { top: 3.2, bottom: 3.2, left: 2.6, right: 2.6 }, textColor: DARK },
-    headStyles: { fillColor: NAVY, textColor: BIANCO, fontStyle: "bold", fontSize: 8.5 },
+    styles: { fontSize: 9.5, cellPadding: { top: 3.4, bottom: 3.4, left: 2.6, right: 2.6 }, textColor: DARK },
+    // Bordo dello stesso colore: copre le fessure fra una cella e l'altra
+    headStyles: { fillColor: testa, textColor: BIANCO, fontStyle: "bold", fontSize: 8.5, lineColor: testa, lineWidth: 0.3 },
     alternateRowStyles: { fillColor: [245, 246, 248] },
     bodyStyles: { fillColor: BIANCO },
     columnStyles: {
@@ -222,42 +337,19 @@ function disegnaBanda(d: DatiStile) {
     didParseCell: allineaTestata,
     margin: { left: ML, right: MR, top: 20, bottom: 25 },
   });
-  y = spazio(doc, finalY(doc) + 10, 70);
-
-  const xT = 121;
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(10);
-  for (const [e, v] of d.totali) {
-    doc.setTextColor(...GRAY);
-    doc.text(e, xT + 3, y);
-    doc.setTextColor(...DARK);
-    doc.text(v, W - MR, y, { align: "right" });
-    y += 7;
-  }
-  doc.setFillColor(...NAVY);
-  doc.rect(xT, y - 2.5, W - MR - xT, 11.5, "F");
-  doc.setFillColor(...accent);
-  doc.rect(xT, y - 2.5, 1.8, 11.5, "F");
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(11.5);
-  doc.setTextColor(...BIANCO);
-  doc.text(d.totale[0], xT + 5, y + 5);
-  doc.text(d.totale[1], W - MR - 2, y + 5, { align: "right" });
-  y += 18;
+  y = spazio(doc, finalY(doc) + 10, 72);
+  y = totali(d, 118, y, testa, accent);
   y = corsivo(doc, d.esenzione ? [d.esenzione] : [], ML, y - 3, W - ML - MR) + 3;
 
-  const testoPag = d.pagamento.flatMap((r) => doc.splitTextToSize(r, W - ML - MR - 8) as string[]);
-  const hPag = 9 + testoPag.length * 4;
-  doc.setFillColor(...accent);
-  doc.rect(ML, y, 1.8, hPag, "F");
+  // Pagamento con barra colorata e IBAN in grassetto
+  const yPag = y;
   doc.setFont("helvetica", "bold");
   doc.setFontSize(10);
   doc.setTextColor(...DARK);
   doc.text(d.etPagamento, ML + 5, y + 5);
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(8.5);
-  doc.setTextColor(...GRAY);
-  doc.text(testoPag, ML + 5, y + 9.5);
+  const fine = scriviPagamento(doc, d.pagamento, ML + 5, y + 10.5, W - ML - MR - 8, 9, GRAY, DARK);
+  doc.setFillColor(...accent);
+  doc.rect(ML, yPag, 1.8, fine - yPag - 1, "F");
   piede(doc, d, ML, W - MR);
 }
 
@@ -270,43 +362,46 @@ function disegnaMinimal(d: DatiStile) {
     etichetta(doc, "VERI*FACTU", W / 2, 49, DARK, "center");
   }
   if (d.logo) {
-    const k = Math.min(34 / d.logo.width, 12 / d.logo.height);
-    doc.addImage(d.logo.dataUrl, "JPEG", ML, 18, d.logo.width * k, d.logo.height * k);
+    const k = Math.min(36 / d.logo.width, 13 / d.logo.height);
+    doc.addImage(d.logo.dataUrl, formatoImg(d.logo), ML, 17, d.logo.width * k, d.logo.height * k);
   }
   doc.setFont("helvetica", "normal");
   doc.setFontSize(22);
   doc.setTextColor(...DARK);
-  doc.text(d.titolo, W - MR, 27, { align: "right", charSpace: 0.5 });
+  doc.text(d.titolo, W - MR, 25, { align: "right", charSpace: 0.5 });
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(12);
+  doc.setFontSize(12.5);
   doc.setTextColor(...accent);
-  doc.text(d.dati[0][1], W - MR, 35, { align: "right" });
+  doc.text(d.dati[0][1], W - MR, 33, { align: "right" });
+  let yd = 41.5;
+  for (const [e, v] of d.dati.slice(1)) {
+    etichetta(doc, e, W - MR, yd, GRAY, "right");
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(10);
+    doc.setTextColor(...DARK);
+    doc.text(v, W - MR, yd + 4.8, { align: "right" });
+    yd += 11;
+  }
   if (d.bozza) {
+    doc.setFont("helvetica", "bold");
     doc.setFontSize(9);
-    doc.text(d.bozza, W - MR, 41.5, { align: "right" });
+    doc.setTextColor(...accent);
+    doc.text(d.bozza, W - MR, yd, { align: "right" });
+    yd += 6;
   }
   dicituraProva(doc, d, W - MR, 8);
 
-  let y = d.qrPng ? 58 : 48;
+  let y = Math.max(yd + 2, d.qrPng ? 58 : 48);
   doc.setDrawColor(...LINE);
   doc.setLineWidth(0.3);
   doc.line(ML, y, W - MR, y);
   y += 9;
-  const xC2 = 86;
+  const xC2 = 112;
   etichetta(doc, d.etEmittente, ML, y, GRAY);
   etichetta(doc, d.etCliente, xC2, y, GRAY);
-  const y1 = blocco(doc, d.azienda, ML, y + 6.5, 62, { size: 9 });
-  const y2 = blocco(doc, d.cliente, xC2, y + 6.5, 58, { size: 9 });
-  let y3 = y;
-  for (const [e, v] of d.dati.slice(1)) {
-    etichetta(doc, e, W - MR, y3, GRAY, "right");
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(10);
-    doc.setTextColor(...DARK);
-    doc.text(v, W - MR, y3 + 5, { align: "right" });
-    y3 += 12;
-  }
-  y = Math.max(y1, y2, y3) + 4;
+  const y1 = blocco(doc, d.azienda, ML, y + 7, xC2 - ML - 10, { size: 9 });
+  const y2 = blocco(doc, d.cliente, xC2, y + 7, W - MR - xC2, { size: 9 });
+  y = Math.max(y1, y2) + 5;
   doc.setDrawColor(...LINE);
   doc.line(ML, y, W - MR, y);
   y += 9;
@@ -320,7 +415,7 @@ function disegnaMinimal(d: DatiStile) {
     theme: "plain",
     styles: {
       fontSize: 9.5,
-      cellPadding: { top: 3.8, bottom: 3.8, left: 1, right: 1 },
+      cellPadding: { top: 3.8, bottom: 3.8, left: 2.4, right: 2.4 },
       textColor: DARK,
       lineColor: LINE,
       lineWidth: { bottom: 0.2 },
@@ -336,9 +431,9 @@ function disegnaMinimal(d: DatiStile) {
     didParseCell: allineaTestata,
     margin: { left: ML, right: MR, top: 20, bottom: 25 },
   });
-  y = spazio(doc, finalY(doc) + 10, 70);
+  y = spazio(doc, finalY(doc) + 10, 72);
 
-  const xT = 121;
+  const xT = 118;
   doc.setFont("helvetica", "normal");
   doc.setFontSize(9.5);
   for (const [e, v] of d.totali) {
@@ -360,68 +455,50 @@ function disegnaMinimal(d: DatiStile) {
   y = corsivo(doc, d.esenzione ? [d.esenzione] : [], ML, y, W - ML - MR) + 4;
 
   etichetta(doc, d.etPagamento, ML, y, GRAY);
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(8.5);
-  doc.setTextColor(...DARK);
-  doc.text(
-    d.pagamento.flatMap((r) => doc.splitTextToSize(r, W - ML - MR) as string[]),
-    ML,
-    y + 5,
-  );
+  scriviPagamento(doc, d.pagamento, ML, y + 5.5, W - ML - MR, 9, GRAY, DARK);
   piede(doc, d, ML, W - MR);
 }
 
 // ── Colonna ────────────────────────────────────────────────────────────────
 function disegnaColonna(d: DatiStile) {
-  const { doc, accent } = d;
-  const SB = 68; // larghezza della colonna
+  const { doc, accent, tono } = d;
+  const SB = 72; // larghezza della colonna
+  const MC = 8; // margine interno
   const cx = SB / 2;
   const XM = SB + 12; // inizio dell'area principale
+  const etColore: RGB = accent;
   const sfondo = () => {
-    doc.setFillColor(243, 244, 246);
+    doc.setFillColor(...tono.fondo);
     doc.rect(0, 0, SB, H, "F");
   };
   sfondo();
-  let y = 16;
+  let y = 14;
   if (d.qrPng) {
-    etichetta(doc, d.etQr, cx, 13, GRAY, "center");
-    doc.addImage(d.qrPng, "PNG", cx - 15, 15.5, 30, 30);
-    etichetta(doc, "VERI*FACTU", cx, 50, DARK, "center");
+    qrSuCard(d, cx - 19, 8, true);
     y = 62;
   }
-  if (d.logo) {
-    // Su una card bianca: il file del logo ha il fondo bianco
-    const k = Math.min(40 / d.logo.width, 14 / d.logo.height);
-    const lw = d.logo.width * k,
-      lh = d.logo.height * k;
-    doc.setFillColor(...BIANCO);
-    doc.roundedRect(8, y - 4, SB - 16, lh + 8, 2, 2, "F");
-    doc.addImage(d.logo.dataUrl, "JPEG", cx - lw / 2, y, lw, lh);
-    y += lh + 14;
-  } else y += 4;
-  etichetta(doc, d.etEmittente, 10, y, accent);
-  blocco(doc, d.azienda, 10, y + 6, SB - 20, { size: 8.5 });
+  const hLogo = logoSuFondo(d, cx, y, SB - MC * 2, 20, "center");
+  y += hLogo ? hLogo + 12 : 4;
+  etichetta(doc, d.etEmittente, MC, y, etColore);
+  blocco(doc, { nome: d.azienda.nome, righe: d.azienda.righeStrette }, MC, y + 6.5, SB - MC * 2, {
+    size: 8.5,
+    nome: tono.testo,
+    righe: tono.testoSoft,
+  });
 
-  // Banca in fondo alla colonna
-  const yPag = H - 62;
-  etichetta(doc, d.etPagamento, 10, yPag, accent);
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(8);
-  doc.setTextColor(...DARK);
-  doc.text(
-    d.pagamento.flatMap((r) => doc.splitTextToSize(r, SB - 20) as string[]),
-    10,
-    yPag + 5,
-  );
+  // Banca in fondo alla colonna, IBAN in grassetto
+  const yPag = H - 64;
+  etichetta(doc, d.etPagamento, MC, yPag, etColore);
+  scriviPagamento(doc, d.pagamento, MC, yPag + 6, SB - MC * 2, 8, tono.testoSoft, tono.testo);
 
   // Area principale: titolo, numero, date
   doc.setFont("helvetica", "bold");
   doc.setFontSize(20);
-  doc.setTextColor(...NAVY);
+  doc.setTextColor(...DARK);
   doc.text(d.titolo, XM, 26);
-  doc.setFontSize(12);
+  doc.setFontSize(12.5);
   doc.setTextColor(...accent);
-  doc.text(d.dati[0][1], XM, 34);
+  doc.text(d.dati[0][1], XM, 34.5);
   if (d.bozza) {
     doc.setFontSize(9);
     doc.text(d.bozza, W - MR, 10, { align: "right" });
@@ -436,13 +513,13 @@ function disegnaColonna(d: DatiStile) {
     doc.text(v, W - MR, yd + 5, { align: "right" });
     yd += 12;
   }
-  y = 50;
+  y = Math.max(50, yd + 4);
   etichetta(doc, d.etCliente, XM, y, accent);
-  const yc = blocco(doc, d.cliente, XM, y + 6.5, 70);
-  y = Math.max(yc, yd) + 6;
+  y = blocco(doc, d.cliente, XM, y + 7, W - MR - XM) + 6;
   y = corsivo(doc, d.note, XM, y, W - MR - XM);
   y = descrizione(doc, d.descr, XM, y, W - MR - XM);
 
+  const testa: RGB = tono.scuro ? tono.fondo : [55, 65, 81];
   autoTable(doc, {
     head: [d.colonne],
     body: d.righe,
@@ -450,18 +527,18 @@ function disegnaColonna(d: DatiStile) {
     theme: "plain",
     styles: {
       fontSize: 9,
-      cellPadding: { top: 3.2, bottom: 3.2, left: 1.8, right: 1.8 },
+      cellPadding: { top: 3.4, bottom: 3.4, left: 2, right: 2 },
       textColor: DARK,
       lineColor: LINE,
       lineWidth: { bottom: 0.2 },
     },
-    headStyles: { fillColor: accent, textColor: BIANCO, fontStyle: "bold", fontSize: 8, lineWidth: 0 },
+    headStyles: { fillColor: testa, textColor: BIANCO, fontStyle: "bold", fontSize: 8, lineColor: testa, lineWidth: 0.3 },
     columnStyles: {
       0: { cellWidth: "auto" },
-      1: { cellWidth: 12, halign: "right" },
-      2: { cellWidth: 22, halign: "right" },
-      3: { cellWidth: 18 },
-      4: { cellWidth: 24, halign: "right" },
+      1: { cellWidth: 11, halign: "right" },
+      2: { cellWidth: 21, halign: "right" },
+      3: { cellWidth: 17 },
+      4: { cellWidth: 23, halign: "right" },
     },
     didParseCell: allineaTestata,
     willDrawPage: (data) => {
@@ -470,26 +547,8 @@ function disegnaColonna(d: DatiStile) {
     margin: { left: XM, right: MR, top: 20, bottom: 25 },
   });
   y = spazio(doc, finalY(doc) + 10, 60);
-
-  const xT = XM + 36;
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(9.5);
-  for (const [e, v] of d.totali) {
-    doc.setTextColor(...GRAY);
-    doc.text(e, xT, y);
-    doc.setTextColor(...DARK);
-    doc.text(v, W - MR, y, { align: "right" });
-    y += 7;
-  }
-  doc.setFillColor(...NAVY);
-  doc.rect(xT - 3, y - 2.5, W - MR - xT + 3, 11, "F");
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(11.5);
-  doc.setTextColor(...BIANCO);
-  doc.text(d.totale[0], xT, y + 4.8);
-  doc.text(d.totale[1], W - MR - 2, y + 4.8, { align: "right" });
-  y += 17;
-  corsivo(doc, d.esenzione ? [d.esenzione] : [], XM, y, W - MR - XM);
+  y = totali(d, XM + 34, y, testa, null);
+  corsivo(doc, d.esenzione ? [d.esenzione] : [], XM, y - 3, W - MR - XM);
   piede(doc, d, XM, W - MR);
 }
 
