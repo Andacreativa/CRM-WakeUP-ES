@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import Link from "next/link";
 import { Save } from "lucide-react";
 import type { ImpostazioniFatture } from "@/lib/impostazioni";
 import { CAUSE_ZERO } from "@/lib/fatture";
@@ -278,6 +279,14 @@ export default function ImpostazioniPage() {
               {vf.errore && vf.certificato && <span className="text-bad"> · {vf.errore}</span>}
             </p>
           )}
+          <p className="text-[11px] text-gray-500 mt-1.5 leading-snug max-w-2xl">
+            L&apos;AEAT chiede che la dichiarazione responsabile del programma sia leggibile dentro il
+            programma stesso:{" "}
+            <Link href="/impostazioni/declaracion-responsable" className="text-brand font-semibold hover:underline">
+              apri la dichiarazione responsabile
+            </Link>
+            .
+          </p>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           <div className="md:col-span-2">
@@ -352,6 +361,22 @@ export default function ImpostazioniPage() {
               <option value="es">Español</option>
               <option value="en">English</option>
             </select>
+          </div>
+          <div>
+            <label className={labelCls}>Posizione del QR tributario</label>
+            <select
+              value={cfg.pdfPosizioneQr}
+              onChange={(e) => set("pdfPosizioneQr", e.target.value)}
+              className={inputCls}
+            >
+              <option value="centro">In alto al centro (preferita dall&apos;AEAT)</option>
+              <option value="sinistra">In alto a sinistra</option>
+              <option value="destra">In alto a destra</option>
+            </select>
+            <p className="text-[11px] text-gray-500 mt-1 leading-snug">
+              Solo sulle fatture trasmesse da qui. Le FAQ dell&apos;AEAT lo vogliono all&apos;inizio
+              della fattura, al centro o a sinistra.
+            </p>
           </div>
           <div className="md:col-span-3">
             <label className={labelCls}>Note di default (su ogni fattura)</label>

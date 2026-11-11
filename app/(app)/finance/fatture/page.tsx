@@ -4,7 +4,7 @@ import { ExportBar, ExportButton } from "@/components/ExportBar";
 import Pills from "@/components/Pills";
 import { Kpi, KpiGrid } from "@/components/Kpi";
 import SearchBox from "@/components/SearchBox";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -207,6 +207,7 @@ export default function FatturePage() {
       .catch(() => {});
   }, []);
 
+  const codaRitentata = useRef(false);
   const load = async () => {
     const params = new URLSearchParams({ annullate: "1" });
     if (anno > 0) params.set("anno", String(anno));
@@ -216,10 +217,20 @@ export default function FatturePage() {
       (await fetch("/api/clienti")).json() as Promise<unknown>,
       (await fetch(`/api/proforma${anno > 0 ? `?anno=${anno}` : ""}`)).json() as Promise<unknown>,
     ]);
-    setFatture(Array.isArray(f) ? (f as Fattura[]) : []);
+    const lista = Array.isArray(f) ? (f as Fattura[]) : [];
+    setFatture(lista);
     setBozze(Array.isArray(b) ? (b as Fattura[]) : []);
     setProforma(Array.isArray(pf) ? (pf as Proforma[]) : []);
     setClienti(Array.isArray(c) ? (c as Cliente[]) : []);
+    // Un registro rimasto in coda (AEAT giù all'emissione) riparte da solo
+    // appena qualcuno apre la lista, una volta per apertura della pagina
+    if (!codaRitentata.current && lista.some((x) => x.vfStato === "in_coda")) {
+      codaRitentata.current = true;
+      const r = await fetch("/api/verifactu/coda", { method: "POST" })
+        .then((x) => x.json())
+        .catch(() => null);
+      if (r?.inviati > 0) load();
+    }
   };
   useEffect(() => {
     load();

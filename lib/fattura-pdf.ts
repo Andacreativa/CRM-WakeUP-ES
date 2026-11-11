@@ -302,19 +302,33 @@ export async function creaFatturaPDF(
   const proforma = !!opts.proforma;
   const c = f.cliente;
 
-  // ── Logo e azienda a sinistra ──────────────────────────────────────────
+  // ── Testata: logo, azienda e QR tributario ─────────────────────────────
+  // Il QR va all'inizio della fattura (FAQ AEAT: in alto, «preferiblemente
+  // centrado o, si no, próximo al margen superior izquierdo»); dove metterlo
+  // si sceglie in Impostazioni › PDF. Solo per le fatture trasmesse da qui:
+  // quelle registrate a mano hanno il loro PDF ufficiale altrove.
+  const conQr = !!f.vfQr && !bozza && !proforma;
+  const posQr = conQr ? cfg.pdfPosizioneQr || "destra" : null;
+  const lato = 30;
+  const qx = posQr === "sinistra" ? ML : posQr === "centro" ? (W - lato) / 2 : W - MR - lato;
+  // Al centro il QR sale un po', così i dati dell'azienda non lo toccano
+  const qy = posQr === "centro" ? 20.5 : 25;
+  // Con il QR a sinistra il logo passa a destra e l'azienda affianca il QR
+  const xAzienda = posQr === "sinistra" ? ML + lato + 8 : ML;
   const logo =
     opts.logo !== undefined ? opts.logo : cfg.logoUrl ? await caricaLogoRifilato(cfg.logoUrl) : null;
   if (logo) {
     // Sta in un riquadro di 34×12 mm, senza deformarsi
     const k = Math.min(34 / logo.width, 12 / logo.height);
-    doc.addImage(logo.dataUrl, "JPEG", ML + 2, 24, logo.width * k, logo.height * k);
+    const lw = logo.width * k;
+    const lx = posQr === "sinistra" ? W - MR - lw : ML + 2;
+    doc.addImage(logo.dataUrl, "JPEG", lx, 24, lw, logo.height * k);
   }
   doc.setFont("helvetica", "bold");
   doc.setFontSize(11);
   doc.setTextColor(...DARK);
-  let y = 48;
-  doc.text(cfg.ragioneSociale, ML, y);
+  let y = posQr === "sinistra" ? 33 : 48;
+  doc.text(cfg.ragioneSociale, xAzienda, y);
   doc.setFont("helvetica", "normal");
   doc.setFontSize(10);
   doc.setTextColor(...GRAY);
@@ -327,23 +341,19 @@ export async function creaFatturaPDF(
   ]) {
     if (!r) continue;
     y += 4.6;
-    doc.text(r, ML, y);
+    doc.text(r, xAzienda, y);
   }
 
-  // ── QR tributario a destra (30×30 mm, dicitura sopra e sotto) ──────────
-  // Solo per le fatture trasmesse da qui: quelle registrate a mano hanno il
-  // loro PDF ufficiale altrove.
-  if (f.vfQr && !bozza && !proforma) {
+  // QR 30×30 mm (l'AEAT ammette da 30 a 40), dicitura sopra e sotto
+  if (conQr && f.vfQr) {
     const { default: QRCode } = await import("qrcode");
     const png = await QRCode.toDataURL(f.vfQr, { errorCorrectionLevel: "M", margin: 0, scale: 8 });
-    const lato = 30,
-      qx = W - MR - lato;
     doc.setFont("helvetica", "bold");
     doc.setFontSize(9.5);
     doc.setTextColor(...DARK);
-    doc.text(L.qr, qx + lato / 2, 22.5, { align: "center" });
-    doc.addImage(png, "PNG", qx, 25, lato, lato);
-    doc.text("VERI*FACTU", qx + lato / 2, 60, { align: "center" });
+    doc.text(L.qr, qx + lato / 2, qy - 2.5, { align: "center" });
+    doc.addImage(png, "PNG", qx, qy, lato, lato);
+    doc.text("VERI*FACTU", qx + lato / 2, qy + lato + 5, { align: "center" });
     if (f.vfQr.includes("prewww")) {
       doc.setFont("helvetica", "bold");
       doc.setFontSize(8);
