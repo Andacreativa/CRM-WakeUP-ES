@@ -1,5 +1,7 @@
 import https from "node:https";
 import fs from "node:fs";
+import tls from "node:tls";
+import { X509Certificate } from "node:crypto";
 import type { Ambiente } from "./registro";
 
 // Invio dei registri al servizio web dell'AEAT. La connessione si autentica
@@ -56,6 +58,81 @@ export function spedisci(ambiente: Ambiente, xml: string): Promise<{ status: num
       else reject(e);
     });
     req.end(xml);
+  });
+}
+
+// ── Verifica del certificato ───────────────────────────────────────────────
+// Prova che il certificato si apra con la password e che l'AEAT lo accetti
+// per la connessione, dall'ambiente in cui gira l'app. Non invia registri:
+// è una GET al servizio, come scripts/verifactu-certificato.mjs.
+export interface EsitoCertificato {
+  ok: boolean;
+  passo: "assente" | "apertura" | "connessione" | "fatto";
+  messaggio: string;
+  titolare: string | null;
+  scadenza: string | null;
+  host: string;
+  produzioneAbilitata: boolean;
+}
+export function verificaCertificato(ambiente: Ambiente): Promise<EsitoCertificato> {
+  const url = new URL(ENDPOINT[ambiente]);
+  const base = {
+    titolare: null,
+    scadenza: null,
+    host: url.host,
+    produzioneAbilitata: process.env.VERIFACTU_PRODUZIONE === "1",
+  };
+  const cert = certificato();
+  if (!cert)
+    return Promise.resolve({ ...base, ok: false, passo: "assente", messaggio: "Certificato non configurato." });
+  try {
+    tls.createSecureContext({ pfx: cert.pfx, passphrase: cert.passphrase });
+  } catch (e) {
+    return Promise.resolve({
+      ...base,
+      ok: false,
+      passo: "apertura",
+      messaggio: `Il certificato non si apre (password sbagliata, file incompleto o formato vecchio): ${e instanceof Error ? e.message : String(e)}`,
+    });
+  }
+  let titolare: string | null = null;
+  let scadenza: string | null = null;
+  try {
+    const x = new X509Certificate(
+      tls.createSecureContext({ pfx: cert.pfx, passphrase: cert.passphrase }).context.getCertificate(),
+    );
+    titolare = /CN=([^\n]+)/.exec(x.subject)?.[1] ?? null;
+    scadenza = new Date(x.validTo).toISOString();
+  } catch {
+    /* titolare e scadenza sono solo informativi */
+  }
+  return new Promise((resolve) => {
+    const req = https.request(
+      { host: url.host, path: url.pathname, method: "GET", pfx: cert.pfx, passphrase: cert.passphrase, timeout: 20_000 },
+      (res) => {
+        res.resume();
+        resolve({
+          ...base,
+          titolare,
+          scadenza,
+          ok: true,
+          passo: "fatto",
+          messaggio: `Il certificato si apre e l'AEAT lo accetta (risposta ${res.statusCode}).`,
+        });
+      },
+    );
+    req.on("timeout", () => req.destroy(new Error("nessuna risposta entro 20 secondi")));
+    req.on("error", (e) =>
+      resolve({
+        ...base,
+        titolare,
+        scadenza,
+        ok: false,
+        passo: "connessione",
+        messaggio: `Il certificato si apre ma la connessione all'AEAT non riesce: ${e.message}`,
+      }),
+    );
+    req.end();
   });
 }
 

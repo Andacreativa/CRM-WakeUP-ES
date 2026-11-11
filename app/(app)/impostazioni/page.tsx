@@ -20,6 +20,20 @@ export default function ImpostazioniPage() {
   const [anteprima, setAnteprima] = useState<string>("");
   // Stato dell'invio all'AEAT: certificato presente, registri in coda
   const [vf, setVf] = useState<{ certificato: boolean; inCoda: number; errore: string | null } | null>(null);
+  // Verifica del certificato con l'AEAT (non invia nulla)
+  const [verifica, setVerifica] = useState<
+    | "attesa"
+    | { ok: boolean; messaggio: string; titolare: string | null; scadenza: string | null; produzioneAbilitata: boolean }
+    | null
+  >(null);
+  const verificaCert = async () => {
+    setVerifica("attesa");
+    try {
+      setVerifica(await (await fetch("/api/verifactu/certificato")).json());
+    } catch {
+      setVerifica({ ok: false, messaggio: "Verifica non riuscita.", titolare: null, scadenza: null, produzioneAbilitata: true });
+    }
+  };
 
   useEffect(() => {
     fetch("/api/impostazioni/fatture")
@@ -277,6 +291,24 @@ export default function ImpostazioniPage() {
               </span>
               {vf.inCoda > 0 && <span className="text-warn"> · {vf.inCoda} registri in coda</span>}
               {vf.errore && vf.certificato && <span className="text-bad"> · {vf.errore}</span>}
+              {vf.certificato && (
+                <button
+                  type="button"
+                  onClick={verificaCert}
+                  disabled={verifica === "attesa"}
+                  className="ml-2 text-brand font-semibold hover:underline disabled:opacity-60"
+                >
+                  {verifica === "attesa" ? "verifico…" : "verifica con l'AEAT"}
+                </button>
+              )}
+            </p>
+          )}
+          {verifica && verifica !== "attesa" && (
+            <p className={cn("text-[11px] mt-1 leading-snug max-w-2xl", verifica.ok ? "text-ok" : "text-bad")}>
+              {verifica.messaggio}
+              {verifica.titolare && ` Titolare: ${verifica.titolare}.`}
+              {verifica.scadenza && ` Valido fino al ${new Date(verifica.scadenza).toLocaleDateString("it-IT")}.`}
+              {!verifica.produzioneAbilitata && " Attenzione: su questo ambiente l'invio vero non è abilitato."}
             </p>
           )}
           <p className="text-[11px] text-gray-500 mt-1.5 leading-snug max-w-2xl">
