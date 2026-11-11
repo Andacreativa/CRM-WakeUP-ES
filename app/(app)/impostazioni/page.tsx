@@ -363,6 +363,19 @@ export default function ImpostazioniPage() {
             </select>
           </div>
           <div>
+            <label className={labelCls}>Impostazione grafica</label>
+            <select value={cfg.pdfStile} onChange={(e) => set("pdfStile", e.target.value)} className={inputCls}>
+              <option value="classico">Classica (come Billin)</option>
+              <option value="banda">Banda: fascia scura in testa, numero grande</option>
+              <option value="minimal">Minimal: righe sottili, molta aria</option>
+              <option value="colonna">Colonna laterale con QR, logo e banca</option>
+            </select>
+            <p className="text-[11px] text-gray-500 mt-1 leading-snug">
+              Nelle impostazioni Banda e Colonna il QR sta in alto a sinistra, in Minimal in alto al centro:
+              la posizione qui sotto vale solo per la Classica.
+            </p>
+          </div>
+          <div>
             <label className={labelCls}>Posizione del QR tributario</label>
             <select
               value={cfg.pdfPosizioneQr}

@@ -54,6 +54,9 @@ export interface ImpostazioniFatture {
   // QR tributario nel PDF: le FAQ AEAT lo vogliono all'inizio della fattura,
   // «preferiblemente centrado o, si no, próximo al margen superior izquierdo»
   pdfPosizioneQr: "destra" | "centro" | "centro_solo" | "sinistra";
+  // Impostazione grafica del foglio: classico (come Billin) oppure una delle
+  // alternative di lib/fattura-pdf-stili.ts
+  pdfStile: "classico" | "banda" | "minimal" | "colonna";
   noteDefault: string;
   piePagina: string;
   // Canale Social Media House: compenso mensile netto da raggiungere con le
@@ -119,6 +122,7 @@ export const IMPOSTAZIONI_FATTURE_DEFAULT: ImpostazioniFatture = {
   colore: "#e8308a",
   linguaDefault: "it",
   pdfPosizioneQr: "centro",
+  pdfStile: "classico",
   noteDefault: "",
   piePagina: "",
   smhNome: "SocialMediaHouse S.R.L.",
@@ -211,6 +215,7 @@ function sanifica(p: Partial<ImpostazioniFatture>): Partial<ImpostazioniFatture>
   if (out.linguaDefault && !["it", "es", "en"].includes(out.linguaDefault)) out.linguaDefault = "it";
   if (out.vfModo && !["prova", "produzione"].includes(out.vfModo)) out.vfModo = "spento";
   if (out.pdfPosizioneQr && !["centro", "centro_solo", "sinistra"].includes(out.pdfPosizioneQr)) out.pdfPosizioneQr = "destra";
+  if (out.pdfStile && !["banda", "minimal", "colonna"].includes(out.pdfStile)) out.pdfStile = "classico";
   for (const k of ["vfCausaSpagna", "vfCausaEstero"] as const) {
     if (out[k] && !CAUSE_IGIC.includes(out[k])) out[k] = "";
   }

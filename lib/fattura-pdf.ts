@@ -34,6 +34,7 @@ const T = {
     numero: "N. fattura",
     data: "Data fattura",
     scadenza: "Scadenza",
+    emittente: "Emittente",
     cliente: "CLIENTE",
     colonne: ["Concetti", "Q.tà", "Prezzo unit.", "Imp.", "Totale"],
     servizi: "Servizi",
@@ -62,6 +63,7 @@ const T = {
     numero: "Nº de factura",
     data: "Fecha factura",
     scadenza: "Fecha vencimiento",
+    emittente: "Emisor",
     cliente: "CLIENTE",
     colonne: ["Conceptos", "Cant.", "Precio uni.", "Imp.", "Total"],
     servizi: "Servicios",
@@ -90,6 +92,7 @@ const T = {
     numero: "Invoice no.",
     data: "Invoice date",
     scadenza: "Due date",
+    emittente: "From",
     cliente: "BILL TO",
     colonne: ["Items", "Qty", "Unit price", "Tax", "Total"],
     servizi: "Services",
@@ -302,6 +305,92 @@ export async function creaFatturaPDF(
   const proforma = !!opts.proforma;
   const c = f.cliente;
 
+  const logo =
+    opts.logo !== undefined ? opts.logo : cfg.logoUrl ? await caricaLogoRifilato(cfg.logoUrl) : null;
+  const rigaCitta = (cap?: string | null, citta?: string | null, prov?: string | null, paese?: string | null) =>
+    [[cap, citta].filter(Boolean).join(" "), prov, paeseL(paese, lingua)].filter(Boolean).join(", ");
+
+  // ── Impostazioni grafiche alternative (lib/fattura-pdf-stili.ts) ────────
+  // Stessi dati e testi, foglio disegnato in modo diverso. Il classico segue.
+  const stile = cfg.pdfStile || "classico";
+  if (stile !== "classico") {
+    const { disegnaStile } = await import("./fattura-pdf-stili");
+    const vociS = vociFattura(f, lingua);
+    const totS = totaliFattura(f);
+    const impS = nomeImposta(f.tipoIva);
+    const zeroS = !(f.iva > 0);
+    const etZeroS = nonSoggetta(f.causaIgic) ? L.nonSoggetta : L.esente;
+    const conImpS = zeroS ? `${impS} ${etZeroS}` : `${impS} ${f.iva} %`;
+    const numS = (n: number) => n.toLocaleString("it-IT", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const rettS = f.tipoFattura !== "F1";
+    let qrPng: string | null = null;
+    if (f.vfQr && !bozza && !proforma) {
+      const { default: QRCode } = await import("qrcode");
+      qrPng = await QRCode.toDataURL(f.vfQr, { errorCorrectionLevel: "M", margin: 0, scale: 8 });
+    }
+    const ibanS = cfg.iban.replace(/\s+/g, "").replace(/(.{4})/g, "$1 ").trim();
+    const dati: [string, string][] = [
+      [proforma ? L.numeroProforma : L.numero, f.numero ?? "—"],
+      [proforma ? L.dataProforma : L.data, data(f.data)],
+    ];
+    if (f.scadenza) dati.push([proforma ? L.validita : L.scadenza, data(f.scadenza)]);
+    const note = [
+      proforma ? L.dicituraProforma : "",
+      rettS && f.rettificaDi?.numero
+        ? compilaTesto(f.tipoRettifica === "S" ? L.sostituisce : L.rettifica, {
+            numero: f.rettificaDi.numero,
+            data: data(f.rettificaDi.data),
+          })
+        : "",
+    ].filter(Boolean);
+    disegnaStile(stile, {
+      doc,
+      accent: ACCENT,
+      logo,
+      qrPng,
+      etQr: L.qr,
+      prova: f.vfQr?.includes("prewww") ? L.prova : null,
+      titolo: proforma ? L.proforma : rettS ? L.rettificativa : L.titolo,
+      bozza: bozza ? L.bozza : null,
+      etEmittente: L.emittente,
+      etCliente: L.cliente,
+      azienda: {
+        nome: cfg.ragioneSociale,
+        righe: [cfg.nif, cfg.indirizzo, rigaCitta(cfg.cap, cfg.citta, cfg.provincia, cfg.paese)].filter(Boolean),
+      },
+      cliente: {
+        nome: c?.nome ?? "—",
+        righe: [c?.partitaIva, c?.via, rigaCitta(c?.cap, c?.citta, c?.provincia, c?.paese)].filter(
+          (r): r is string => !!r,
+        ),
+      },
+      dati,
+      note,
+      descr: (f.descrizione || cfg.vfDescrizioneDefault || "").trim(),
+      colonne: L.colonne,
+      righe: vociS.map((v) => [
+        v.descrizione,
+        numS(v.quantita),
+        fmt(v.prezzo),
+        zeroS ? etZeroS : `${f.iva} %`,
+        fmt(v.imponibile),
+      ]),
+      totali: [
+        [`${L.imponibile} ${conImpS}`, fmt(totS.imponibile)],
+        [conImpS, fmt(totS.imposta)],
+      ],
+      totale: [L.totale, fmt(totS.totale)],
+      esenzione: zeroS && cfg.testoEsenzione.trim() && !nonSoggetta(f.causaIgic) ? cfg.testoEsenzione.trim() : "",
+      etPagamento: L.pagamento,
+      pagamento: [
+        cfg.iban ? `${L.bonifico} ${ibanS}${cfg.bic ? ` / ${L.swift}: ${cfg.bic}` : ""}` : "",
+        cfg.noteDefault.trim(),
+      ].filter(Boolean),
+      piePagina: cfg.piePagina.trim(),
+    });
+    return doc;
+  }
+
   // ── Testata: logo, azienda e QR tributario ─────────────────────────────
   // Il QR va all'inizio della fattura (FAQ AEAT: «arriba, próximo al margen
   // superior, preferiblemente centrado o, si no, próximo al margen superior
@@ -320,8 +409,6 @@ export async function creaFatturaPDF(
   // Di quanto scende il resto della testata per lasciare aria al QR
   const dy = posQr === "centro_solo" ? 36 : posQr === "centro" ? 14 : 0;
   const aziendaDestra = posQr === "sinistra";
-  const logo =
-    opts.logo !== undefined ? opts.logo : cfg.logoUrl ? await caricaLogoRifilato(cfg.logoUrl) : null;
   if (logo) {
     // Sta in un riquadro di 34×12 mm, senza deformarsi
     const k = Math.min(34 / logo.width, 12 / logo.height);
