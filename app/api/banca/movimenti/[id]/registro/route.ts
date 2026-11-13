@@ -7,9 +7,10 @@ import { ErroreRegistro, collegaRegistro, type RigaInput } from "@/lib/registro-
 type Ctx = { params: Promise<{ id: string }> };
 
 // POST { righe: [{ dipendenteId, voce, mese, anno, importo, pagamentoId?, nuova? }],
-//        resto?: { importo, descrizione, mese, anno } }
+//        copertura?: { spesaId?, categoria, fornitore, descrizione, mese, anno } }
 // Il movimento (uscita) paga queste righe del registro pagamenti: quelle
-// già registrate si collegano, le altre si creano con la loro spesa.
+// già registrate si collegano, le altre si creano. Con `copertura` una sola
+// spesa (fattura Metropolitan, addebito AEAT) paga tutte le righe.
 export async function POST(request: Request, { params }: Ctx) {
   try {
     const { id } = await params;
@@ -21,7 +22,7 @@ export async function POST(request: Request, { params }: Ctx) {
     if (!righe.length || righe.length !== (body.righe?.length ?? 0)) {
       return NextResponse.json({ error: "Righe del registro non valide" }, { status: 400 });
     }
-    await collegaRegistro(prisma, movId, righe, body.resto ?? null);
+    await collegaRegistro(prisma, movId, righe, body.copertura ?? null);
     const aggiornato = await prisma.movimentoBancario.findUnique({
       where: { id: movId },
       include: INCLUDE_MOVIMENTO,

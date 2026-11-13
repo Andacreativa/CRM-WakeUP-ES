@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { VOCE_DA_CATEGORIA } from "@/lib/registro";
+import { allineaCoperturaBenefit } from "@/lib/registro-banca";
 import { prisma } from "@/lib/prisma";
 import { CATEGORIE_SPESA, AZIENDE } from "@/lib/constants";
 import { INCLUDE_MOVIMENTO, imparaBanca, meseAnno } from "@/lib/banca";
@@ -79,12 +80,14 @@ export async function POST(request: Request, { params }: Ctx) {
           },
         });
       }
+      // fattura dei benefit (Metropolitan): paga i benefit del mese
+      if (!(voceRegistro && dipendenteId)) await allineaCoperturaBenefit(tx, spesa.id);
       return tx.movimentoBancario.update({
         where: { id: mov.id },
         data: { stato: "spesa_creata" },
         include: INCLUDE_MOVIMENTO,
       });
-    });
+    }, { timeout: 20_000, maxWait: 10_000 });
     if (body.impara !== false) {
       await imparaBanca(prisma, mov.beneficiario, { categoria, fornitore });
     }

@@ -4,6 +4,7 @@
 // nata dalla banca o inserita a mano in Spese.
 import type { Prisma, PrismaClient } from "@prisma/client";
 import { nomeCompleto } from "./dipendenti";
+import { allineaCoperturaBenefit } from "./registro-banca";
 
 type Db = PrismaClient | Prisma.TransactionClient;
 
@@ -42,6 +43,8 @@ export async function personaDelFornitore(db: Db, fornitore: string) {
 //   la riga si toglie.
 // Le commissioni nate da una fattura restano gestite dalla fattura.
 export async function allineaRegistroSpesa(db: Db, spesaId: number) {
+  // fattura dei benefit (Metropolitan): paga i benefit del mese delle persone
+  await allineaCoperturaBenefit(db, spesaId);
   const spesa = await db.spesa.findUnique({
     where: { id: spesaId },
     include: { pagamentoMensile: true },

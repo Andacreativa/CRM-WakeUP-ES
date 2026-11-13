@@ -634,21 +634,34 @@ export function suggerisci(m: MovimentoLike, ctx: ContestoSuggerimenti): Suggeri
       candidati.splice(0, candidati.length, proposta, ...resto);
     }
   }
-  // Pagamento dei dipendenti: righe del registro (le spese di quelle righe
-  // non si propongono anche come abbinamento singolo)
+  candidati.sort((a, b) => b.punteggio - a.punteggio || a.id - b.id);
+  // Pagamento dei dipendenti: righe del registro. Le spese del registro
+  // (anche di altri mesi) passano dalla proposta; con la spesa unica
+  // (Metropolitan, AEAT) la fattura già in Spese si collega invece di
+  // crearne un'altra.
   const registro = ctx.registro
     ? proponiRegistro(
-        { importo: m.importo, dataContabile: m.dataContabile, categoria, persona, testo, testoN },
+        { importo: m.importo, dataContabile: m.dataContabile, categoria, fornitore, descrizione, persona, testo, testoN },
         ctx.registro,
       )
     : null;
   if (registro) {
-    // le righe del registro (anche di altri mesi) passano dalla proposta
     for (let i = candidati.length - 1; i >= 0; i--) {
       if (candidati[i].registro) candidati.splice(i, 1);
     }
+    const fattura = registro.copertura ? candidati.find((c) => !c.ids && c.punteggio >= 50) : undefined;
+    if (registro.copertura && fattura) {
+      registro.copertura = {
+        spesaId: fattura.id,
+        categoria: fattura.categoria,
+        fornitore: fattura.fornitore,
+        descrizione: fattura.descrizione ?? "",
+        mese: fattura.mese,
+        anno: fattura.anno,
+      };
+      candidati.splice(candidati.indexOf(fattura), 1);
+    }
   }
-  candidati.sort((a, b) => b.punteggio - a.punteggio || a.id - b.id);
 
   return {
     registro,

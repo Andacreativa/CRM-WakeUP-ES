@@ -42,10 +42,20 @@ interface Pagamento {
   note: string | null;
   fattura: { id: number; numero: string | null; cliente: { nome: string } | null } | null;
   spesa: { abbinamentiBancari: { movimento: { dataContabile: string } }[] } | null;
+  // spesa unica che paga la riga (fattura Metropolitan, addebito AEAT)
+  spesaCopertura: {
+    id: number;
+    fornitore: string;
+    abbinamentiBancari: { movimento: { dataContabile: string } }[];
+  } | null;
 }
 
 // Data del movimento bancario che ha pagato la riga (null = non ancora visto in banca)
-const pagatoInBanca = (p: Pagamento) => p.spesa?.abbinamentiBancari[0]?.movimento.dataContabile ?? null;
+const pagatoInBanca = (p: Pagamento) =>
+  p.spesa?.abbinamentiBancari[0]?.movimento.dataContabile ??
+  p.spesaCopertura?.abbinamentiBancari[0]?.movimento.dataContabile ??
+  null;
+const pagataDa = (p: Pagamento) => (p.spesaCopertura ? ` · pagato con la spesa ${p.spesaCopertura.fornitore}` : "");
 const dataBreve = (iso: string) => new Date(iso).toLocaleDateString("it-IT", { timeZone: "UTC" });
 
 const inputCls =
@@ -132,7 +142,7 @@ export default function PagamentiPage() {
   const totale = pagamenti.reduce((s, x) => s + x.importo, 0);
 
   const registraMese = async () => {
-    if (!confirm(`Registrare tutte le voci mancanti di ${MESI[mese - 1]} ${anno} con gli importi di default?`))
+    if (!confirm(`Registrare le voci mancanti di ${MESI[mese - 1]} ${anno} con gli importi di default?\n\nBenefit e IRPF arrivano dalla banca (fattura Metropolitan, addebito AEAT del trimestre).`))
       return;
     const res = await fetch("/api/pagamenti-mensili/registra-mese", {
       method: "POST",
@@ -306,7 +316,7 @@ export default function PagamentiPage() {
                             <button
                               onClick={() => setModal({ persona: p, voce: v, esistente })}
                               className="group inline-flex flex-col items-end"
-                              title={banca ? `Pagato in banca il ${dataBreve(banca)} · modifica o elimina` : "Registrato, non ancora visto in banca · modifica o elimina"}
+                              title={`${banca ? `Pagato in banca il ${dataBreve(banca)}` : "Registrato, non ancora visto in banca"}${pagataDa(esistente)} · modifica o elimina`}
                             >
                               <span className="inline-flex items-center gap-1 text-sm font-semibold text-gray-900">
                                 <Check className="w-3.5 h-3.5 text-ok" />

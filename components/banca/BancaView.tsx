@@ -22,7 +22,7 @@ import { useAnno } from "@/lib/anno-context";
 import { cn } from "@/lib/utils";
 import {
   STATO_MOVIMENTO_LABEL,
-  type RestoRegistro,
+  type CoperturaRegistro,
   type RigaRegistroBanca,
   type StatoMovimento,
   type Suggerimento,
@@ -94,7 +94,7 @@ interface Edit {
   dipendenteId: number | null; // rimborsi/benefit: persona del registro
   // Pagamento dei dipendenti: il movimento paga queste righe del registro
   usaRegistro: boolean;
-  registro: { righe: RigaRegistroBanca[]; resto: RestoRegistro | null } | null;
+  registro: { righe: RigaRegistroBanca[]; copertura: CoperturaRegistro | null } | null;
 }
 
 type Vista = "movimenti" | "importazioni";
@@ -126,7 +126,7 @@ const editDaSuggerimento = (s: Suggerimento): Edit => ({
   candidatoId: s.candidati[0] && s.candidati[0].punteggio >= 50 ? s.candidati[0].id : 0,
   dipendenteId: s.dipendenteId,
   usaRegistro: !!s.registro?.certa,
-  registro: s.registro ? { righe: s.registro.righe, resto: s.registro.resto } : null,
+  registro: s.registro ? { righe: s.registro.righe, copertura: s.registro.copertura } : null,
 });
 const CON_REGISTRO = new Set(["Rimborsi", "Benefit", "Commissioni"]);
 // Categorie dei pagamenti ai dipendenti: la riga offre anche «Registro dipendenti»
@@ -273,7 +273,7 @@ export default function BancaView() {
       const res = await fetch(`/api/banca/movimenti/${r.id}/registro`, {
         method: "POST",
         headers,
-        body: JSON.stringify({ righe: e.registro.righe, resto: e.registro.resto }),
+        body: JSON.stringify({ righe: e.registro.righe, copertura: e.registro.copertura }),
       });
       const j = await res.json();
       if (!res.ok) return j.error || "Errore";
@@ -407,7 +407,7 @@ export default function BancaView() {
             importoRegistro: null,
           },
         ],
-        resto: null,
+        copertura: null,
       },
     });
     setRegistroDi(r);
@@ -810,8 +810,27 @@ export default function BancaView() {
                               )}
                               {e?.usaRegistro && e.registro ? (
                                 <div className="mt-1 space-y-0.5">
+                                  {e.registro.copertura && (
+                                    <div
+                                      className="flex items-center gap-1.5 text-xs min-w-0"
+                                      title="Una spesa sola (come la fattura): paga le righe qui sotto, che non hanno una spesa propria"
+                                    >
+                                      <CategoriaBadge categoria={e.registro.copertura.categoria} />
+                                      <span className="truncate text-gray-700">
+                                        <span className="font-medium">{e.registro.copertura.fornitore}</span>
+                                        {e.registro.copertura.spesaId
+                                          ? ` · già in Spese (#${e.registro.copertura.spesaId})`
+                                          : " · spesa unica nuova"}
+                                      </span>
+                                      <span className="ml-auto font-semibold tabular-nums text-gray-900">{fmt(Math.abs(r.importo))}</span>
+                                      <span className="w-4 shrink-0" />
+                                    </div>
+                                  )}
                                   {e.registro.righe.map((x, i) => (
-                                    <div key={i} className="flex items-center gap-1.5 text-xs min-w-0">
+                                    <div
+                                      key={i}
+                                      className={cn("flex items-center gap-1.5 text-xs min-w-0", e.registro!.copertura && "pl-3 text-gray-500")}
+                                    >
                                       <CategoriaBadge
                                         categoria={x.voce === "irpf" ? "Tasse" : x.voce === "seguridad" ? "Seguridad Social" : VOCE_REGISTRO_LABEL[x.voce]}
                                       />
@@ -831,7 +850,9 @@ export default function BancaView() {
                                               : "Nuova riga del registro"
                                         }
                                       >
-                                        {x.pagamentoId && !x.nuova ? (
+                                        {e.registro!.copertura && !x.pagamentoId ? (
+                                          <Plus className="w-3.5 h-3.5 text-gray-400" />
+                                        ) : x.pagamentoId && !x.nuova ? (
                                           <Check className={cn("w-3.5 h-3.5", x.importoRegistro !== null ? "text-warn" : "text-ok")} />
                                         ) : (
                                           <Plus className={cn("w-3.5 h-3.5", x.nuova ? "text-brand" : "text-gray-400")} />
@@ -839,16 +860,6 @@ export default function BancaView() {
                                       </span>
                                     </div>
                                   ))}
-                                  {e.registro.resto && (
-                                    <div className="flex items-center gap-1.5 text-xs min-w-0">
-                                      <CategoriaBadge categoria="Tasse" />
-                                      <span className="truncate text-gray-700">{e.registro.resto.descrizione}</span>
-                                      <span className="ml-auto font-semibold tabular-nums text-gray-900">
-                                        {fmt(e.registro.resto.importo)}
-                                      </span>
-                                      <span className="w-4 shrink-0" />
-                                    </div>
-                                  )}
                                   <div className="flex items-center gap-2 text-[11px]">
                                     {s?.registro && !s.registro.certa && (
                                       <span className="text-warn truncate" title={s.registro.nota}>
@@ -1054,12 +1065,22 @@ export default function BancaView() {
           importo={Math.abs(registroDi.importo)}
           persone={persone}
           righe={edits[registroDi.id].registro!.righe}
-          resto={edits[registroDi.id].registro!.resto}
+          copertura={edits[registroDi.id].registro!.copertura}
+          coperturaDefault={
+            registroDi.suggerimento?.registro?.copertura ?? {
+              spesaId: null,
+              categoria: edits[registroDi.id].categoria,
+              fornitore: edits[registroDi.id].fornitore,
+              descrizione: edits[registroDi.id].descrizione,
+              mese: new Date(registroDi.dataContabile).getUTCMonth() + 1,
+              anno: new Date(registroDi.dataContabile).getUTCFullYear(),
+            }
+          }
           meseDefault={new Date(registroDi.dataContabile).getUTCMonth() + 1}
           annoDefault={new Date(registroDi.dataContabile).getUTCFullYear()}
           onClose={() => setRegistroDi(null)}
-          onSave={(righe, resto) => {
-            setEdit(registroDi.id, { usaRegistro: true, registro: { righe, resto } });
+          onSave={(righe, copertura) => {
+            setEdit(registroDi.id, { usaRegistro: true, registro: { righe, copertura } });
             setRegistroDi(null);
           }}
         />

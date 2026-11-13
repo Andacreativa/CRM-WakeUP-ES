@@ -9,6 +9,8 @@ import {
 
 // Registra in blocco, per tutte le persone attive, le voci del mese non
 // ancora registrate che hanno un importo di default maggiore di zero.
+// Benefit e IRPF no: li paga una spesa unica che arriva dalla banca (fattura
+// Metropolitan, addebito AEAT del trimestre), con una riga sola in Spese.
 export async function POST(request: Request) {
   try {
     const body = await request.json();
@@ -29,7 +31,7 @@ export async function POST(request: Request) {
     await prisma.$transaction(async (tx) => {
       for (const d of persone) {
         for (const voce of vociDiTipo(d.tipo)) {
-          if (VOCI[voce].auto || VOCI[voce].multiplo) continue;
+          if (VOCI[voce].auto || VOCI[voce].multiplo || voce === "benefit" || voce === "irpf") continue;
           if (giaFatte.has(`${d.id}:${voce}`)) continue;
           const importo = Math.round(importoDefault(d, voce) * 100) / 100;
           if (importo <= 0) continue;

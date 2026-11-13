@@ -67,9 +67,9 @@ export const REGOLE_BANCA_DEFAULT: RegolaBanca[] = [
     categoria: "Carta Aziendale",
     fornitore: BBVA,
   },
-  // L'addebito mensile Metropolitan è il benefit dei dipendenti: si divide
-  // tra le persone con benefit (registro pagamenti)
-  { pattern: "METROPOLITAN WORLD", categoria: "Benefit", fornitore: "Metropolitan World SL" },
+  // L'addebito mensile Metropolitan resta una spesa Ufficio (per il
+  // commercialista) e paga i benefit delle persone (registro pagamenti)
+  { pattern: "METROPOLITAN WORLD", categoria: "Ufficio", fornitore: "Metropolitan World SL" },
   {
     pattern: "JOSE RAMON GARCIA|QUANTUM BUSINESS|ASESORIA",
     categoria: "Commercialista",
@@ -144,16 +144,21 @@ export interface RigaRegistroBanca {
   // integrazione (es. «diferencia nóminas»): sempre una riga in più
   nuova?: boolean;
 }
-export interface RestoRegistro {
-  importo: number;
-  descrizione: string; // es. «Altre ritenute (mod. 111) · 2º trimestre 2026»
+// Spesa unica che paga più righe del registro (fattura Metropolitan →
+// benefit, addebito AEAT del trimestre → IRPF): in Spese, Bilancio e Informe
+// resta una riga sola, le righe del registro non hanno una spesa propria.
+export interface CoperturaRegistro {
+  spesaId: number | null; // spesa già registrata da collegare (null = si crea)
+  categoria: string;
+  fornitore: string;
+  descrizione: string;
   mese: number;
   anno: number;
 }
 export interface PropostaRegistro {
   tipo: "stipendio" | "seguridad" | "benefit" | "irpf";
   righe: RigaRegistroBanca[];
-  resto: RestoRegistro | null;
+  copertura: CoperturaRegistro | null;
   certa: boolean; // preselezionata: si può applicare in blocco
   nota: string;
 }

@@ -2,18 +2,20 @@
 
 import { useState } from "react";
 import { Plus, Trash2, X } from "lucide-react";
-import { fmt, MESI } from "@/lib/constants";
+import { CATEGORIE_SPESA, fmt, MESI } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 import {
   VOCI_REGISTRO_BANCA,
-  type RestoRegistro,
+  type CoperturaRegistro,
   type RigaRegistroBanca,
   type VoceRegistroBanca,
 } from "@/lib/banca-shared";
 
 // Righe del registro pagamenti che un movimento in uscita paga: persona,
-// voce, mese e importo. La somma (più l'eventuale resto, es. altre ritenute
-// del mod. 111) deve tornare con il movimento.
+// voce, mese e importo. Senza spesa unica ogni riga ha la sua spesa e la
+// somma deve tornare con il movimento. Con la spesa unica (fattura
+// Metropolitan, addebito AEAT) una sola spesa con l'importo del movimento
+// paga le righe, che non hanno una spesa propria.
 
 export const VOCE_REGISTRO_LABEL: Record<VoceRegistroBanca, string> = {
   stipendio: "Stipendio",
@@ -29,7 +31,8 @@ export default function RegistroRigheModal({
   importo,
   persone,
   righe: righeIniziali,
-  resto: restoIniziale,
+  copertura: coperturaIniziale,
+  coperturaDefault,
   meseDefault,
   annoDefault,
   onClose,
@@ -38,14 +41,15 @@ export default function RegistroRigheModal({
   importo: number; // del movimento (in valore assoluto)
   persone: { id: number; nome: string }[];
   righe: RigaRegistroBanca[];
-  resto: RestoRegistro | null;
+  copertura: CoperturaRegistro | null;
+  coperturaDefault: CoperturaRegistro; // proposta se si accende la spesa unica
   meseDefault: number;
   annoDefault: number;
   onClose: () => void;
-  onSave: (righe: RigaRegistroBanca[], resto: RestoRegistro | null) => void;
+  onSave: (righe: RigaRegistroBanca[], copertura: CoperturaRegistro | null) => void;
 }) {
   const [righe, setRighe] = useState<RigaRegistroBanca[]>(righeIniziali);
-  const [resto, setResto] = useState<RestoRegistro | null>(restoIniziale);
+  const [copertura, setCopertura] = useState<CoperturaRegistro | null>(coperturaIniziale);
   // persone in elenco + quelle delle righe (anche se non più attive)
   const elenco = [
     ...persone,
@@ -54,13 +58,14 @@ export default function RegistroRigheModal({
       .map((r) => ({ id: r.dipendenteId, nome: r.nome })),
   ].filter((p, i, a) => a.findIndex((x) => x.id === p.id) === i);
 
-  const somma = righe.reduce((t, r) => t + cent(r.importo || 0), 0) + (resto ? cent(resto.importo || 0) : 0);
+  const somma = righe.reduce((t, r) => t + cent(r.importo || 0), 0);
   const diff = cent(importo) - somma;
+  const quadra = copertura ? diff >= -1 : Math.abs(diff) <= 1;
   const valide =
     righe.length > 0 &&
     righe.every((r) => r.dipendenteId && r.importo > 0) &&
-    (!resto || resto.importo > 0) &&
-    Math.abs(diff) <= 1;
+    (!copertura || !!copertura.spesaId || (!!copertura.fornitore.trim() && !!copertura.categoria)) &&
+    quadra;
 
   // Cambiando persona, voce o mese la riga non è più quella del registro
   // proposta: alla conferma si collega quella giusta, se c'è, o si crea.
@@ -103,12 +108,73 @@ export default function RegistroRigheModal({
           <div>
             <h2 className="text-lg font-bold text-gray-900">Registro dipendenti</h2>
             <p className="text-sm text-gray-500">
-              Movimento di {fmt(importo)}: le righe già nel registro si collegano, le altre si creano con la loro spesa.
+              Movimento di {fmt(importo)}: le righe già nel registro si collegano, le altre si creano.
             </p>
           </div>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-700">
             <X className="w-5 h-5" />
           </button>
+        </div>
+
+        {/* Spesa unica */}
+        <div className="rounded-xl border border-gray-200 p-3 space-y-2">
+          <label className="flex items-start gap-2 text-sm text-gray-700 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={!!copertura}
+              onChange={(e) => setCopertura(e.target.checked ? coperturaDefault : null)}
+              className="accent-pink-600 mt-0.5"
+            />
+            <span>
+              <span className="font-medium">Una spesa unica per tutto il movimento</span>
+              <span className="block text-xs text-gray-400">
+                Come la fattura (es. Metropolitan in Ufficio, addebito AEAT in Tasse): in Spese, Bilancio e Informe una
+                riga sola; le righe del registro non hanno una spesa propria.
+              </span>
+            </span>
+          </label>
+          {copertura &&
+            (copertura.spesaId ? (
+              <div className="flex items-center gap-2 text-sm pl-6">
+                <span className="text-gray-700">
+                  Collega la spesa <span className="font-medium">#{copertura.spesaId}</span> già in Spese ·{" "}
+                  {copertura.categoria} · {copertura.fornitore}
+                  {copertura.descrizione ? ` · ${copertura.descrizione}` : ""}
+                </span>
+                <button
+                  onClick={() => setCopertura({ ...coperturaDefault, spesaId: null })}
+                  className="text-xs text-brand hover:underline whitespace-nowrap"
+                >
+                  creane una nuova
+                </button>
+              </div>
+            ) : (
+              <div className="grid grid-cols-[150px_1fr_1.3fr] gap-2 pl-6">
+                <select
+                  value={copertura.categoria}
+                  onChange={(e) => setCopertura({ ...copertura, categoria: e.target.value })}
+                  className={inputCls}
+                >
+                  {CATEGORIE_SPESA.map((c) => (
+                    <option key={c} value={c}>
+                      {c}
+                    </option>
+                  ))}
+                </select>
+                <input
+                  value={copertura.fornitore}
+                  onChange={(e) => setCopertura({ ...copertura, fornitore: e.target.value })}
+                  placeholder="Fornitore"
+                  className={inputCls}
+                />
+                <input
+                  value={copertura.descrizione}
+                  onChange={(e) => setCopertura({ ...copertura, descrizione: e.target.value })}
+                  placeholder="Descrizione"
+                  className={inputCls}
+                />
+              </div>
+            ))}
         </div>
 
         <div className="space-y-2">
@@ -193,60 +259,28 @@ export default function RegistroRigheModal({
           </button>
         </div>
 
-        <div className="border-t border-gray-100 pt-3 space-y-2">
-          {resto ? (
-            <div className="grid grid-cols-[1fr_100px_28px] gap-2 items-center">
-              <input
-                value={resto.descrizione}
-                onChange={(e) => setResto({ ...resto, descrizione: e.target.value })}
-                className={inputCls}
-                title="Spesa a parte, categoria Tasse"
-              />
-              <input
-                type="number"
-                step="0.01"
-                min="0"
-                value={resto.importo}
-                onChange={(e) => setResto({ ...resto, importo: parseFloat(e.target.value) || 0 })}
-                className={cn(inputCls, "text-right tabular-nums")}
-              />
-              <button onClick={() => setResto(null)} className="text-gray-400 hover:text-bad" title="Togli il resto">
-                <Trash2 className="w-4 h-4" />
-              </button>
-              <span className="text-[11px] text-gray-400 col-span-3 -mt-1">
-                Resto: spesa a parte in Tasse · {MESI[resto.mese - 1]} {resto.anno}
-              </span>
-            </div>
-          ) : (
-            <button
-              onClick={() =>
-                setResto({
-                  importo: Math.max(0, diff) / 100,
-                  descrizione: "Altre ritenute (mod. 111)",
-                  mese: righe[righe.length - 1]?.mese ?? meseDefault,
-                  anno: righe[righe.length - 1]?.anno ?? annoDefault,
-                })
-              }
-              className="btn btn-ghost btn-sm"
-            >
-              <Plus className="w-4 h-4" /> Resto come spesa Tasse
-            </button>
-          )}
-          <div className="flex items-center justify-between text-sm">
-            <span className="text-gray-500">
-              Righe {fmt(somma / 100)} · movimento {fmt(importo)}
-            </span>
-            <span className={cn("font-semibold", Math.abs(diff) <= 1 ? "text-ok" : "text-bad")}>
-              {Math.abs(diff) <= 1 ? "Torna ✓" : `Differenza ${fmt(diff / 100)}`}
-            </span>
-          </div>
+        <div className="border-t border-gray-100 pt-3 flex items-center justify-between text-sm">
+          <span className="text-gray-500">
+            Righe {fmt(somma / 100)} · movimento {fmt(importo)}
+          </span>
+          <span className={cn("font-semibold", quadra ? "text-ok" : "text-bad")}>
+            {copertura
+              ? diff < -1
+                ? `Le righe superano il movimento di ${fmt(-diff / 100)}`
+                : diff > 1
+                  ? `${fmt(diff / 100)} restano solo nella spesa`
+                  : "Torna ✓"
+              : quadra
+                ? "Torna ✓"
+                : `Differenza ${fmt(diff / 100)}`}
+          </span>
         </div>
 
         <div className="flex justify-end gap-2">
           <button onClick={onClose} className="btn btn-secondary">
             Annulla
           </button>
-          <button onClick={() => onSave(righe, resto)} disabled={!valide} className="btn btn-primary disabled:opacity-50">
+          <button onClick={() => onSave(righe, copertura)} disabled={!valide} className="btn btn-primary disabled:opacity-50">
             Usa queste righe
           </button>
         </div>

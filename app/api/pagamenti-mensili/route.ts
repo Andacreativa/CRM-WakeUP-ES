@@ -7,9 +7,20 @@ const INCLUDE = {
     select: { id: true, nome: true, cognome: true, tipo: true },
   },
   fattura: { select: { id: true, numero: true, cliente: { select: { nome: true } } } },
-  // pagamento visto in banca: data del movimento collegato alla spesa
+  // pagamento visto in banca: data del movimento collegato alla spesa (o alla
+  // spesa unica che paga la riga: fattura Metropolitan, addebito AEAT)
   spesa: {
     select: {
+      abbinamentiBancari: {
+        select: { movimento: { select: { dataContabile: true } } },
+        take: 1,
+      },
+    },
+  },
+  spesaCopertura: {
+    select: {
+      id: true,
+      fornitore: true,
       abbinamentiBancari: {
         select: { movimento: { select: { dataContabile: true } } },
         take: 1,

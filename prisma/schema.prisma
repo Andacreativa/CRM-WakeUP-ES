@@ -256,7 +256,10 @@ model Spesa {
   fatturaId    Int?
   fattura      Fattura? @relation(fields: [fatturaId], references: [id], onDelete: Cascade)
   createdAt    DateTime @default(now())
-  pagamentoMensile PagamentoMensile?
+  pagamentoMensile PagamentoMensile? @relation("SpesaRegistro")
+  // righe del registro pagate da questa spesa (fattura Metropolitan →
+  // benefit delle persone, addebito AEAT del trimestre → IRPF)
+  righeCoperte     PagamentoMensile[] @relation("CoperturaRegistro")
   abbinamentiBancari AbbinamentoBancario[]
 }
 
@@ -353,7 +356,12 @@ model PagamentoMensile {
   data         DateTime?
   note         String?
   spesaId      Int?       @unique
-  spesa        Spesa?     @relation(fields: [spesaId], references: [id], onDelete: SetNull)
+  spesa        Spesa?     @relation("SpesaRegistro", fields: [spesaId], references: [id], onDelete: SetNull)
+  // Riga senza spesa propria: il costo sta in una spesa unica che ne paga
+  // più d'una (fattura Metropolitan = benefit, addebito AEAT = IRPF del
+  // trimestre). In Spese, Bilancio e Informe resta una riga sola.
+  spesaCoperturaId Int?
+  spesaCopertura   Spesa?  @relation("CoperturaRegistro", fields: [spesaCoperturaId], references: [id], onDelete: Cascade)
   fatturaId    Int? // commissioni: fattura di origine
   fattura      Fattura?   @relation("CommissioneFattura", fields: [fatturaId], references: [id], onDelete: Cascade)
   createdAt    DateTime   @default(now())
@@ -362,6 +370,7 @@ model PagamentoMensile {
   @@index([anno, mese])
   @@index([dipendenteId, anno])
   @@index([fatturaId])
+  @@index([spesaCoperturaId])
 }
 
 model PagamentoDipendente {

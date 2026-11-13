@@ -3,18 +3,23 @@
 // - nomina («Nomina Leonardo Mestre - Marzo 2026»): stipendio della persona,
 //   mese dal testo (se quel mese è già pagato, il mese della data);
 // - TGSS: Seguridad Social della persona con quell'importo, mese dell'addebito;
-// - categoria Benefit senza persona (addebito Metropolitan): benefit diviso
-//   in parti uguali tra le persone con benefit, mese dell'addebito;
-// - AEAT a gennaio/aprile/luglio/ottobre: IRPF del trimestre prima, per
-//   persona e mese; la differenza è una riga a parte (altre ritenute, mod. 111).
-// Le righe già presenti nel registro e non ancora viste in banca si
-// collegano; le altre si creano (riga + spesa) alla conferma.
+// - addebito Metropolitan: una sola spesa (Ufficio, come la fattura) che paga
+//   i benefit delle persone, divisi in parti uguali, mese dell'addebito;
+// - AEAT a gennaio/aprile/luglio/ottobre: una sola spesa Tasse (l'addebito)
+//   che paga l'IRPF del trimestre prima, per persona e mese.
+// Stipendio e Seguridad Social hanno la loro spesa per riga; benefit e IRPF
+// no: il costo sta nella spesa unica (in Spese, Bilancio e Informe resta una
+// riga sola). Le righe già nel registro e non ancora viste in banca si
+// collegano; le altre si creano alla conferma.
 import type { Prisma, PrismaClient } from "@prisma/client";
 import { nomeCompleto, vociDiTipo, type Voce } from "./dipendenti";
-import { fmt } from "./constants";
-import type { PropostaRegistro, RigaRegistroBanca, VoceRegistroBanca } from "./banca-shared";
+import { CATEGORIE_SPESA, fmt } from "./constants";
+import type { CoperturaRegistro, PropostaRegistro, RigaRegistroBanca, VoceRegistroBanca } from "./banca-shared";
 
 type Db = PrismaClient | Prisma.TransactionClient;
+
+// Fornitore che paga i benefit delle persone (una fattura per tutti)
+export const BENEFIT_RE = /METROPOLITAN/i;
 
 export interface PersonaRegistro {
   id: number;
@@ -33,7 +38,8 @@ export interface RigaRegistroCtx {
   mese: number;
   importo: number;
   spesaId: number | null;
-  inBanca: boolean;
+  coperturaId: number | null;
+  inBanca: boolean; // la sua spesa (o la spesa unica che la paga) è collegata alla banca
 }
 export interface ContestoRegistro {
   persone: PersonaRegistro[];
@@ -49,6 +55,7 @@ const chiave = (dip: number, voce: string, anno: number, mese: number) => `${dip
 const cent = (n: number) => Math.round(Math.abs(n) * 100);
 
 export async function caricaContestoRegistro(db: Db, anni: number[]): Promise<ContestoRegistro> {
+  const conBanca = { select: { _count: { select: { abbinamentiBancari: true } } } } as const;
   const [persone, righe] = await Promise.all([
     db.dipendente.findMany({
       select: {
@@ -74,7 +81,9 @@ export async function caricaContestoRegistro(db: Db, anni: number[]): Promise<Co
             mese: true,
             importo: true,
             spesaId: true,
-            spesa: { select: { _count: { select: { abbinamentiBancari: true } } } },
+            spesaCoperturaId: true,
+            spesa: conBanca,
+            spesaCopertura: conBanca,
           },
           orderBy: [{ anno: "asc" }, { mese: "asc" }, { id: "asc" }],
         })
@@ -98,7 +107,9 @@ export async function caricaContestoRegistro(db: Db, anni: number[]): Promise<Co
       mese: r.mese,
       importo: r.importo,
       spesaId: r.spesaId,
-      inBanca: (r.spesa?._count.abbinamentiBancari ?? 0) > 0,
+      coperturaId: r.spesaCoperturaId,
+      inBanca:
+        (r.spesa?._count.abbinamentiBancari ?? 0) > 0 || (r.spesaCopertura?._count.abbinamentiBancari ?? 0) > 0,
     })),
     usate: new Set(),
     occupati: new Set(),
@@ -129,6 +140,8 @@ interface InfoMovimento {
   importo: number;
   dataContabile: Date;
   categoria: string; // categoria proposta (regola, memoria)
+  fornitore: string; // fornitore proposto
+  descrizione: string; // descrizione proposta (osservazioni)
   persona: { id: number; nome: string } | null; // citata nel testo
   testo: string;
   testoN: string; // testo normalizzato
@@ -139,13 +152,11 @@ export function proponiRegistro(info: InfoMovimento, ctx: ContestoRegistro): Pro
   const aa = info.dataContabile.getUTCFullYear();
   const totale = cent(info.importo);
   const haVoce = (p: PersonaRegistro, v: Voce) => vociDiTipo(p.tipo).includes(v);
-  const libera = (dip: number, voce: string, anno: number, mese: number) => {
-    const r = ctx.righe.find(
+  const libera = (dip: number, voce: string, anno: number, mese: number) =>
+    ctx.righe.find(
       (x) =>
         x.dipendenteId === dip && x.voce === voce && x.anno === anno && x.mese === mese && !x.inBanca && !ctx.usate.has(x.id),
-    );
-    return r ?? null;
-  };
+    ) ?? null;
   const riga = (
     p: PersonaRegistro,
     voce: VoceRegistroBanca,
@@ -172,6 +183,14 @@ export function proponiRegistro(info: InfoMovimento, ctx: ContestoRegistro): Pro
       if (!r.nuova) ctx.occupati.add(chiave(r.dipendenteId, r.voce, r.anno, r.mese));
     }
   };
+  const spesaUnica = (categoria: string, fornitore: string, descrizione: string): CoperturaRegistro => ({
+    spesaId: null,
+    categoria,
+    fornitore,
+    descrizione,
+    mese: mm,
+    anno: aa,
+  });
 
   // ── Stipendio ──
   if (info.persona && (info.categoria === "Stipendio" || /\bNOMINAS?\b/i.test(info.testo))) {
@@ -204,7 +223,7 @@ export function proponiRegistro(info: InfoMovimento, ctx: ContestoRegistro): Pro
     const esistente = nuova ? null : libera(p.id, "stipendio", scelto.anno, scelto.mese);
     const righe = [riga(p, "stipendio", scelto.mese, scelto.anno, totale / 100, esistente, nuova)];
     riserva(righe);
-    return { tipo: "stipendio", righe, resto: null, certa, nota };
+    return { tipo: "stipendio", righe, copertura: null, certa, nota };
   }
 
   // ── Seguridad Social ──
@@ -238,15 +257,13 @@ export function proponiRegistro(info: InfoMovimento, ctx: ContestoRegistro): Pro
     if (!p) return null;
     const righe = [riga(p, "seguridad", mm, aa, totale / 100, esistente)];
     riserva(righe);
-    return { tipo: "seguridad", righe, resto: null, certa: true, nota: `Seguridad Social di ${periodoTesto(mm, aa)}` };
+    return { tipo: "seguridad", righe, copertura: null, certa: true, nota: `Seguridad Social di ${periodoTesto(mm, aa)}` };
   }
 
-  // ── Benefit (addebito unico per tutti, es. Metropolitan) ──
-  if (info.categoria === "Benefit" && !info.persona) {
+  // ── Benefit: una fattura per tutti (Metropolitan) ──
+  if (!info.persona && (BENEFIT_RE.test(info.testo) || info.categoria === "Benefit")) {
     const conBenefit = ctx.persone.filter(
-      (p) =>
-        haVoce(p, "benefit") &&
-        ((p.attivo && p.benefitMensili > 0) || !!libera(p.id, "benefit", aa, mm)),
+      (p) => haVoce(p, "benefit") && ((p.attivo && p.benefitMensili > 0) || !!libera(p.id, "benefit", aa, mm)),
     );
     if (!conBenefit.length) return null;
     const libere = conBenefit.filter((p) => !ctx.occupati.has(chiave(p.id, "benefit", aa, mm)));
@@ -258,10 +275,10 @@ export function proponiRegistro(info: InfoMovimento, ctx: ContestoRegistro): Pro
     return {
       tipo: "benefit",
       righe,
-      resto: null,
+      copertura: spesaUnica(info.categoria, info.fornitore, info.descrizione),
       certa,
       nota: certa
-        ? `benefit di ${periodoTesto(mm, aa)} diviso tra ${persone.length} person${persone.length === 1 ? "a" : "e"}`
+        ? `benefit di ${periodoTesto(mm, aa)} di ${persone.length} person${persone.length === 1 ? "a" : "e"}`
         : "benefit di questo mese già pagato in banca: controlla mese e persone",
     };
   }
@@ -294,15 +311,12 @@ export function proponiRegistro(info: InfoMovimento, ctx: ContestoRegistro): Pro
     return {
       tipo: "irpf",
       righe,
-      resto:
-        restoCent > 0
-          ? { importo: restoCent / 100, descrizione: `Altre ritenute (mod. 111) · ${trimestre}`, mese: mesiQ[2], anno: annoQ }
-          : null,
+      copertura: spesaUnica("Tasse", info.fornitore || "Agencia Tributaria", `Retenciones ${trimestre} (mod. 111)`),
       certa,
       nota:
         restoCent < 0
           ? `IRPF ${trimestre}: le righe superano l'addebito di ${fmt(-restoCent / 100)}, correggi gli importi`
-          : `IRPF ${trimestre}${restoCent > 0 ? ` · ${fmt(restoCent / 100)} di altre ritenute` : ""}`,
+          : `IRPF ${trimestre}${restoCent > 0 ? ` · ${fmt(restoCent / 100)} di altre ritenute nell'addebito` : ""}`,
     };
   }
   return null;
@@ -317,12 +331,6 @@ export interface RigaInput {
   importo: number;
   pagamentoId?: number | null;
   nuova?: boolean;
-}
-export interface RestoInput {
-  importo: number;
-  descrizione: string;
-  mese: number;
-  anno: number;
 }
 export class ErroreRegistro extends Error {
   constructor(
@@ -348,16 +356,18 @@ const VOCE_LABEL: Record<VoceRegistroBanca, string> = {
   rimborsi: "Rimborsi",
 };
 
-// Collega il movimento (uscita da rivedere) alle righe del registro: le
-// righe già presenti e non ancora viste in banca si collegano (con
-// l'importo della banca e la data del pagamento), le altre nascono con la
-// loro spesa. Il resto (es. altre ritenute del mod. 111) è una spesa a parte.
-// La somma deve tornare con il movimento.
+// Collega il movimento (uscita da rivedere) alle righe del registro.
+// Senza spesa unica: ogni riga ha la sua spesa (quelle già nel registro e
+// non ancora viste in banca si collegano con l'importo della banca, le altre
+// nascono) e la somma deve tornare con il movimento.
+// Con la spesa unica (`copertura`): una sola spesa con l'importo del
+// movimento (già registrata o nuova) paga le righe, che restano senza spesa
+// propria; se una riga ne aveva una (registrata a mano), quella va via.
 export async function collegaRegistro(
   prisma: PrismaClient,
   movId: number,
   righeIn: RigaInput[],
-  restoIn: RestoInput | null,
+  coperturaIn: CoperturaRegistro | null,
 ) {
   const mov = await prisma.movimentoBancario.findUnique({
     where: { id: movId },
@@ -382,19 +392,40 @@ export async function collegaRegistro(
     if (r.importo <= 0) throw new ErroreRegistro("Importo non valido in una riga");
     if (r.mese < 1 || r.mese > 12 || r.anno < 2000 || r.anno > 2100) throw new ErroreRegistro("Mese non valido");
   }
-  const resto =
-    restoIn && Number(restoIn.importo) > 0
-      ? {
-          importo: Math.round(Number(restoIn.importo) * 100) / 100,
-          descrizione: String(restoIn.descrizione ?? "").trim() || "Altre ritenute (mod. 111)",
-          mese: Number(restoIn.mese) || mov.dataContabile.getUTCMonth() + 1,
-          anno: Number(restoIn.anno) || mov.dataContabile.getUTCFullYear(),
-        }
-      : null;
-  const somma = righe.reduce((t, r) => t + cent(r.importo), 0) + (resto ? cent(resto.importo) : 0);
-  if (Math.abs(somma - cent(mov.importo)) > 1) {
+  const somma = righe.reduce((t, r) => t + cent(r.importo), 0);
+  const importoMov = cent(mov.importo);
+  const unica = coperturaIn
+    ? {
+        spesaId: coperturaIn.spesaId ? Number(coperturaIn.spesaId) : null,
+        categoria: String(coperturaIn.categoria ?? ""),
+        fornitore: String(coperturaIn.fornitore ?? "").trim(),
+        descrizione: String(coperturaIn.descrizione ?? "").trim() || null,
+        mese: Number(coperturaIn.mese) || mov.dataContabile.getUTCMonth() + 1,
+        anno: Number(coperturaIn.anno) || mov.dataContabile.getUTCFullYear(),
+      }
+    : null;
+  if (unica) {
+    if (somma > importoMov + 1) {
+      throw new ErroreRegistro(`Le righe (${fmt(somma / 100)}) superano il movimento (${fmt(importoMov / 100)})`, 409);
+    }
+    if (unica.spesaId) {
+      const s = await prisma.spesa.findUnique({
+        where: { id: unica.spesaId },
+        include: { _count: { select: { abbinamentiBancari: true } }, pagamentoMensile: { select: { id: true } } },
+      });
+      if (!s) throw new ErroreRegistro("Spesa non trovata", 404);
+      if (s._count.abbinamentiBancari) throw new ErroreRegistro(`La spesa #${s.id} è già collegata a un altro movimento`, 409);
+      if (s.pagamentoMensile) throw new ErroreRegistro(`La spesa #${s.id} è una riga del registro`, 409);
+      if (Math.abs(cent(s.importo) - importoMov) > 5) {
+        throw new ErroreRegistro(`Importi diversi: movimento ${fmt(importoMov / 100)}, spesa ${fmt(s.importo)}`, 409);
+      }
+    } else {
+      if (!CATEGORIE_SPESA.includes(unica.categoria)) throw new ErroreRegistro("Categoria della spesa non valida");
+      if (!unica.fornitore) throw new ErroreRegistro("Fornitore della spesa mancante");
+    }
+  } else if (Math.abs(somma - importoMov) > 1) {
     throw new ErroreRegistro(
-      `La somma delle righe (${fmt(somma / 100)}) non torna con il movimento (${fmt(Math.abs(mov.importo))})`,
+      `La somma delle righe (${fmt(somma / 100)}) non torna con il movimento (${fmt(importoMov / 100)})`,
       409,
     );
   }
@@ -407,14 +438,16 @@ export async function collegaRegistro(
   if (nomi.size !== new Set(righe.map((r) => r.dipendenteId)).size) throw new ErroreRegistro("Persona non trovata", 404);
 
   // Righe del registro di quelle persone e mesi, con lo stato in banca
+  const conBanca = { select: { id: true, importo: true, _count: { select: { abbinamentiBancari: true } } } } as const;
   const esistenti = await prisma.pagamentoMensile.findMany({
     where: {
       OR: righe.map((r) => ({ dipendenteId: r.dipendenteId, voce: r.voce, anno: r.anno, mese: r.mese })),
     },
-    include: { spesa: { select: { id: true, importo: true, _count: { select: { abbinamentiBancari: true } } } } },
+    include: { spesa: conBanca, spesaCopertura: conBanca },
     orderBy: { id: "asc" },
   });
-  const inBanca = (pm: (typeof esistenti)[number]) => (pm.spesa?._count.abbinamentiBancari ?? 0) > 0;
+  const inBanca = (pm: (typeof esistenti)[number]) =>
+    (pm.spesa?._count.abbinamentiBancari ?? 0) > 0 || (pm.spesaCopertura?._count.abbinamentiBancari ?? 0) > 0;
   const prese = new Set<number>();
   const piano = righe.map((r) => {
     let pm = r.pagamentoId ? esistenti.find((x) => x.id === r.pagamentoId) : undefined;
@@ -439,13 +472,70 @@ export async function collegaRegistro(
 
   const dataIt = mov.dataContabile.toLocaleDateString("it-IT", { timeZone: "UTC" });
   const nota = `Da estratto conto BBVA del ${dataIt}`;
+
+  if (unica) {
+    return prisma.$transaction(
+      async (tx) => {
+        const spesaId =
+          unica.spesaId ??
+          (
+            await tx.spesa.create({
+              data: {
+                azienda: "Spagna",
+                fornitore: unica.fornitore,
+                categoria: unica.categoria,
+                descrizione: unica.descrizione,
+                note: nota,
+                mese: unica.mese,
+                anno: unica.anno,
+                importo: importoMov / 100,
+              },
+              select: { id: true },
+            })
+          ).id;
+        // righe già nel registro: pagate dalla spesa unica, via la spesa propria
+        const proprie = piano.filter((x) => x.pm?.spesaId).map((x) => x.pm!.spesaId!);
+        for (const x of piano.filter((y) => y.pm)) {
+          await tx.pagamentoMensile.update({
+            where: { id: x.pm!.id },
+            data: { spesaId: null, spesaCoperturaId: spesaId, importo: x.r.importo, data: mov.dataContabile },
+          });
+        }
+        if (proprie.length) await tx.spesa.deleteMany({ where: { id: { in: proprie } } });
+        const daCreare = piano.filter((x) => !x.pm);
+        if (daCreare.length) {
+          await tx.pagamentoMensile.createMany({
+            data: daCreare.map((x) => ({
+              dipendenteId: x.r.dipendenteId,
+              anno: x.r.anno,
+              mese: x.r.mese,
+              voce: x.r.voce,
+              importo: x.r.importo,
+              data: mov.dataContabile,
+              note: unica.fornitore || null,
+              spesaCoperturaId: spesaId,
+            })),
+          });
+        }
+        await tx.abbinamentoBancario.create({ data: { movimentoId: mov.id, spesaId, importo: importoMov / 100 } });
+        return tx.movimentoBancario.update({
+          where: { id: mov.id },
+          data: { stato: unica.spesaId ? "abbinato" : "spesa_creata" },
+        });
+      },
+      { timeout: 20_000, maxWait: 10_000 },
+    );
+  }
+
+  // Una spesa per riga
   const nuove = piano.filter((x) => !x.pm || !x.pm.spesaId);
   const collegate = piano.filter((x) => x.pm && x.pm.spesaId);
-
   return prisma.$transaction(
     async (tx) => {
       // 1. Righe già nel registro: importo della banca e data del pagamento
-      const cambiate = collegate.filter((x) => cent(x.pm!.importo) !== cent(x.r.importo) || cent(x.pm!.spesa?.importo ?? 0) !== cent(x.r.importo));
+      const cambiate = collegate.filter(
+        (x) => cent(x.pm!.importo) !== cent(x.r.importo) || cent(x.pm!.spesa?.importo ?? 0) !== cent(x.r.importo),
+      );
       for (const x of cambiate) {
         await tx.pagamentoMensile.update({ where: { id: x.pm!.id }, data: { importo: x.r.importo, data: mov.dataContabile } });
         await tx.spesa.update({ where: { id: x.pm!.spesaId! }, data: { importo: x.r.importo } });
@@ -466,19 +556,12 @@ export async function collegaRegistro(
         anno: r.anno,
         importo: r.importo,
       }));
-      if (resto) {
-        dati.push({
-          azienda: "Spagna",
-          fornitore: "Agencia Tributaria",
-          categoria: "Tasse",
-          descrizione: resto.descrizione,
-          note: nota,
-          mese: resto.mese,
-          anno: resto.anno,
-          importo: resto.importo,
-        });
-      }
-      const create = dati.length ? await tx.spesa.createManyAndReturn({ data: dati, select: { id: true, fornitore: true, categoria: true, descrizione: true, mese: true, anno: true, importo: true } }) : [];
+      const create = dati.length
+        ? await tx.spesa.createManyAndReturn({
+            data: dati,
+            select: { id: true, fornitore: true, categoria: true, descrizione: true, mese: true, anno: true, importo: true },
+          })
+        : [];
       // abbina ogni dato alla spesa creata (stessi campi), senza contare sull'ordine
       const libere = [...create];
       const spesaDi = dati.map((d) => {
@@ -490,16 +573,19 @@ export async function collegaRegistro(
         if (i < 0) throw new Error("Spesa creata non ritrovata");
         return libere.splice(i, 1)[0].id;
       });
-      const nuoveConPm = nuove.filter((x) => x.pm && !x.pm.spesaId);
-      for (const x of nuoveConPm) {
-        // riga del registro senza spesa (caso raro): le si dà quella nuova
-        const id = spesaDi[nuove.indexOf(x)];
-        await tx.pagamentoMensile.update({ where: { id: x.pm!.id }, data: { spesaId: id, importo: x.r.importo, data: mov.dataContabile } });
+      for (const [i, x] of nuove.entries()) {
+        // riga del registro senza spesa: prende quella nuova
+        if (x.pm) {
+          await tx.pagamentoMensile.update({
+            where: { id: x.pm.id },
+            data: { spesaId: spesaDi[i], spesaCoperturaId: null, importo: x.r.importo, data: mov.dataContabile },
+          });
+        }
       }
-      const daCreare = nuove.filter((x) => !x.pm);
+      const daCreare = nuove.map((x, i) => ({ x, i })).filter(({ x }) => !x.pm);
       if (daCreare.length) {
         await tx.pagamentoMensile.createMany({
-          data: daCreare.map((x) => ({
+          data: daCreare.map(({ x, i }) => ({
             dipendenteId: x.r.dipendenteId,
             anno: x.r.anno,
             mese: x.r.mese,
@@ -507,7 +593,7 @@ export async function collegaRegistro(
             importo: x.r.importo,
             data: mov.dataContabile,
             note: mov.osservazioni ?? null,
-            spesaId: spesaDi[nuove.indexOf(x)],
+            spesaId: spesaDi[i],
           })),
         });
       }
@@ -525,4 +611,75 @@ export async function collegaRegistro(
     },
     { timeout: 20_000, maxWait: 10_000 },
   );
+}
+
+// ─── Fattura dei benefit inserita a mano (o creata dalla banca) ──────
+// Una spesa del fornitore dei benefit (Metropolitan) paga i benefit del
+// mese delle persone, divisi in parti uguali: righe del registro senza spesa
+// propria. Le persone sono quelle già pagate da questa spesa, altrimenti chi
+// ha il benefit in scheda. Una riga del mese con spesa propria (registrata a
+// mano, non in banca) passa a questa spesa; chi ha già il benefit pagato da
+// un'altra spesa o in banca resta fuori.
+export async function allineaCoperturaBenefit(db: Db, spesaId: number) {
+  const spesa = await db.spesa.findUnique({
+    where: { id: spesaId },
+    include: { righeCoperte: true, pagamentoMensile: { select: { id: true } } },
+  });
+  if (!spesa) return;
+  const coperte = spesa.righeCoperte.filter((r) => r.voce === "benefit");
+  if (!BENEFIT_RE.test(spesa.fornitore) || spesa.pagamentoMensile || spesa.importo <= 0) {
+    if (coperte.length) await db.pagamentoMensile.deleteMany({ where: { id: { in: coperte.map((r) => r.id) } } });
+    return;
+  }
+  const tutte = await db.dipendente.findMany({ orderBy: { id: "asc" } });
+  const giaPagate = new Set(coperte.map((r) => r.dipendenteId));
+  const candidate = giaPagate.size
+    ? tutte.filter((p) => giaPagate.has(p.id))
+    : tutte.filter((p) => p.attivo && p.benefitMensili > 0 && vociDiTipo(p.tipo).includes("benefit"));
+  const delMese = await db.pagamentoMensile.findMany({
+    where: { voce: "benefit", anno: spesa.anno, mese: spesa.mese, dipendenteId: { in: candidate.map((p) => p.id) } },
+    include: {
+      spesa: { select: { _count: { select: { abbinamentiBancari: true } } } },
+      spesaCopertura: { select: { _count: { select: { abbinamentiBancari: true } } } },
+    },
+  });
+  const piano = candidate
+    .map((p) => {
+      const mia = coperte.find((r) => r.dipendenteId === p.id);
+      if (mia) return { p, pm: mia, propria: null as number | null };
+      const altra = delMese.find((r) => r.dipendenteId === p.id);
+      if (!altra) return { p, pm: null, propria: null };
+      const bloccata =
+        (altra.spesa?._count.abbinamentiBancari ?? 0) > 0 ||
+        (altra.spesaCoperturaId !== null && altra.spesaCoperturaId !== spesa.id);
+      return bloccata ? null : { p, pm: altra, propria: altra.spesaId };
+    })
+    .filter((x): x is NonNullable<typeof x> => !!x);
+  if (!piano.length) return;
+  const parti = dividiInParti(spesa.importo, piano.length);
+  for (const [i, x] of piano.entries()) {
+    if (x.pm) {
+      await db.pagamentoMensile.update({
+        where: { id: x.pm.id },
+        data: { spesaId: null, spesaCoperturaId: spesa.id, importo: parti[i], anno: spesa.anno, mese: spesa.mese },
+      });
+      if (x.propria) await db.spesa.deleteMany({ where: { id: x.propria } });
+    } else {
+      await db.pagamentoMensile.create({
+        data: {
+          dipendenteId: x.p.id,
+          anno: spesa.anno,
+          mese: spesa.mese,
+          voce: "benefit",
+          importo: parti[i],
+          note: spesa.fornitore,
+          spesaCoperturaId: spesa.id,
+        },
+      });
+    }
+  }
+  // righe di persone che non ci sono più nel piano: via
+  const tenute = new Set(piano.map((x) => x.pm?.id).filter(Boolean));
+  const via = coperte.filter((r) => !tenute.has(r.id)).map((r) => r.id);
+  if (via.length) await db.pagamentoMensile.deleteMany({ where: { id: { in: via } } });
 }
