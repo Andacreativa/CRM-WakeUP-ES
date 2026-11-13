@@ -4,7 +4,7 @@ import SearchBox from "@/components/SearchBox";
 import { matchQ } from "@/lib/utils";
 import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { Check, ChevronLeft, ChevronRight, Plus, Trash2, X, Zap } from "lucide-react";
+import { Check, ChevronLeft, ChevronRight, Landmark, Plus, Trash2, X, Zap } from "lucide-react";
 import { fmt, MESI } from "@/lib/constants";
 import { useAnno } from "@/lib/anno-context";
 import {
@@ -41,7 +41,12 @@ interface Pagamento {
   data: string | null;
   note: string | null;
   fattura: { id: number; numero: string | null; cliente: { nome: string } | null } | null;
+  spesa: { abbinamentiBancari: { movimento: { dataContabile: string } }[] } | null;
 }
+
+// Data del movimento bancario che ha pagato la riga (null = non ancora visto in banca)
+const pagatoInBanca = (p: Pagamento) => p.spesa?.abbinamentiBancari[0]?.movimento.dataContabile ?? null;
+const dataBreve = (iso: string) => new Date(iso).toLocaleDateString("it-IT", { timeZone: "UTC" });
 
 const inputCls =
   "w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30 bg-white";
@@ -150,7 +155,8 @@ export default function PagamentiPage() {
         <div>
           <h1 className="page-title">Pagamenti</h1>
           <p className="page-sub">
-            Registro mensile: ogni voce registrata crea la spesa corrispondente
+            Registro mensile: ogni voce registrata crea la spesa corrispondente ·{" "}
+            <Landmark className="w-3.5 h-3.5 text-ok inline -mt-0.5" /> = pagamento visto in banca
           </p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
@@ -253,12 +259,15 @@ export default function PagamentiPage() {
                       }
                       const righe = cella(p, v);
                       const somma = righe.reduce((s, x) => s + x.importo, 0);
-                      if (VOCI[v].auto || VOCI[v].multiplo) {
+                      const tutteInBanca = righe.length > 0 && righe.every((x) => pagatoInBanca(x));
+                      if (VOCI[v].auto || VOCI[v].multiplo || righe.length > 1) {
                         // Più righe nel mese (commissioni dalle fatture, rimborsi):
                         // in tabella solo il totale, il dettaglio si apre col clic
                         const unita = VOCI[v].auto
                           ? `fattur${righe.length === 1 ? "a" : "e"}`
-                          : `rimbors${righe.length === 1 ? "o" : "i"}`;
+                          : VOCI[v].multiplo
+                            ? `rimbors${righe.length === 1 ? "o" : "i"}`
+                            : "righe";
                         return (
                           <td key={v} className="text-right">
                             {righe.length ? (
@@ -268,7 +277,10 @@ export default function PagamentiPage() {
                                 title="Apri il dettaglio"
                               >
                                 <span className="text-sm font-semibold text-gray-900 group-hover:text-brand">{fmt(somma)}</span>
-                                <span className="text-[10px] text-gray-400 group-hover:text-gray-600">
+                                <span className="inline-flex items-center gap-1 text-[10px] text-gray-400 group-hover:text-gray-600">
+                                  {tutteInBanca && (
+                                    <Landmark className="w-3 h-3 text-ok" aria-label="Pagato in banca" />
+                                  )}
                                   {righe.length} {unita}
                                 </span>
                               </button>
@@ -286,6 +298,7 @@ export default function PagamentiPage() {
                         );
                       }
                       const esistente = righe[0] ?? null;
+                      const banca = esistente ? pagatoInBanca(esistente) : null;
                       const def = importoDefault(p, v);
                       return (
                         <td key={v} className="text-right">
@@ -293,16 +306,23 @@ export default function PagamentiPage() {
                             <button
                               onClick={() => setModal({ persona: p, voce: v, esistente })}
                               className="group inline-flex flex-col items-end"
-                              title="Modifica o elimina"
+                              title={banca ? `Pagato in banca il ${dataBreve(banca)} · modifica o elimina` : "Registrato, non ancora visto in banca · modifica o elimina"}
                             >
                               <span className="inline-flex items-center gap-1 text-sm font-semibold text-gray-900">
                                 <Check className="w-3.5 h-3.5 text-ok" />
                                 {fmt(esistente.importo)}
                               </span>
-                              <span className="text-[10px] text-gray-400 group-hover:text-gray-600">
-                                {esistente.data
-                                  ? new Date(esistente.data).toLocaleDateString("it-IT")
-                                  : "registrato"}
+                              <span className="inline-flex items-center gap-1 text-[10px] text-gray-400 group-hover:text-gray-600">
+                                {banca ? (
+                                  <>
+                                    <Landmark className="w-3 h-3 text-ok" aria-label="Pagato in banca" />
+                                    {dataBreve(banca)}
+                                  </>
+                                ) : esistente.data ? (
+                                  new Date(esistente.data).toLocaleDateString("it-IT")
+                                ) : (
+                                  "registrato"
+                                )}
                               </span>
                             </button>
                           ) : (
@@ -420,11 +440,16 @@ function DettaglioVoceModal({
               : "";
             const testo = auto
               ? `${r.fattura?.numero ?? "fattura"}${r.fattura?.cliente ? ` · ${r.fattura.cliente.nome}` : ""}`
-              : (r.note ?? "rimborso");
+              : (r.note ?? (VOCI[voce].multiplo ? "rimborso" : VOCI[voce].label));
             const riga = (
               <>
                 <span className="text-[11px] text-gray-400 tabular-nums w-16 shrink-0">{quando}</span>
                 <span className="flex-1 min-w-0 truncate text-gray-700">{testo}</span>
+                {pagatoInBanca(r) && (
+                  <span title={`Pagato in banca il ${dataBreve(pagatoInBanca(r)!)}`}>
+                    <Landmark className="w-3.5 h-3.5 text-ok" />
+                  </span>
+                )}
                 <span className="font-semibold text-gray-900 tabular-nums">{fmt(r.importo)}</span>
               </>
             );
@@ -455,11 +480,11 @@ function DettaglioVoceModal({
         </div>
         {auto ? (
           <p className="text-xs text-gray-400">Le commissioni nascono dalle fatture incassate: si modificano dalla fattura.</p>
-        ) : (
+        ) : VOCI[voce].multiplo ? (
           <button onClick={() => onApri(null)} className="btn btn-secondary w-full">
             <Plus className="w-4 h-4" /> Aggiungi rimborso
           </button>
-        )}
+        ) : null}
       </div>
     </div>
   );

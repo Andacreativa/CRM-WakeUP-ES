@@ -11,6 +11,7 @@ import {
   Settings2,
   Landmark,
   Loader2,
+  Plus,
   RotateCcw,
   Trash2,
   Unlink,
@@ -21,10 +22,13 @@ import { useAnno } from "@/lib/anno-context";
 import { cn } from "@/lib/utils";
 import {
   STATO_MOVIMENTO_LABEL,
+  type RestoRegistro,
+  type RigaRegistroBanca,
   type StatoMovimento,
   type Suggerimento,
 } from "@/lib/banca-shared";
 import ImportEstrattoModal from "./ImportEstrattoModal";
+import RegistroRigheModal, { VOCE_REGISTRO_LABEL } from "./RegistroRigheModal";
 import BoardEntrate from "./BoardEntrate";
 
 // Vista "Banca": estratto conto BBVA importato, uscite da trasformare in
@@ -88,6 +92,9 @@ interface Edit {
   descrizione: string;
   candidatoId: number; // 0 = crea una nuova spesa
   dipendenteId: number | null; // rimborsi/benefit: persona del registro
+  // Pagamento dei dipendenti: il movimento paga queste righe del registro
+  usaRegistro: boolean;
+  registro: { righe: RigaRegistroBanca[]; resto: RestoRegistro | null } | null;
 }
 
 type Vista = "movimenti" | "importazioni";
@@ -118,8 +125,15 @@ const editDaSuggerimento = (s: Suggerimento): Edit => ({
   descrizione: s.descrizione,
   candidatoId: s.candidati[0] && s.candidati[0].punteggio >= 50 ? s.candidati[0].id : 0,
   dipendenteId: s.dipendenteId,
+  usaRegistro: !!s.registro?.certa,
+  registro: s.registro ? { righe: s.registro.righe, resto: s.registro.resto } : null,
 });
 const CON_REGISTRO = new Set(["Rimborsi", "Benefit", "Commissioni"]);
+// Categorie dei pagamenti ai dipendenti: la riga offre anche «Registro dipendenti»
+const CATEGORIE_DIPENDENTI = new Set(["Stipendio", "Seguridad Social", "Benefit", "Tasse", "Rimborsi"]);
+const REGISTRO = -99; // valore della scelta «Registro dipendenti» nella tendina
+const MESI_BREVI = MESI.map((m) => m.slice(0, 3).toLowerCase());
+const periodo = (mese: number, anno: number) => `${MESI_BREVI[mese - 1]} ${String(anno).slice(2)}`;
 const VOCE_REGISTRO: Record<string, string> = { Rimborsi: "rimborsi", Benefit: "benefit", Commissioni: "commissioni" };
 
 
@@ -148,6 +162,8 @@ export default function BancaView() {
   const [busy, setBusy] = useState<string | null>(null);
   const [msg, setMsg] = useState<{ kind: "ok" | "err"; text: string } | null>(null);
   const [showImport, setShowImport] = useState(false);
+  // movimento di cui si modificano le righe del registro
+  const [registroDi, setRegistroDi] = useState<Movimento | null>(null);
 
   const notify = useCallback((kind: "ok" | "err", text: string) => {
     setMsg({ kind, text });
@@ -252,6 +268,18 @@ export default function BancaView() {
     const e = edits[r.id];
     if (!e) return "Riga senza dati";
     const headers = { "Content-Type": "application/json" };
+    if (e.usaRegistro) {
+      if (!e.registro?.righe.length) return "Nessuna riga del registro";
+      const res = await fetch(`/api/banca/movimenti/${r.id}/registro`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ righe: e.registro.righe, resto: e.registro.resto }),
+      });
+      const j = await res.json();
+      if (!res.ok) return j.error || "Errore";
+      sostituisci(j);
+      return null;
+    }
     const scelto = e.candidatoId ? r.suggerimento?.candidati.find((c) => c.id === e.candidatoId) : undefined;
     const res = e.candidatoId
       ? await fetch(`/api/banca/movimenti/${r.id}/abbina`, {
@@ -302,7 +330,14 @@ export default function BancaView() {
     if (err) notify("err", err);
     else {
       const e = edits[r.id];
-      notify("ok", e?.candidatoId ? "Movimento abbinato alla spesa esistente" : "Spesa creata dal movimento");
+      notify(
+        "ok",
+        e?.usaRegistro
+          ? "Movimento collegato al registro pagamenti"
+          : e?.candidatoId
+            ? "Movimento abbinato alla spesa esistente"
+            : "Spesa creata dal movimento",
+      );
       // le spese appena usate non sono più candidate per le altre righe
       await load();
     }
@@ -337,6 +372,45 @@ export default function BancaView() {
     await load();
     if (errori.length) notify("err", `${ok} ok, ${errori.length} non riusciti. ${errori.slice(0, 3).join(" · ")}`);
     else notify("ok", `${ok} movimenti ${verbo.toLowerCase()}`);
+  };
+
+  const scegliRegistro = (r: Movimento) => {
+    const e = edits[r.id];
+    if (e?.registro?.righe.length) {
+      setEdit(r.id, { usaRegistro: true });
+      return;
+    }
+    const d = new Date(r.dataContabile);
+    const voce =
+      e?.categoria === "Seguridad Social"
+        ? "seguridad"
+        : e?.categoria === "Benefit"
+          ? "benefit"
+          : e?.categoria === "Tasse"
+            ? "irpf"
+            : e?.categoria === "Rimborsi"
+              ? "rimborsi"
+              : "stipendio";
+    const p = persone.find((x) => x.id === e?.dipendenteId) ?? persone[0];
+    setEdit(r.id, {
+      usaRegistro: true,
+      registro: {
+        righe: [
+          {
+            dipendenteId: p?.id ?? 0,
+            nome: p?.nome ?? "",
+            voce,
+            mese: d.getUTCMonth() + 1,
+            anno: d.getUTCFullYear(),
+            importo: Math.abs(r.importo),
+            pagamentoId: null,
+            importoRegistro: null,
+          },
+        ],
+        resto: null,
+      },
+    });
+    setRegistroDi(r);
   };
 
   const toggleSel = (id: number) =>
@@ -674,6 +748,7 @@ export default function BancaView() {
                       const occupato = busy === `#${r.id}`;
                       const haCandidati = !!s && s.candidati.length > 0;
                       const persona = e?.dipendenteId ? persone.find((d) => d.id === e.dipendenteId)?.nome : undefined;
+                      const mostraTendina = haCandidati || !!s?.registro || (!!e && CATEGORIE_DIPENDENTI.has(e.categoria));
                       return (
                         <tr key={r.id} className="align-top">
                           {editing && (
@@ -710,12 +785,19 @@ export default function BancaView() {
 
                           {editing ? (
                             <td>
-                              {haCandidati && (
+                              {mostraTendina && (
                                 <select
-                                  value={e?.candidatoId ?? 0}
-                                  onChange={(ev) => setEdit(r.id, { candidatoId: parseInt(ev.target.value) })}
-                                  className={cn(inputCls, e?.candidatoId && "border-ok/30 bg-ok/10")}
+                                  value={e?.usaRegistro ? REGISTRO : (e?.candidatoId ?? 0)}
+                                  onChange={(ev) => {
+                                    const v = parseInt(ev.target.value);
+                                    if (v === REGISTRO) scegliRegistro(r);
+                                    else setEdit(r.id, { candidatoId: v, usaRegistro: false });
+                                  }}
+                                  className={cn(inputCls, (e?.candidatoId || e?.usaRegistro) && "border-ok/30 bg-ok/10")}
                                 >
+                                  <option value={REGISTRO}>
+                                    {s?.registro ? `Registro dipendenti · ${s.registro.nota}` : "Registro dipendenti…"}
+                                  </option>
                                   <option value={0}>Crea nuova spesa</option>
                                   {s!.candidati.map((c) => (
                                     <option key={c.id} value={c.id}>
@@ -726,7 +808,60 @@ export default function BancaView() {
                                   ))}
                                 </select>
                               )}
-                              {candidato ? (
+                              {e?.usaRegistro && e.registro ? (
+                                <div className="mt-1 space-y-0.5">
+                                  {e.registro.righe.map((x, i) => (
+                                    <div key={i} className="flex items-center gap-1.5 text-xs min-w-0">
+                                      <CategoriaBadge
+                                        categoria={x.voce === "irpf" ? "Tasse" : x.voce === "seguridad" ? "Seguridad Social" : VOCE_REGISTRO_LABEL[x.voce]}
+                                      />
+                                      <span className="truncate text-gray-700">
+                                        <span className="font-medium">{x.nome}</span> · {periodo(x.mese, x.anno)}
+                                      </span>
+                                      <span className="ml-auto font-semibold tabular-nums text-gray-900">{fmt(x.importo)}</span>
+                                      <span
+                                        className="w-4 shrink-0 flex justify-center"
+                                        title={
+                                          x.nuova
+                                            ? "Riga in più nel registro (integrazione)"
+                                            : x.pagamentoId
+                                              ? x.importoRegistro !== null
+                                                ? `Già nel registro con ${fmt(x.importoRegistro)}: prende l'importo della banca`
+                                                : "Già nel registro: si collega"
+                                              : "Nuova riga del registro"
+                                        }
+                                      >
+                                        {x.pagamentoId && !x.nuova ? (
+                                          <Check className={cn("w-3.5 h-3.5", x.importoRegistro !== null ? "text-warn" : "text-ok")} />
+                                        ) : (
+                                          <Plus className={cn("w-3.5 h-3.5", x.nuova ? "text-brand" : "text-gray-400")} />
+                                        )}
+                                      </span>
+                                    </div>
+                                  ))}
+                                  {e.registro.resto && (
+                                    <div className="flex items-center gap-1.5 text-xs min-w-0">
+                                      <CategoriaBadge categoria="Tasse" />
+                                      <span className="truncate text-gray-700">{e.registro.resto.descrizione}</span>
+                                      <span className="ml-auto font-semibold tabular-nums text-gray-900">
+                                        {fmt(e.registro.resto.importo)}
+                                      </span>
+                                      <span className="w-4 shrink-0" />
+                                    </div>
+                                  )}
+                                  <div className="flex items-center gap-2 text-[11px]">
+                                    {s?.registro && !s.registro.certa && (
+                                      <span className="text-warn truncate" title={s.registro.nota}>
+                                        da controllare
+                                      </span>
+                                    )}
+                                    <button onClick={() => setRegistroDi(r)} className="text-brand hover:underline">
+                                      Modifica righe
+                                    </button>
+                                    <span className="text-gray-400 truncate">✓ già nel registro · + nuova riga</span>
+                                  </div>
+                                </div>
+                              ) : candidato ? (
                                 <div className="flex items-center gap-1.5 mt-1 min-w-0">
                                   <CategoriaBadge categoria={candidato.categoria} />
                                   <span
@@ -851,9 +986,15 @@ export default function BancaView() {
                                   onClick={() => singolo(r)}
                                   disabled={!!busy}
                                   className="btn btn-primary btn-sm"
-                                  title={e?.candidatoId ? "Collega il movimento alla spesa scelta" : "Crea la spesa e collegala"}
+                                  title={
+                                    e?.usaRegistro
+                                      ? "Collega o crea le righe del registro pagamenti"
+                                      : e?.candidatoId
+                                        ? "Collega il movimento alla spesa scelta"
+                                        : "Crea la spesa e collegala"
+                                  }
                                 >
-                                  <Check /> {e?.candidatoId ? "Abbina" : "Crea"}
+                                  <Check /> {e?.usaRegistro ? "Registra" : e?.candidatoId ? "Abbina" : "Crea"}
                                 </button>
                                 <button
                                   onClick={() => azioneSingola(r, { azione: "escludi" }, "Movimento escluso")}
@@ -908,6 +1049,21 @@ export default function BancaView() {
       )}
 
       {showImport && <ImportEstrattoModal onClose={() => setShowImport(false)} onImported={load} />}
+      {registroDi && edits[registroDi.id]?.registro && (
+        <RegistroRigheModal
+          importo={Math.abs(registroDi.importo)}
+          persone={persone}
+          righe={edits[registroDi.id].registro!.righe}
+          resto={edits[registroDi.id].registro!.resto}
+          meseDefault={new Date(registroDi.dataContabile).getUTCMonth() + 1}
+          annoDefault={new Date(registroDi.dataContabile).getUTCFullYear()}
+          onClose={() => setRegistroDi(null)}
+          onSave={(righe, resto) => {
+            setEdit(registroDi.id, { usaRegistro: true, registro: { righe, resto } });
+            setRegistroDi(null);
+          }}
+        />
+      )}
     </div>
   );
 }

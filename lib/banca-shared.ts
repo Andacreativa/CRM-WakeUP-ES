@@ -67,7 +67,9 @@ export const REGOLE_BANCA_DEFAULT: RegolaBanca[] = [
     categoria: "Carta Aziendale",
     fornitore: BBVA,
   },
-  { pattern: "METROPOLITAN WORLD", categoria: "Ufficio", fornitore: "Metropolitan World SL" },
+  // L'addebito mensile Metropolitan è il benefit dei dipendenti: si divide
+  // tra le persone con benefit (registro pagamenti)
+  { pattern: "METROPOLITAN WORLD", categoria: "Benefit", fornitore: "Metropolitan World SL" },
   {
     pattern: "JOSE RAMON GARCIA|QUANTUM BUSINESS|ASESORIA",
     categoria: "Commercialista",
@@ -117,6 +119,43 @@ export interface Suggerimento {
   dipendenteId: number | null;
   dipendenteNome: string | null;
   candidati: CandidatoSpesa[];
+  // Pagamento dei dipendenti (nomina, Seguridad Social, benefit, IRPF del
+  // trimestre): il movimento si divide in righe del registro pagamenti.
+  registro: PropostaRegistro | null;
+}
+
+// ─── Banca → registro pagamenti dei dipendenti ───────────────────────
+export const VOCI_REGISTRO_BANCA = ["stipendio", "seguridad", "irpf", "benefit", "rimborsi"] as const;
+export type VoceRegistroBanca = (typeof VOCI_REGISTRO_BANCA)[number];
+export const isVoceRegistroBanca = (v: unknown): v is VoceRegistroBanca =>
+  typeof v === "string" && (VOCI_REGISTRO_BANCA as readonly string[]).includes(v);
+
+export interface RigaRegistroBanca {
+  dipendenteId: number;
+  nome: string;
+  voce: VoceRegistroBanca;
+  mese: number;
+  anno: number;
+  importo: number;
+  // riga del registro già presente e non ancora vista in banca: si collega
+  pagamentoId: number | null;
+  // il suo importo attuale, se diverso da quello pagato (vince la banca)
+  importoRegistro: number | null;
+  // integrazione (es. «diferencia nóminas»): sempre una riga in più
+  nuova?: boolean;
+}
+export interface RestoRegistro {
+  importo: number;
+  descrizione: string; // es. «Altre ritenute (mod. 111) · 2º trimestre 2026»
+  mese: number;
+  anno: number;
+}
+export interface PropostaRegistro {
+  tipo: "stipendio" | "seguridad" | "benefit" | "irpf";
+  righe: RigaRegistroBanca[];
+  resto: RestoRegistro | null;
+  certa: boolean; // preselezionata: si può applicare in blocco
+  nota: string;
 }
 
 // ─── Riconciliazione entrate (Fase 4) ────────────────────────────────

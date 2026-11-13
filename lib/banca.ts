@@ -3,6 +3,7 @@ import * as XLSX from "xlsx";
 import type { Prisma, PrismaClient } from "@prisma/client";
 import { nomeCompleto } from "./dipendenti";
 import { syncCommissioneFattura } from "./commissioni";
+import { caricaContestoRegistro, proponiRegistro, type ContestoRegistro } from "./registro-banca";
 import {
   ESCLUDI,
   CATEGORIA_DEFAULT,
@@ -384,6 +385,8 @@ export interface ContestoSuggerimenti {
   fornitori: { id: number; nome: string; key: string }[];
   // commissioni già proposte a un movimento precedente: non si ripropongono
   riservate?: Set<number>;
+  // registro pagamenti dei dipendenti (stipendi, Seguridad Social, benefit, IRPF)
+  registro?: ContestoRegistro;
 }
 
 // Carica una volta sola ciò che serve per suggerire su molti movimenti:
@@ -393,7 +396,7 @@ export async function caricaContestoSuggerimenti(
   anni: number[],
 ): Promise<ContestoSuggerimenti> {
   const anniEstesi = Array.from(new Set(anni.flatMap((a) => [a - 1, a, a + 1])));
-  const [impostazioni, spese, dipendenti, fornitori] = await Promise.all([
+  const [impostazioni, spese, dipendenti, fornitori, registro] = await Promise.all([
     getImpostazioniBanca(db),
     anniEstesi.length
       ? db.spesa.findMany({
@@ -407,8 +410,10 @@ export async function caricaContestoSuggerimenti(
       : Promise.resolve([] as SpesaCtx[]),
     db.dipendente.findMany({ select: { id: true, nome: true, cognome: true } }),
     db.fornitore.findMany({ select: { id: true, nome: true } }),
+    caricaContestoRegistro(db, anniEstesi),
   ]);
   return {
+    registro,
     impostazioni,
     regole: compilaRegole(impostazioni.regole),
     spese,
@@ -629,9 +634,24 @@ export function suggerisci(m: MovimentoLike, ctx: ContestoSuggerimenti): Suggeri
       candidati.splice(0, candidati.length, proposta, ...resto);
     }
   }
+  // Pagamento dei dipendenti: righe del registro (le spese di quelle righe
+  // non si propongono anche come abbinamento singolo)
+  const registro = ctx.registro
+    ? proponiRegistro(
+        { importo: m.importo, dataContabile: m.dataContabile, categoria, persona, testo, testoN },
+        ctx.registro,
+      )
+    : null;
+  if (registro) {
+    // le righe del registro (anche di altri mesi) passano dalla proposta
+    for (let i = candidati.length - 1; i >= 0; i--) {
+      if (candidati[i].registro) candidati.splice(i, 1);
+    }
+  }
   candidati.sort((a, b) => b.punteggio - a.punteggio || a.id - b.id);
 
   return {
+    registro,
     categoria,
     fornitore,
     fornitoreId: fornitoreMatch?.id ?? null,

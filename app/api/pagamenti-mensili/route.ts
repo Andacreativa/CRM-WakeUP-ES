@@ -7,6 +7,15 @@ const INCLUDE = {
     select: { id: true, nome: true, cognome: true, tipo: true },
   },
   fattura: { select: { id: true, numero: true, cliente: { select: { nome: true } } } },
+  // pagamento visto in banca: data del movimento collegato alla spesa
+  spesa: {
+    select: {
+      abbinamentiBancari: {
+        select: { movimento: { select: { dataContabile: true } } },
+        take: 1,
+      },
+    },
+  },
 };
 
 // Registro pagamenti: ?anno= (obbligatorio) &mese= (opzionale) &dipendenteId=
