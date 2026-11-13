@@ -22,7 +22,7 @@ export async function POST(
     include: { cliente: true, acconti: true },
   });
   if (!fattura) return NextResponse.json({ error: "Fattura non trovata" }, { status: 404 });
-  if (fattura.pagato || fattura.annullata || residuo(fattura, true) <= 0) {
+  if (fattura.pagato || fattura.annullata || residuo(fattura) <= 0) {
     return NextResponse.json({ error: "La fattura non ha nulla da saldare" }, { status: 400 });
   }
   const cfg = await getImpostazioniFatture(prisma);

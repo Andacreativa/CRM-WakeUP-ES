@@ -380,7 +380,7 @@ export default function FatturePage() {
     0,
   );
   const daIncassare = attive.reduce(
-    (s, f) => s + (statoCalcolato(f) === "pagato" ? 0 : residuo(f, true)),
+    (s, f) => s + (statoCalcolato(f) === "pagato" ? 0 : residuo(f)),
     0,
   );
 

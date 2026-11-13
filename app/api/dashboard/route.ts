@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { isFinnRitenuta } from "@/lib/finn-split";
+import { lordo } from "@/lib/fatture";
 
 export async function GET(request: Request) {
   try {
@@ -45,7 +46,9 @@ export async function GET(request: Request) {
     const altriCalc = altri.filter((a) => !isFinnRitenuta(a));
     const altriAnnoPrecCalc = altriAnnoPrec.filter((a) => !isFinnRitenuta(a));
 
-    const totaleFatture = fatture.reduce((s: number, f) => s + f.importo, 0);
+    // Sul totale della fattura (imponibile + IGIC): è quello che il cliente
+    // paga, e quello su cui si misurano incassato e in attesa (come in Fatture)
+    const totaleFatture = fatture.reduce((s: number, f) => s + lordo(f), 0);
     const totaleAltriIngressi = altriCalc.reduce(
       (s: number, a) => s + a.importo,
       0,
@@ -53,11 +56,11 @@ export async function GET(request: Request) {
     const totaleEntrate = totaleFatture + totaleAltriIngressi;
     const totaleFatturePagate = fatture.reduce((s: number, f) => {
       const sum = (f.acconti ?? []).reduce((a, b) => a + b.importo, 0);
-      return s + (f.pagato || sum >= f.importo ? f.importo : sum);
+      return s + (f.pagato || sum >= lordo(f) ? lordo(f) : sum);
     }, 0);
     const totaleFattureInAttesa = fatture.reduce((s: number, f) => {
       const sum = (f.acconti ?? []).reduce((a, b) => a + b.importo, 0);
-      return s + (f.pagato || sum >= f.importo ? 0 : f.importo - sum);
+      return s + (f.pagato || sum >= lordo(f) ? 0 : lordo(f) - sum);
     }, 0);
     const totaleSpese = spese.reduce((s: number, e) => s + e.importo, 0);
     const bilancio = totaleEntrate - totaleSpese;

@@ -1,4 +1,5 @@
 import { fmt } from "./constants";
+import { lordo } from "./fatture";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 export interface VocePreventivoData {
@@ -225,28 +226,28 @@ export function fattureToExcel(
     mese: number;
     anno: number;
     importo: number;
+    tipoIva?: string | null;
+    iva?: number | null;
     pagato: boolean;
     acconti?: { importo: number }[];
   }[],
   MESI: string[],
 ) {
   return fatture.map((f) => {
+    // incassi e residuo sul TOTALE della fattura (imponibile + IGIC)
+    const totale = lordo(f);
     const accRicevuto = (f.acconti ?? []).reduce((s, a) => s + a.importo, 0);
-    const residuo = Math.max(0, f.importo - accRicevuto);
-    const stato =
-      f.pagato || accRicevuto >= f.importo
-        ? "Pagato"
-        : accRicevuto > 0
-          ? "Acconto"
-          : "In Attesa";
+    const saldata = f.pagato || accRicevuto >= totale;
+    const stato = saldata ? "Pagato" : accRicevuto > 0 ? "Acconto" : "In Attesa";
     return {
       Cliente: f.cliente?.nome ?? "",
       Paese: f.cliente?.paese ?? "",
       Mese: MESI[f.mese - 1],
       Anno: f.anno,
       Importo: f.importo,
+      Totale: totale,
       "Acconto Ricevuto": accRicevuto,
-      Residuo: f.pagato || accRicevuto >= f.importo ? 0 : residuo,
+      Residuo: saldata ? 0 : Math.max(0, totale - accRicevuto),
       Stato: stato,
     };
   });
@@ -258,6 +259,8 @@ export function fattureToPDF(
     azienda: string;
     mese: number;
     importo: number;
+    tipoIva?: string | null;
+    iva?: number | null;
     pagato: boolean;
     acconti?: { importo: number }[];
   }[],
@@ -274,8 +277,9 @@ export function fattureToPDF(
   ];
   const rows: CellInput[][] = fatture.map((f) => {
     const accRicevuto = (f.acconti ?? []).reduce((s, a) => s + a.importo, 0);
-    const isPagato = f.pagato || accRicevuto >= f.importo;
-    const residuo = isPagato ? 0 : Math.max(0, f.importo - accRicevuto);
+    // incassi e residuo sul TOTALE della fattura (imponibile + IGIC)
+    const isPagato = f.pagato || accRicevuto >= lordo(f);
+    const residuo = isPagato ? 0 : Math.max(0, lordo(f) - accRicevuto);
     const isAcconto = !isPagato && accRicevuto > 0;
     const statoLabel = isPagato ? "Pagato" : isAcconto ? "Acconto" : "In Attesa";
     const statoColor: [number, number, number] = isPagato

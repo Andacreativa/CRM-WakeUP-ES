@@ -174,15 +174,19 @@ export const aliquota = (f: ImportiFattura) =>
 export const imposta = (f: ImportiFattura) => round2((f.importo * aliquota(f)) / 100);
 export const lordo = (f: ImportiFattura) => round2(f.importo + imposta(f));
 
+// REGOLA: il cliente paga il TOTALE della fattura (imponibile + IGIC).
+// Acconti, bonifici, residui, scadenze, solleciti e cruscotto si confrontano
+// sempre con lordo(), mai con `importo` (che è l'imponibile). Chi calcola un
+// residuo passa da qui.
 // Una rettificativa ha importo negativo: il suo residuo (negativo) compensa
-// quello della fattura che corregge. Sul lordo quando il dovuto è con l'IGIC.
-export const residuo = (
-  f: ImportiFattura & { acconti?: { importo: number }[] },
-  suLordo = false,
-) => {
-  const dovuto = suLordo ? lordo(f) : f.importo;
+// quello della fattura che corregge.
+export const residuo = (f: ImportiFattura & { acconti?: { importo: number }[] }) => {
+  const dovuto = lordo(f);
   return dovuto < 0 ? dovuto - totalePagato(f) : Math.max(0, dovuto - totalePagato(f));
 };
+// Fattura saldata: quanto ricevuto copre il totale (o è segnata incassata)
+export const saldata = (f: ImportiFattura & { pagato?: boolean; acconti?: { importo: number }[] }) =>
+  !!f.pagato || (totalePagato(f) > 0 && totalePagato(f) + 0.005 >= lordo(f));
 export const statoCalcolato = (f: {
   pagato: boolean;
   importo: number;

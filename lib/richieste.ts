@@ -1,4 +1,5 @@
 import type { Prisma } from "@prisma/client";
+import { saldata } from "./fatture";
 
 // Helper per le richieste di fattura ("fatture da emettere").
 
@@ -217,6 +218,8 @@ export const RICHIESTA_INCLUDE = {
       numero: true,
       pagato: true,
       importo: true,
+      tipoIva: true, // servono a saldata(): incassata = acconti ≥ totale con IGIC
+      iva: true,
       data: true,
       stato: true,
       acconti: { select: { importo: true } },
@@ -237,9 +240,8 @@ export function serializzaRichiesta(r: RichiestaConRelazioni) {
   const emessaEff = r.fattura ? r.fattura.stato === "emessa" : r.emessa;
   let incassataEff = r.incassata;
   if (r.fattura && emessaEff) {
-    const acconti = r.fattura.acconti.reduce((s, a) => s + a.importo, 0);
-    incassataEff =
-      r.fattura.pagato || (acconti > 0 && acconti >= r.fattura.importo);
+    // incassata quando gli acconti coprono il TOTALE (imponibile + IGIC)
+    incassataEff = saldata(r.fattura);
   }
   let stato: StatoRichiesta;
   if (emessaEff && incassataEff) stato = "incassata";

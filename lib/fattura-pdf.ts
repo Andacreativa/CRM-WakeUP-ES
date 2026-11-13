@@ -833,7 +833,7 @@ export function messaggioSollecito(
   const v = {
     cliente: f.cliente.nome,
     numero: f.numero ?? "",
-    importo: fmt(residuo(f, true)),
+    importo: fmt(residuo(f)),
     scadenza: f.scadenza ? new Date(f.scadenza).toLocaleDateString(es ? "es-ES" : "it-IT") : "",
     iban: cfg.iban,
     azienda: cfg.ragioneSociale,

@@ -20,6 +20,7 @@ export async function GET(_: Request, { params }: Ctx) {
           mese: true,
           anno: true,
           importo: true,
+          tipoIva: true, // per il totale (imponibile + IGIC)
           iva: true,
           pagato: true,
           scadenza: true,

@@ -1,4 +1,5 @@
 "use client";
+import { lordo } from "@/lib/fatture";
 
 import { ExportBar, ExportButton } from "@/components/ExportBar";
 import Pills from "@/components/Pills";
@@ -62,7 +63,8 @@ const STATI: Record<Stato, { label: string; pill: string }> = {
 };
 
 const sumAcc = (f: Fattura) => (f.acconti ?? []).reduce((s, a) => s + a.importo, 0);
-const residuo = (f: Fattura) => Math.max(0, f.importo - sumAcc(f));
+// residuo sul TOTALE della fattura (imponibile + IGIC): è quello che il cliente paga
+const residuo = (f: Fattura) => Math.max(0, lordo(f) - sumAcc(f));
 
 export default function ScadenzePage() {
   const { anno } = useAnno();

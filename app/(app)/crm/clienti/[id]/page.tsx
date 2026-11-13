@@ -1,4 +1,5 @@
 "use client";
+import { lordo } from "@/lib/fatture";
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
@@ -93,9 +94,11 @@ export default function ClienteDettaglioPage() {
   let fatturato = 0;
   let incassato = 0;
   for (const f of c.fatture) {
-    fatturato += f.importo;
+    // sul totale della fattura (imponibile + IGIC): è quello che il cliente paga
+    const tot = lordo(f);
+    fatturato += tot;
     const acc = f.acconti.reduce((s, a) => s + a.importo, 0);
-    incassato += f.pagato ? f.importo : Math.min(f.importo, acc);
+    incassato += f.pagato ? tot : Math.min(tot, acc);
   }
   const daIncassare = Math.max(0, fatturato - incassato);
 
@@ -189,7 +192,7 @@ export default function ClienteDettaglioPage() {
                 <tbody>
                   {c.fatture.map((f) => {
                     const acc = f.acconti.reduce((s, a) => s + a.importo, 0);
-                    const stato = f.pagato || acc >= f.importo ? "pagata" : acc > 0 ? "acconto" : "da incassare";
+                    const stato = f.pagato || acc >= lordo(f) ? "pagata" : acc > 0 ? "acconto" : "da incassare";
                     return (
                       <tr key={f.id}>
                         <td className="text-xs font-mono">

@@ -17,6 +17,8 @@ export async function GET(request: Request) {
         where: { origine: { not: "sales" }, annullata: false, stato: "emessa" },
         select: {
           importo: true,
+          tipoIva: true, // per il totale (imponibile + IGIC): incassi e residui si misurano su quello
+          iva: true,
           pagato: true,
           anno: true,
           mese: true,

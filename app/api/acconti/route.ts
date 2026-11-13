@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { lordo } from "@/lib/fatture";
 
 export const runtime = "nodejs";
 
@@ -45,7 +46,8 @@ export async function POST(request: Request) {
 
     const totalePagato =
       fattura.acconti.reduce((s, a) => s + a.importo, 0) + importo;
-    const residuo = Math.max(0, fattura.importo - totalePagato);
+    // residuo sul TOTALE della fattura (imponibile + IGIC)
+    const residuo = Math.max(0, lordo(fattura) - totalePagato);
 
     const pagato = fattura.pagato;
 

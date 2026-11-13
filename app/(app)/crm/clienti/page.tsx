@@ -1,4 +1,5 @@
 "use client";
+import { lordo } from "@/lib/fatture";
 
 import { ExportBar, ExportButton } from "@/components/ExportBar";
 import { Kpi, KpiGrid } from "@/components/Kpi";
@@ -49,9 +50,11 @@ const stats = (c: Cliente) => {
   let incassato = 0;
   let ultima: number | null = null;
   for (const f of c.fatture) {
-    fatturato += f.importo;
+    // sul totale della fattura (imponibile + IGIC): è quello che il cliente paga
+    const tot = lordo(f);
+    fatturato += tot;
     const acc = f.acconti.reduce((s, a) => s + a.importo, 0);
-    incassato += f.pagato ? f.importo : Math.min(f.importo, acc);
+    incassato += f.pagato ? tot : Math.min(tot, acc);
     const t = f.data ? new Date(f.data).getTime() : new Date(f.anno, f.mese - 1, 1).getTime();
     if (ultima == null || t > ultima) ultima = t;
   }
