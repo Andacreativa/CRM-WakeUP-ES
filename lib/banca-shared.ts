@@ -62,8 +62,13 @@ export const REGOLE_BANCA_DEFAULT: RegolaBanca[] = [
     categoria: "Commissioni",
     fornitore: "Finn Kalbhenn",
   },
+  // TRASPASO = ricarica della carta aziendale dal conto: un giroconto, non
+  // una spesa (gli acquisti fatti con la carta si registrano dagli scontrini).
+  { pattern: "TRASPASO", categoria: ESCLUDI, fornitore: "" },
+  // L'addebito mensile della carta è la rata fissa con cui si pagano gli
+  // acquisti rateizzati: quella è una spesa.
   {
-    pattern: "ADEUDO MENSUAL DE TARJETA|TARJETA VIRTUAL|RECARGA|TRASPASO",
+    pattern: "ADEUDO MENSUAL DE TARJETA|TARJETA VIRTUAL|RECARGA",
     categoria: "Carta Aziendale",
     fornitore: BBVA,
   },
