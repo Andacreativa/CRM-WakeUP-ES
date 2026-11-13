@@ -10,8 +10,10 @@ import { Plus, X, Check } from "lucide-react";
 import { fmt } from "@/lib/constants";
 import { ricordaLista, riprendiLista } from "@/lib/lista-memo";
 import PreventivoFormModal from "@/components/preventivi/PreventivoFormModal";
+import CaricaPreventivoButton from "@/components/preventivi/CaricaPreventivo";
 import {
   type Preventivo,
+  type PreventivoPrecompilato,
   STATUS_OPTIONS,
   isPreventivoScaduto,
   pillPreventivo,
@@ -24,6 +26,8 @@ const CHIAVE_LISTA = "preventivi:lista";
 export default function PreventiviPage() {
   const [preventivi, setPreventivi] = useState<Preventivo[]>([]);
   const [showForm, setShowForm] = useState(false);
+  // campi letti da un PDF con «Carica preventivo»: aprono il modulo già compilato
+  const [precompilato, setPrecompilato] = useState<PreventivoPrecompilato | null>(null);
   const [filtroStatus, setFiltroStatus] = useState("tutti");
   const [q, setQ] = useState("");
 
@@ -67,12 +71,23 @@ export default function PreventiviPage() {
             {preventivi.length} preventivi totali
           </p>
         </div>
-        <button
-          onClick={() => setShowForm(true)}
-          className="btn btn-primary"
-        >
-          <Plus className="w-4 h-4" /> Crea preventivo
-        </button>
+        <div className="flex items-center gap-2 flex-wrap">
+          <CaricaPreventivoButton
+            onEstratto={(p) => {
+              setPrecompilato(p);
+              setShowForm(true);
+            }}
+          />
+          <button
+            onClick={() => {
+              setPrecompilato(null);
+              setShowForm(true);
+            }}
+            className="btn btn-primary"
+          >
+            <Plus className="w-4 h-4" /> Crea preventivo
+          </button>
+        </div>
       </div>
 
       {/* Filtri */}
@@ -224,9 +239,14 @@ export default function PreventiviPage() {
       {showForm && (
         <PreventivoFormModal
           preventivo={null}
-          onClose={() => setShowForm(false)}
+          precompilato={precompilato}
+          onClose={() => {
+            setShowForm(false);
+            setPrecompilato(null);
+          }}
           onSaved={() => {
             setShowForm(false);
+            setPrecompilato(null);
             load();
           }}
         />

@@ -52,6 +52,21 @@ export interface VocePreventivo {
   tipo: TipoVoce;
 }
 
+// Campi del modulo precompilati da un preventivo caricato (PDF letto dall'app)
+export interface PreventivoPrecompilato {
+  origine: string; // nome del file letto
+  oggetto: string;
+  nomeCliente: string;
+  aziendaCliente: string;
+  emailCliente: string;
+  lingua: Lingua;
+  iva: number;
+  dataScadenza: string; // YYYY-MM-DD o ""
+  condizioni: string;
+  note: string;
+  voci: VocePreventivo[];
+}
+
 export const STATUS_OPTIONS = [
   { value: "attesa", label: "In Attesa", bg: "#f59e0b", text: "#ffffff", border: "#f59e0b" },
   { value: "accettato", label: "Accettato", bg: "#22c55e", text: "#ffffff", border: "#22c55e" },

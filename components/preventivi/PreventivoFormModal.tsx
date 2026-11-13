@@ -6,6 +6,7 @@ import { fmt } from "@/lib/constants";
 import {
   type Lingua,
   type Preventivo,
+  type PreventivoPrecompilato,
   type TipoVoce,
   type VocePreventivo,
   DEFAULT_CONDIZIONI,
@@ -14,6 +15,7 @@ import {
   nuovaVoce,
   parseVociPreventivo,
 } from "./tipi";
+import CaricaPreventivoButton from "./CaricaPreventivo";
 
 interface Contatto {
   id: number;
@@ -23,41 +25,52 @@ interface Contatto {
 
 const BRAND = "#e8308a";
 
-const formDa = (p: Preventivo | null) => ({
-  oggetto: p?.oggetto ?? "",
-  nomeCliente: p?.nomeCliente ?? "",
-  emailCliente: p?.emailCliente ?? "",
-  aziendaCliente: p?.aziendaCliente ?? "",
+const formDa = (p: Preventivo | null, pre: PreventivoPrecompilato | null = null) => ({
+  oggetto: p?.oggetto ?? pre?.oggetto ?? "",
+  nomeCliente: p?.nomeCliente ?? pre?.nomeCliente ?? "",
+  emailCliente: p?.emailCliente ?? pre?.emailCliente ?? "",
+  aziendaCliente: p?.aziendaCliente ?? pre?.aziendaCliente ?? "",
   azienda: p?.azienda ?? "Anda",
-  iva: p?.iva ?? 0,
+  iva: p?.iva ?? pre?.iva ?? 0,
   feeCommerciale: p?.feeCommerciale ?? 0,
   status: p?.status ?? "attesa",
-  note: p?.note ?? "",
-  condizioni: p?.condizioni || DEFAULT_CONDIZIONI,
-  dataScadenza: p?.dataScadenza ? p.dataScadenza.slice(0, 10) : "",
-  lingua: (p ? linguaDi(p) : "it") as Lingua,
+  note: p?.note ?? pre?.note ?? "",
+  condizioni: p?.condizioni || pre?.condizioni || DEFAULT_CONDIZIONI,
+  dataScadenza: p?.dataScadenza ? p.dataScadenza.slice(0, 10) : (pre?.dataScadenza ?? ""),
+  lingua: (p ? linguaDi(p) : (pre?.lingua ?? "it")) as Lingua,
 });
 
 // Form del preventivo: Nuovo e Modifica. Usato dalla lista e dalla scheda.
+// `precompilato`: campi letti da un preventivo caricato (PDF).
 export default function PreventivoFormModal({
   preventivo,
+  precompilato = null,
   onClose,
   onSaved,
   onGeneraContratto,
 }: {
   preventivo: Preventivo | null;
+  precompilato?: PreventivoPrecompilato | null;
   onClose: () => void;
   onSaved: (p: Preventivo) => void;
   onGeneraContratto?: (p: Preventivo) => void;
 }) {
   const editing = preventivo;
-  const [form, setForm] = useState(() => formDa(preventivo));
+  const [form, setForm] = useState(() => formDa(preventivo, precompilato));
   const [voci, setVoci] = useState<VocePreventivo[]>(() => {
-    const v = preventivo ? parseVociPreventivo(preventivo.voci) : [];
+    const v = preventivo ? parseVociPreventivo(preventivo.voci) : (precompilato?.voci ?? []);
     return v.length ? v : [nuovaVoce()];
   });
+  const [origine, setOrigine] = useState<string | null>(precompilato?.origine ?? null);
   const [contatti, setContatti] = useState<Contatto[]>([]);
   const [saving, setSaving] = useState(false);
+
+  // Preventivo caricato a modulo già aperto: sostituisce i campi letti
+  const applicaPrecompilato = (pre: PreventivoPrecompilato) => {
+    setForm((f) => ({ ...formDa(null, pre), feeCommerciale: f.feeCommerciale, status: f.status, azienda: f.azienda }));
+    setVoci(pre.voci.length ? pre.voci : [nuovaVoce()]);
+    setOrigine(pre.origine);
+  };
 
   useEffect(() => {
     fetch("/api/contatti")
@@ -128,16 +141,26 @@ export default function PreventivoFormModal({
   return (
     <div className="fixed inset-0 bg-black/50 flex items-end md:items-start justify-center z-50 p-0 md:p-4 overflow-y-auto">
       <div className="glass-modal rounded-t-2xl md:rounded-2xl w-full max-w-3xl md:my-4 p-4 md:p-6 space-y-4 md:space-y-5 max-h-[95vh] overflow-y-auto">
-        <div className="flex items-center justify-between">
-          <h2 className="text-lg font-bold text-gray-900">
-            {editing ? `Modifica ${editing.numero}` : "Nuovo Preventivo"}
-          </h2>
-          <button
-            onClick={onClose}
-            className="p-1.5 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100"
-          >
-            <X className="w-5 h-5" />
-          </button>
+        <div className="flex items-center justify-between gap-3">
+          <div className="min-w-0">
+            <h2 className="text-lg font-bold text-gray-900">
+              {editing ? `Modifica ${editing.numero}` : "Nuovo Preventivo"}
+            </h2>
+            {origine && (
+              <p className="text-xs text-gray-500 truncate" title={origine}>
+                Compilato da «{origine}»: controlla voci e importi prima di salvare
+              </p>
+            )}
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            {!editing && <CaricaPreventivoButton compatto onEstratto={applicaPrecompilato} />}
+            <button
+              onClick={onClose}
+              className="p-1.5 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
         </div>
 
         {/* Row 1: Oggetto + Status */}
