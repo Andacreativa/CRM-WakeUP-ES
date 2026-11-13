@@ -20,7 +20,8 @@ interface FatturaBoard {
   data: string | null;
   mese: number;
   anno: number;
-  importo: number;
+  importo: number; // lordo (imponibile + IGIC): quello che il cliente paga
+  imponibile: number;
   azienda: string;
   incassatoFuori: number;
   pagato: boolean;
@@ -467,6 +468,7 @@ export default function BoardEntrate({ anno, onChange }: { anno: number; onChang
                           <div className="flex items-center justify-between mt-1 gap-2">
                             <span className="text-[11px] text-gray-500 truncate">
                               {dt(f.data)}
+                              {Math.abs(f.importo - f.imponibile) > 0.005 ? ` · imponibile ${fmt(f.imponibile)} + IGIC` : ""}
                               {f.incassatoFuori > 0.5 && !f.manuale ? ` · incassato fuori banca ${fmt(f.incassatoFuori)}` : ""}
                             </span>
                             <span className="flex items-center gap-1.5 shrink-0">

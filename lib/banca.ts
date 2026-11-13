@@ -4,6 +4,7 @@ import type { Prisma, PrismaClient } from "@prisma/client";
 import { nomeCompleto } from "./dipendenti";
 import { syncCommissioneFattura } from "./commissioni";
 import { caricaContestoRegistro, proponiRegistro, type ContestoRegistro } from "./registro-banca";
+import { lordo } from "./fatture";
 import {
   ESCLUDI,
   CATEGORIA_DEFAULT,
@@ -801,7 +802,9 @@ export function suggerisciEntrata(m: MovimentoLike, ctx: ContestoEntrate): Sugge
   for (const f of ctx.fatture) {
     if (f.abbinamentiBancari.length) continue;
     const incassato = f.acconti.reduce((t, a) => t + a.importo, 0);
-    const residuo = f.pagato ? 0 : Math.max(0, f.importo - incassato);
+    // il cliente paga il lordo (imponibile + IGIC)
+    const dovuto = lordo(f);
+    const residuo = f.pagato ? 0 : Math.max(0, dovuto - incassato);
     const motivi: string[] = [];
     let p = 0;
     const num = normNumero(f.numero);
@@ -816,7 +819,7 @@ export function suggerisciEntrata(m: MovimentoLike, ctx: ContestoEntrate): Sugge
       motivi.push("cliente");
     }
     const diffMesi = (anno - f.anno) * 12 + (mese - f.mese); // >0 = bonifico dopo la fattura
-    if (centesimi(f.importo) === cents) {
+    if (centesimi(dovuto) === cents) {
       p += 35;
       motivi.push("importo");
     } else if (residuo > 0 && centesimi(residuo) === cents) {
@@ -839,7 +842,7 @@ export function suggerisciEntrata(m: MovimentoLike, ctx: ContestoEntrate): Sugge
       numero: f.numero,
       cliente: f.cliente?.nome ?? "—",
       clienteId: f.cliente?.id ?? null,
-      importo: f.importo,
+      importo: dovuto,
       incassato,
       residuo,
       pagato: f.pagato,

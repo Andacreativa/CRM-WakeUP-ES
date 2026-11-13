@@ -186,6 +186,8 @@ export const residuo = (
 export const statoCalcolato = (f: {
   pagato: boolean;
   importo: number;
+  tipoIva?: string | null;
+  iva?: number | null;
   annullata?: boolean;
   stato?: string;
   acconti?: { importo: number }[];
@@ -196,7 +198,8 @@ export const statoCalcolato = (f: {
   if (f.pagato) return "pagato";
   // Rettificativa: si chiude a mano, quando è compensata o rimborsata
   if (f.importo < 0) return "attesa";
-  if (totalePagato(f) >= f.importo) return "pagato";
+  // gli acconti sono quello che il cliente paga: il lordo, con l'IGIC
+  if (totalePagato(f) >= lordo(f)) return "pagato";
   if (totalePagato(f) > 0) return "acconto";
   return "attesa";
 };

@@ -15,8 +15,11 @@ import {
   suggerisciEntrata,
 } from "./banca";
 import type { SuggerimentoEntrata } from "./banca-shared";
+import { lordo } from "./fatture";
 
 const r2 = (n: number) => Math.round(n * 100) / 100;
+// Il cliente paga il lordo (imponibile + IGIC): la board, gli incassi e lo
+// stato «incassata» ragionano su quello, come i contatori di Fatture.
 
 // ─── Board ───────────────────────────────────────────────────────────
 export interface FatturaBoard {
@@ -25,7 +28,8 @@ export interface FatturaBoard {
   data: string | null; // data fattura o primo del mese
   mese: number;
   anno: number;
-  importo: number;
+  importo: number; // lordo: quello che il cliente paga
+  imponibile: number;
   azienda: string;
   incassatoFuori: number; // acconti registrati a mano (non dalla banca)
   pagato: boolean;
@@ -84,6 +88,7 @@ export async function costruisciBoard(prisma: PrismaClient, anno: number) {
     const accontiBanca = new Set(f.abbinamentiBancari.map((a) => a.accontoId).filter((x): x is number => x !== null));
     const incassatoFuori = f.acconti.filter((a) => !accontiBanca.has(a.id)).reduce((t, a) => t + a.importo, 0);
     const coperturaBanca = f.abbinamentiBancari.reduce((t, a) => t + a.importo, 0);
+    const dovuto = lordo(f);
     const c = perCliente.get(nome) ?? { id: f.cliente?.id ?? null, nome, fatture: [] };
     c.fatture.push({
       id: f.id,
@@ -91,10 +96,11 @@ export async function costruisciBoard(prisma: PrismaClient, anno: number) {
       data: (f.data ?? new Date(Date.UTC(f.anno, f.mese - 1, 1))).toISOString(),
       mese: f.mese,
       anno: f.anno,
-      importo: f.importo,
+      importo: dovuto,
+      imponibile: f.importo,
       azienda: f.azienda,
       // segnata incassata a mano: quello che la banca non copre è stato incassato "fuori"
-      incassatoFuori: f.pagato ? Math.max(incassatoFuori, r2(f.importo - coperturaBanca)) : incassatoFuori,
+      incassatoFuori: f.pagato ? Math.max(incassatoFuori, r2(dovuto - coperturaBanca)) : incassatoFuori,
       pagato: f.pagato,
       manuale: f.pagato && incassatoFuori === 0 && coperturaBanca === 0,
     });
@@ -168,7 +174,8 @@ export async function incassaMovimento(prisma: PrismaClient, movId: number, rich
     const incassato = f.acconti.reduce((t, a) => t + a.importo, 0);
     const coperturaBanca = f.abbinamentiBancari.reduce((t, a) => t + a.importo, 0);
     const giaIncassata = f.pagato && incassato === 0 && coperturaBanca === 0;
-    const residuo = giaIncassata ? f.importo : Math.max(0, f.importo - incassato);
+    const dovuto = lordo(f);
+    const residuo = giaIncassata ? dovuto : Math.max(0, dovuto - incassato);
     let importo = r.importo !== undefined && r.importo > 0 ? Math.min(r.importo, residuo) : residuo;
     importo = r2(Math.min(importo, resta));
     if (importo <= 0) continue;
@@ -200,7 +207,7 @@ export async function incassaMovimento(prisma: PrismaClient, movId: number, rich
       if (!q.primaPagato) {
         const f = await tx.fattura.findUnique({ where: { id: q.fatturaId }, include: { acconti: { select: { importo: true } } } });
         const tot = f!.acconti.reduce((t, a) => t + a.importo, 0);
-        if (centesimi(tot) + 5 >= centesimi(f!.importo)) {
+        if (centesimi(tot) + 5 >= centesimi(lordo(f!))) {
           await tx.fattura.update({ where: { id: q.fatturaId }, data: { pagato: true, metodo: f!.metodo ?? "Bonifico" } });
           cambiati.push({ fatturaId: q.fatturaId, primaPagato: false });
         }
@@ -258,7 +265,7 @@ export async function scollegaMovimento(prisma: PrismaClient, movId: number, fat
       const f = await tx.fattura.findUnique({ where: { id: fid }, include: { acconti: { select: { importo: true } } } });
       if (!f || !f.pagato) continue;
       const tot = f.acconti.reduce((t, a) => t + a.importo, 0);
-      if (centesimi(tot) + 5 < centesimi(f.importo)) {
+      if (centesimi(tot) + 5 < centesimi(lordo(f))) {
         await tx.fattura.update({ where: { id: fid }, data: { pagato: false } });
         cambiate.push({ fatturaId: fid, primaPagato: true });
       }
