@@ -17,11 +17,27 @@ import {
 } from "./tipi";
 import CaricaPreventivoButton from "./CaricaPreventivo";
 
+// Referente (CRM › Contatti): persona di un cliente o di un lead
 interface Contatto {
+  id: number;
+  nome: string;
+  cognome: string | null;
+  email: string | null;
+  principale: boolean;
+  cliente: { id: number; nome: string } | null;
+  lead: { id: number; nome: string; azienda: string | null } | null;
+}
+// Cliente (CRM › Clienti)
+interface ClienteMin {
   id: number;
   nome: string;
   email: string | null;
 }
+const nomeContatto = (c: Contatto) => `${c.nome}${c.cognome ? ` ${c.cognome}` : ""}`.trim();
+const stessoNome = (a: string, b: string) => a.trim().toLowerCase() === b.trim().toLowerCase();
+// Referente «vero»: una persona, non il cliente ripetuto come contatto
+// (molti referenti importati hanno lo stesso nome dell'azienda)
+const referenteVero = (k: Contatto, nomeCliente: string) => !stessoNome(nomeContatto(k), nomeCliente);
 
 const BRAND = "#e8308a";
 
@@ -63,6 +79,7 @@ export default function PreventivoFormModal({
   });
   const [origine, setOrigine] = useState<string | null>(precompilato?.origine ?? null);
   const [contatti, setContatti] = useState<Contatto[]>([]);
+  const [clienti, setClienti] = useState<ClienteMin[]>([]);
   const [saving, setSaving] = useState(false);
 
   // Preventivo caricato a modulo già aperto: sostituisce i campi letti
@@ -77,6 +94,10 @@ export default function PreventivoFormModal({
       .then((r) => r.json())
       .then((c) => setContatti(Array.isArray(c) ? c : []))
       .catch(() => {});
+    fetch("/api/clienti?min=1")
+      .then((r) => r.json())
+      .then((c) => setClienti(Array.isArray(c) ? c : []))
+      .catch(() => {});
   }, []);
 
   const subtotale = (voci ?? []).reduce(
@@ -86,14 +107,36 @@ export default function PreventivoFormModal({
   const ivaAmt = (subtotale * (Number(form.iva) || 0)) / 100;
   const totale = subtotale + ivaAmt;
 
-  const applyContatto = (id: string) => {
-    const c = (contatti ?? []).find((x) => x.id === parseInt(id));
-    if (c)
+  // Scelta dalla tendina: «c:<id>» = cliente, «k:<id>» = contatto (referente).
+  // Cliente: intestatario = referente principale se c'è (ragione sociale =
+  // il cliente), altrimenti il cliente stesso. Contatto: la persona, con la
+  // sua azienda (cliente o lead) come ragione sociale.
+  const applyContatto = (chiave: string) => {
+    const [tipo, idS] = chiave.split(":");
+    const id = parseInt(idS ?? "", 10);
+    if (!id) return;
+    if (tipo === "c") {
+      const cl = clienti.find((x) => x.id === id);
+      if (!cl) return;
+      const suoi = contatti.filter((k) => k.cliente?.id === id);
+      const ref = suoi.find((k) => k.principale && referenteVero(k, cl.nome)) ?? suoi.find((k) => referenteVero(k, cl.nome)) ?? null;
       setForm((f) => ({
         ...f,
-        nomeCliente: c.nome ?? "",
-        emailCliente: c.email ?? "",
+        nomeCliente: ref ? nomeContatto(ref) : cl.nome,
+        aziendaCliente: ref ? cl.nome : "",
+        emailCliente: (ref?.email || cl.email || suoi[0]?.email) ?? "",
       }));
+      return;
+    }
+    const c = contatti.find((x) => x.id === id);
+    if (!c) return;
+    const azienda = c.cliente?.nome ?? c.lead?.azienda ?? "";
+    setForm((f) => ({
+      ...f,
+      nomeCliente: nomeContatto(c),
+      aziendaCliente: stessoNome(azienda, nomeContatto(c)) ? "" : azienda,
+      emailCliente: c.email ?? "",
+    }));
   };
 
   const updateVoce = (
@@ -269,12 +312,29 @@ export default function PreventivoFormModal({
                 defaultValue=""
                 className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30 text-gray-500"
               >
-                <option value="">Seleziona da contatti...</option>
-                {(contatti ?? []).map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.nome ?? "—"}
-                  </option>
-                ))}
+                <option value="">Seleziona da clienti o contatti…</option>
+                {clienti.length > 0 && (
+                  <optgroup label="Clienti">
+                    {clienti.map((c) => (
+                      <option key={`c:${c.id}`} value={`c:${c.id}`}>
+                        {c.nome}
+                      </option>
+                    ))}
+                  </optgroup>
+                )}
+                {contatti.length > 0 && (
+                  <optgroup label="Contatti (referenti)">
+                    {contatti.map((c) => {
+                      const azienda = c.cliente?.nome ?? c.lead?.azienda ?? "";
+                      return (
+                        <option key={`k:${c.id}`} value={`k:${c.id}`}>
+                          {nomeContatto(c) || "—"}
+                          {azienda && !stessoNome(azienda, nomeContatto(c)) ? ` · ${azienda}` : ""}
+                        </option>
+                      );
+                    })}
+                  </optgroup>
+                )}
               </select>
             </div>
             <div>
