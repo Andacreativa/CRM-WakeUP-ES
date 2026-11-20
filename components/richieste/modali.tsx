@@ -9,11 +9,24 @@ import {
   type ContrattoMin,
   type FatturaCandidata,
   type Richiesta,
+  type VoceRichiesta,
   inputCls,
   labelCls,
   nomeCliente,
+  parseVoci,
   toISODate,
 } from "./tipi";
+
+// Le righe che diventeranno la fattura: quelle della richiesta se i conti
+// tornano con l'imponibile, altrimenti una sola con la sua descrizione
+const righeDaRichiesta = (r: Richiesta): VoceRichiesta[] => {
+  const voci = parseVoci(r.voci).filter((v) => v.descrizione || v.importo);
+  const somma = voci.reduce((s, v) => s + v.importo, 0);
+  return voci.length && Math.abs(somma - r.imponibile) < 0.01
+    ? voci
+    : [{ descrizione: r.descrizione, importo: r.imponibile }];
+};
+const NOME_LINGUA: Record<string, string> = { es: "spagnolo", en: "inglese", it: "italiano" };
 
 // ── Modal: crea fattura dalla richiesta ──────────────────────────────────
 export function CreaFatturaModal({
@@ -38,32 +51,75 @@ export function CreaFatturaModal({
   const [busy, setBusy] = useState(false);
   // Con VeriFactu acceso nasce una bozza: il numero arriva all'emissione
   const [bozza, setBozza] = useState(false);
+  // La fattura emessa è nella lingua del PDF (spagnolo): le righe della
+  // richiesta, scritte in italiano, si traducono e si rivedono qui
+  const [righe, setRighe] = useState<VoceRichiesta[]>(() => righeDaRichiesta(richiesta));
+  const [lingua, setLingua] = useState("it");
+  const [descrizioneOperazione, setDescrizioneOperazione] = useState("");
+  const [traduzione, setTraduzione] = useState<"no" | "in_corso" | "fatta" | "errore">("no");
 
-  // Scadenza e modo dalle Impostazioni fatture
+  // Scadenza, modo, lingua e descrizione dell'operazione dalle Impostazioni fatture
   useEffect(() => {
+    let vivo = true;
     fetch("/api/impostazioni/fatture")
       .then((r) => (r.ok ? r.json() : null))
-      .then((c) => {
-        if (!c) return;
+      .then(async (c) => {
+        if (!c || !vivo) return;
         setBozza(c.vfModo !== "spento");
+        setDescrizioneOperazione(String(c.vfDescrizioneDefault ?? "").trim());
         const giorni = Number(c.giorniScadenza);
         if (giorni > 0) {
           const d = new Date();
           d.setDate(d.getDate() + giorni);
           setScadenza(toISODate(d));
         }
+        const l = c.linguaDefault === "es" || c.linguaDefault === "en" ? c.linguaDefault : "it";
+        setLingua(l);
+        if (l === "it") return;
+        setTraduzione("in_corso");
+        try {
+          const iniziali = righeDaRichiesta(richiesta);
+          const res = await fetch("/api/traduci-righe", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ lingua: l, testi: iniziali.map((v) => v.descrizione) }),
+          });
+          const j = (await res.json().catch(() => ({}))) as { testi?: string[]; error?: string };
+          if (!vivo) return;
+          if (!res.ok || !Array.isArray(j.testi) || j.testi.length !== iniziali.length) {
+            setTraduzione("errore");
+            return;
+          }
+          setRighe(iniziali.map((v, i) => ({ ...v, descrizione: j.testi![i] || v.descrizione })));
+          setTraduzione("fatta");
+        } catch {
+          if (vivo) setTraduzione("errore");
+        }
       })
       .catch(() => {});
-  }, []);
+    return () => {
+      vivo = false;
+    };
+  }, [richiesta]);
 
   const submit = async () => {
+    if (righe.some((v) => !v.descrizione.trim())) {
+      setErr("Scrivi la descrizione di ogni riga.");
+      return;
+    }
     setBusy(true);
     setErr(null);
     try {
       const res = await fetch(`/api/richieste-fattura/${richiesta.id}/crea-fattura`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ numero, data, scadenza, metodo }),
+        body: JSON.stringify({
+          numero,
+          data,
+          scadenza,
+          metodo,
+          voci: righe.map((v) => ({ descrizione: v.descrizione.trim(), importo: v.importo })),
+        }),
       });
       const j = await res.json().catch(() => ({}));
       if (!res.ok) {
@@ -93,6 +149,47 @@ export function CreaFatturaModal({
             <strong>{fmt(richiesta.imponibile)}</strong>
             {richiesta.iva > 0 && <> · IGIC {richiesta.iva}%</>}
           </div>
+        </div>
+        <div>
+          <div className="flex items-baseline justify-between gap-2 mb-1">
+            <label className={labelCls}>
+              Righe della fattura{lingua !== "it" ? ` (in ${NOME_LINGUA[lingua]})` : ""}
+            </label>
+            {traduzione === "in_corso" && (
+              <span className="text-[11px] text-gray-400">Traduzione in corso…</span>
+            )}
+            {traduzione === "fatta" && (
+              <span className="text-[11px] text-gray-400">Tradotte in automatico: controllale</span>
+            )}
+            {traduzione === "errore" && (
+              <span className="text-[11px] text-bad">
+                Traduzione non riuscita: scrivile in {NOME_LINGUA[lingua]} a mano
+              </span>
+            )}
+          </div>
+          <div className="space-y-1.5">
+            {righe.map((v, i) => (
+              <div key={i} className="flex items-center gap-2">
+                <input
+                  value={v.descrizione}
+                  onChange={(e) =>
+                    setRighe((rs) => rs.map((r, k) => (k === i ? { ...r, descrizione: e.target.value } : r)))
+                  }
+                  className={cn(inputCls, traduzione === "in_corso" && "text-gray-400")}
+                  placeholder="Descrizione della riga"
+                  disabled={traduzione === "in_corso"}
+                />
+                <span className="text-sm text-gray-700 tabular-nums whitespace-nowrap w-24 text-right">
+                  {fmt(v.importo)}
+                </span>
+              </div>
+            ))}
+          </div>
+          {descrizioneOperazione && (
+            <p className="text-[11px] text-gray-400 mt-1.5">
+              Descrizione dell&apos;operazione: «{descrizioneOperazione}» (dalle Impostazioni)
+            </p>
+          )}
         </div>
         <div className="grid grid-cols-2 gap-3">
           {!bozza && (
@@ -152,7 +249,7 @@ export function CreaFatturaModal({
           </button>
           <button
             onClick={submit}
-            disabled={busy}
+            disabled={busy || traduzione === "in_corso"}
             className="btn btn-primary disabled:opacity-60"
           >
             {busy ? "Creazione…" : bozza ? "Crea la bozza" : "Crea fattura"}

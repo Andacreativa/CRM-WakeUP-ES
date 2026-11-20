@@ -229,6 +229,16 @@ export default function FatturaPage() {
     )
       load();
   };
+  // Emessa con VeriFactu spento: il registro di alta si crea e si manda adesso
+  const registra = async () => {
+    if (
+      confirm(
+        `Registrare la fattura ${numero} nell'AEAT (${ambienteVf})?\n\nSolo se non è già stata trasmessa da un altro programma (Billin): altrimenti risulterebbe doppia. Dopo i dati fiscali non si modificano più.`,
+      ) &&
+      (await azione("verifactu", { azione: "registra" }))
+    )
+      load();
+  };
   const inviaCoda = async () => {
     if (busy) return;
     setBusy(true);
@@ -424,6 +434,16 @@ export default function FatturaPage() {
             title="Rimanda il registro all'AEAT con i dati corretti"
           >
             <Send /> Reinvia all&apos;AEAT
+          </button>
+        )}
+        {vfAttivo && !bozza && !gestita && !f.annullata && (
+          <button
+            onClick={registra}
+            disabled={busy}
+            className="btn btn-primary"
+            title="Fattura emessa con VeriFactu spento: crea il registro e lo manda all'AEAT"
+          >
+            <Send /> Registra in VeriFactu
           </button>
         )}
         {inCoda && (

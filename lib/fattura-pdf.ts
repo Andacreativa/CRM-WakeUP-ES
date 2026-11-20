@@ -1,7 +1,14 @@
 import { fmt, MESI } from "./constants";
 import { IMPOSTAZIONI_FATTURE_DEFAULT, compilaTesto, togliInciso, type ImpostazioniFatture } from "./impostazioni";
 import { linkGmail } from "./utils";
-import { leggiVoci, nonSoggetta, residuo, type FatturaDettaglio, type ImportiFattura } from "./fatture";
+import {
+  leggiVoci,
+  nomeFileDocumento,
+  nonSoggetta,
+  residuo,
+  type FatturaDettaglio,
+  type ImportiFattura,
+} from "./fatture";
 
 // PDF della singola fattura e messaggio email. I dati dell'emittente, la
 // lingua, il colore e i testi arrivano da Impostazioni › Fatture.
@@ -282,11 +289,33 @@ async function caricaLogoPng(src: string): Promise<LogoPdf | null> {
   }
 }
 
-export const nomeFilePDF = (f: { id: number; numero: string | null }) =>
-  `fattura_${(f.numero ?? `bozza_${f.id}`).replace(/[^\w.-]+/g, "_")}.pdf`;
+// Lingua del PDF (Impostazioni › PDF): vale per il foglio e per il nome del file
+export const linguaPdf = (cfg: Pick<ImpostazioniFatture, "linguaDefault">): Lingua =>
+  cfg.linguaDefault === "es" || cfg.linguaDefault === "en" ? cfg.linguaDefault : "it";
+
+// «FACTURA RECTIFICATIVA» → «Factura Rectificativa»
+const titoloFile = (s: string) => s.toLowerCase().replace(/(^|\s)\S/g, (c) => c.toUpperCase());
+
+// Nome del file nella lingua del PDF: «Factura BRAbibione-Srl_F2026105.pdf»
+export const nomeFilePDF = (
+  f: {
+    id: number;
+    numero: string | null;
+    stato?: string | null;
+    tipoFattura?: string | null;
+    cliente?: { nome: string } | null;
+  },
+  cfg: Pick<ImpostazioniFatture, "linguaDefault">,
+) => {
+  const lingua = linguaPdf(cfg);
+  const L = T[lingua];
+  const bozza = f.stato === "bozza" || !f.numero;
+  const titolo = bozza ? L.bozza : f.tipoFattura && f.tipoFattura !== "F1" ? L.rettificativa : L.titolo;
+  return nomeFileDocumento(titoloFile(titolo), f.cliente?.nome, f.numero ?? String(f.id));
+};
 
 export async function exportFatturaPDF(f: FatturaDettaglio, cfg: ImpostazioniFatture) {
-  (await creaFatturaPDF(f, cfg)).save(nomeFilePDF(f));
+  (await creaFatturaPDF(f, cfg)).save(nomeFilePDF(f, cfg));
 }
 
 // Logo già pronto per il PDF (immagine rifilata, misure in pixel). Nel
@@ -305,7 +334,7 @@ export async function creaFatturaPDF(
   // scadenza e la dicitura che non è una fattura
   opts: { logo?: LogoPdf | null; logoBianco?: LogoPdf | null; proforma?: boolean } = {},
 ) {
-  const lingua: Lingua = cfg.linguaDefault === "es" || cfg.linguaDefault === "en" ? cfg.linguaDefault : "it";
+  const lingua = linguaPdf(cfg);
   const L = T[lingua];
   const { default: jsPDF } = await import("jspdf");
   const { default: autoTable } = await import("jspdf-autotable");
@@ -897,7 +926,7 @@ export async function inviaFatturaMail(id: number): Promise<string | null> {
     const res = await fetch(`/api/fatture/${id}/email`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ pdf, filename: nomeFilePDF(f) }),
+      body: JSON.stringify({ pdf, filename: nomeFilePDF(f, cfg) }),
     });
     const j = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error(j.error ?? "Invio non riuscito");

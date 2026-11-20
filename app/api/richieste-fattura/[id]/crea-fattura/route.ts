@@ -1,12 +1,16 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { RICHIESTA_INCLUDE, parseVoci, serializzaRichiesta } from "@/lib/richieste";
-import { getImpostazioniFatture, prossimoNumeroFattura } from "@/lib/impostazioni";
+import { causaIgicProposta, getImpostazioniFatture, prossimoNumeroFattura } from "@/lib/impostazioni";
 
 // Converte la richiesta in una fattura vera (registro Fatture) e la collega.
 // Richiede la validazione. I dati della fattura (numero, data, scadenza,
 // metodo) arrivano dal form precompilato. Con VeriFactu acceso nasce una
 // bozza: numero e registro arrivano quando la si emette dal suo pannello.
+// La fattura emessa è nella lingua del PDF (spagnolo: va al commercialista e
+// all'AEAT): le righe arrivano dal modale già tradotte e riviste, la
+// descrizione dell'operazione è quella di default delle Impostazioni
+// («Servicios de Publicidad»), mai il testo italiano della richiesta.
 export async function POST(
   request: Request,
   { params }: { params: Promise<{ id: string }> },
@@ -19,9 +23,11 @@ export async function POST(
       data?: string;
       scadenza?: string;
       metodo?: string;
+      voci?: { descrizione?: string; importo?: number }[];
     };
     const r = await prisma.richiestaFattura.findUnique({
       where: { id: richiestaId },
+      include: { cliente: { select: { paese: true } } },
     });
     if (!r || r.deletedAt) {
       return NextResponse.json({ error: "Non trovata" }, { status: 404 });
@@ -42,12 +48,23 @@ export async function POST(
     const dataFattura = body.data ? new Date(body.data) : new Date();
     const cfg = await getImpostazioniFatture(prisma);
     const bozza = cfg.vfModo !== "spento";
-    // Le righe della richiesta diventano le righe della fattura, se i conti tornano
-    const righe = parseVoci(r.voci);
-    const voci =
-      righe.length && Math.abs(righe.reduce((s, v) => s + v.importo, 0) - r.imponibile) < 0.01
-        ? righe.map((v) => ({ descrizione: v.descrizione, quantita: 1, prezzo: v.importo }))
-        : [];
+    // Le righe: quelle riviste nel modale se i conti tornano con l'imponibile,
+    // altrimenti quelle della richiesta; senza righe, una sola con la sua descrizione
+    const tornano = (vs: { descrizione: string; importo: number }[]) =>
+      vs.length > 0 &&
+      vs.every((v) => v.descrizione) &&
+      Math.abs(vs.reduce((s, v) => s + v.importo, 0) - r.imponibile) < 0.01;
+    const dalModale = (Array.isArray(body.voci) ? body.voci : []).map((v) => ({
+      descrizione: String(v?.descrizione ?? "").trim(),
+      importo: Number(v?.importo) || 0,
+    }));
+    const dallaRichiesta = parseVoci(r.voci);
+    const righe = tornano(dalModale)
+      ? dalModale
+      : tornano(dallaRichiesta)
+        ? dallaRichiesta
+        : [{ descrizione: r.descrizione.trim(), importo: r.imponibile }];
+    const voci = righe.map((v) => ({ descrizione: v.descrizione, quantita: 1, prezzo: v.importo }));
     const result = await prisma.$transaction(async (tx) => {
       const numero = bozza
         ? null
@@ -58,7 +75,7 @@ export async function POST(
           data: dataFattura,
           stato: bozza ? "bozza" : "emessa",
           emessaIl: bozza ? null : new Date(),
-          descrizione: r.descrizione?.trim() || null,
+          descrizione: cfg.vfDescrizioneDefault.trim() || null,
           voci: JSON.stringify(voci),
           clienteId: r.clienteId,
           contrattoId: r.contrattoId,
@@ -69,6 +86,9 @@ export async function POST(
           importo: r.imponibile,
           tipoIva: r.tipoIva,
           iva: r.iva,
+          // A 0 % serve la causa di esenzione (VeriFactu la esige): quella
+          // delle Impostazioni per il paese del cliente, come nel modale
+          causaIgic: Number(r.iva) > 0 ? null : causaIgicProposta(r.cliente?.paese, cfg),
           pagato: false,
           inviata: false,
           origine: "finance",

@@ -173,6 +173,13 @@ const SOLLECITI_SUPERATI = {
     "Estimado/a {cliente},\n\nle recordamos que la factura {numero} de {importo}, con vencimiento {scadenza}, a día de hoy no consta como pagada.\nLe rogamos realice el pago mediante transferencia al IBAN {iban}.\n\nUn cordial saludo,\n{azienda}",
 } as const;
 
+// Causa di esenzione IGIC proposta per una fattura a 0 % (la stessa regola del
+// modale fattura): dipende solo dal paese del cliente. VeriFactu la esige.
+export const causaIgicProposta = (
+  paese: string | null | undefined,
+  cfg: Pick<ImpostazioniFatture, "vfCausaSpagna" | "vfCausaEstero">,
+) => (paese === "Spagna" ? cfg.vfCausaSpagna : cfg.vfCausaEstero) || null;
+
 export async function getImpostazioniFatture(db: Db): Promise<ImpostazioniFatture> {
   const row = await db.impostazione.findUnique({ where: { chiave: CHIAVE } });
   let saved: Partial<ImpostazioniFatture> = {};

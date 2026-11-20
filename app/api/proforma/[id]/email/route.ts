@@ -39,7 +39,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       html: msg.html,
       nomeMittente: cfg.ragioneSociale,
       allegati: [
-        { filename: nomeFileProforma(p), content: Buffer.from(body.pdf, "base64"), contentType: "application/pdf" },
+        { filename: nomeFileProforma(p, cfg), content: Buffer.from(body.pdf, "base64"), contentType: "application/pdf" },
       ],
     });
   } catch (e) {

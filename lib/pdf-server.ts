@@ -119,5 +119,12 @@ export async function pdfFatturaServer(
   if (!f) return null;
   const cfg = await getImpostazioniFatture(db);
   const doc = await creaFatturaPDF(f, cfg, { logo: await logoServer(), logoBianco: await logoServer("anda-bianco") });
-  return { buffer: Buffer.from(doc.output("arraybuffer")), nomeFile: nomeFilePDF(f), fattura: f };
+  return { buffer: Buffer.from(doc.output("arraybuffer")), nomeFile: nomeFilePDF(f, cfg), fattura: f };
+}
+
+// Content-Disposition che regge anche un nome con accenti o «ñ»: l'ASCII per
+// i browser vecchi, l'UTF-8 (RFC 6266) per tutti gli altri
+export function contentDisposition(nome: string, inline = true) {
+  const ascii = nome.replace(/[^\x20-\x7e]/g, "_").replace(/"/g, "");
+  return `${inline ? "inline" : "attachment"}; filename="${ascii}"; filename*=UTF-8''${encodeURIComponent(nome)}`;
 }

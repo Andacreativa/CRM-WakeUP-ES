@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getImpostazioniFatture } from "@/lib/impostazioni";
-import { messaggioFattura } from "@/lib/fattura-pdf";
+import { messaggioFattura, nomeFilePDF } from "@/lib/fattura-pdf";
 import { inviaMail, mailConfigurata } from "@/lib/mail";
 
 export const runtime = "nodejs";
@@ -30,6 +30,12 @@ export async function POST(
   if (!msg) {
     return NextResponse.json({ error: "Il cliente non ha un indirizzo email" }, { status: 400 });
   }
+  // Nome dell'allegato nella lingua del PDF («Factura Cliente_F2026105.pdf»):
+  // via solo i caratteri che un nome di file non può avere
+  const nomeFile = (body.filename || nomeFilePDF(fattura, cfg))
+    .replace(/[\\/:*?"<>|\u0000-\u001f]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
   try {
     await inviaMail({
       a: msg.a,
@@ -39,7 +45,7 @@ export async function POST(
       nomeMittente: cfg.ragioneSociale,
       allegati: [
         {
-          filename: (body.filename || `fattura_${fattura.numero ?? fattura.id}.pdf`).replace(/[^\w.-]+/g, "_"),
+          filename: nomeFile,
           content: Buffer.from(body.pdf, "base64"),
           contentType: "application/pdf",
         },

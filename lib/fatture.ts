@@ -220,3 +220,14 @@ export const isScaduta = (
 
 export const dataIt = (d: string | Date | null | undefined) =>
   d ? new Date(d).toLocaleDateString("it-IT") : "—";
+
+// Nome dei PDF come li rinomina l'utente: tipo di documento nella lingua del
+// PDF, destinatario con i trattini, poi il numero (lo schema dei preventivi,
+// senza la lingua in coda: fatture e proforma escono sempre in spagnolo).
+// Es. «Factura BRAbibione-Srl_F2026105.pdf».
+export function nomeFileDocumento(titolo: string, cliente: string | null | undefined, numero: string) {
+  const pulisci = (t: string) =>
+    t.replace(/[\\/:*?"<>|\u0000-\u001f]+/g, " ").replace(/\s+/g, " ").trim();
+  const destinatario = pulisci(cliente ?? "").replace(/ /g, "-");
+  return `${pulisci(`${titolo}${destinatario ? ` ${destinatario}` : ""}_${pulisci(numero)}`)}.pdf`;
+}

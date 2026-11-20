@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { whereArea } from "@/lib/abbonamenti-area";
-import { pdfFatturaServer } from "@/lib/pdf-server";
+import { contentDisposition, pdfFatturaServer } from "@/lib/pdf-server";
 import { emailArea } from "@/lib/area-token";
 
 export const runtime = "nodejs";
@@ -23,7 +23,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
     return new Response(new Uint8Array(pdf.buffer), {
       headers: {
         "Content-Type": "application/pdf",
-        "Content-Disposition": `inline; filename="${pdf.nomeFile}"`,
+        "Content-Disposition": contentDisposition(pdf.nomeFile),
         "Cache-Control": "no-store",
       },
     });

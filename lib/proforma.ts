@@ -3,7 +3,7 @@
 // Gli importi si leggono come quelli della fattura (lib/fatture.ts), così il
 // totale della proforma e quello della fattura che ne nasce coincidono.
 
-import { leggiVoci, totaleVoci, type ClienteFattura } from "./fatture";
+import { leggiVoci, nomeFileDocumento, totaleVoci, type ClienteFattura } from "./fatture";
 import { CAUSE_IGIC } from "./impostazioni";
 
 export type StatoProforma = "aperta" | "convertita" | "annullata";
@@ -50,8 +50,15 @@ export const scadutaProforma = (
   oggi = new Date(),
 ) => p.stato === "aperta" && !!p.validaFino && new Date(p.validaFino) < new Date(oggi.toDateString());
 
-export const nomeFileProforma = (p: { numero: string }) =>
-  `proforma_${p.numero.replace(/[^\w.-]+/g, "_")}.pdf`;
+// Nome del PDF nella lingua del documento: «Factura Proforma Cliente_PF20261.pdf»
+export const nomeFileProforma = (
+  p: { numero: string; cliente?: { nome: string } | null },
+  cfg: { linguaDefault: string },
+) => {
+  const lingua = cfg.linguaDefault === "es" || cfg.linguaDefault === "en" ? cfg.linguaDefault : "it";
+  const titolo = { it: "Fattura Proforma", es: "Factura Proforma", en: "Proforma Invoice" }[lingua];
+  return nomeFileDocumento(titolo, p.cliente?.nome, p.numero);
+};
 
 // ── Dati dal modulo (POST e PATCH dell'API) ───────────────────────────────
 // Le stesse regole della fattura: righe con prezzo, IGIC 0 % o 7 %, a 0 % la

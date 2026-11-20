@@ -101,7 +101,7 @@ async function caricaProformaECfg(id: number): Promise<[ProformaDettaglio, Impos
 }
 
 export async function scaricaProformaPDF(p: ProformaDettaglio, cfg: ImpostazioniFatture) {
-  (await creaProformaPDF(p, cfg)).save(nomeFileProforma(p));
+  (await creaProformaPDF(p, cfg)).save(nomeFileProforma(p, cfg));
 }
 
 // Manda la proforma al cliente e la segna come inviata; restituisce la data
