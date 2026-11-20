@@ -165,12 +165,16 @@ export default function FatturePage() {
     compenso: 2700,
     ritenuta: 15,
   });
+  // VeriFactu acceso: una fattura emessa senza registro si registra dal menu
+  const [vfModo, setVfModo] = useState<string>("spento");
+  const vfAttivo = vfModo !== "spento";
 
   useEffect(() => {
     fetch("/api/impostazioni/fatture")
       .then((r) => (r.ok ? r.json() : null))
       .then((c) => {
         if (!c) return;
+        setVfModo(String(c.vfModo ?? "spento"));
         setSmhCfg({
           nome: c.smhNome || "SocialMediaHouse S.R.L.",
           compenso: Number(c.smhCompensoMensile) || 2700,
@@ -294,6 +298,32 @@ export default function FatturePage() {
     const problema = r.errore ?? r.error;
     if (problema) alert(`Il registro resta in coda: ${problema}.`);
     else if (r.attesa > 0 && !r.inviati) alert(`L'AEAT chiede di aspettare ancora ${r.attesa} secondi fra un invio e l'altro.`);
+    load();
+  };
+  // Emessa con VeriFactu spento (nessun registro): il registro di alta si
+  // crea e parte adesso. Solo per fatture non già trasmesse da altri programmi.
+  const registraVf = async (f: Fattura) => {
+    const dove = vfModo === "produzione" ? "invio vero" : "ambiente di prova, senza valore fiscale";
+    if (
+      !confirm(
+        `Registrare la fattura ${f.numero ?? ""} nell'AEAT (${dove})?\n\nSolo se non è già stata trasmessa da un altro programma (Billin): altrimenti risulterebbe doppia. Dopo i dati fiscali non si modificano più.`,
+      )
+    )
+      return;
+    const res = await fetch(`/api/fatture/${f.id}/verifactu`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ azione: "registra" }),
+    });
+    const j = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      alert((Array.isArray(j.errori) && j.errori.length ? j.errori : [j.error ?? res.status]).join("\n"));
+      return;
+    }
+    const problema = j.coda?.errore;
+    if (problema) alert(`Registro creato ma resta in coda: ${problema}.`);
+    else if (j.coda && j.coda.attesa > 0 && !j.coda.inviati)
+      alert(`Registro creato: parte fra ${j.coda.attesa} secondi (l'AEAT chiede una pausa fra un invio e l'altro).`);
     load();
   };
   const inviaMail = async (f: Fattura) => {
@@ -858,7 +888,8 @@ export default function FatturePage() {
                     <RowMenu title="Azioni sulla fattura">
                       {(chiudi) => (
                         <>
-                          {/* Si accende solo se il registro aspetta di partire */}
+                          {/* In coda: riprova l'invio. Emessa senza registro con
+                              VeriFactu acceso: si registra da qui. Altrimenti spenta */}
                           {f.vfStato === "in_coda" ? (
                             <button
                               className="menu-item"
@@ -870,6 +901,17 @@ export default function FatturePage() {
                             >
                               <Send /> Presenta
                             </button>
+                          ) : vfAttivo && f.stato === "emessa" && !gestitaVf(f) && !f.annullata ? (
+                            <button
+                              className="menu-item"
+                              title="Crea il registro VeriFactu di questa fattura e lo manda all'AEAT"
+                              onClick={() => {
+                                chiudi();
+                                registraVf(f);
+                              }}
+                            >
+                              <Send /> Registra in VeriFactu
+                            </button>
                           ) : (
                             <span className="menu-item spenta">
                               <Send /> Presenta
@@ -880,7 +922,9 @@ export default function FatturePage() {
                               ? "Il registro è in coda per l'AEAT."
                               : gestitaVf(f)
                                 ? "Già trasmessa: correzioni dal pannello."
-                                : "Registrata a mano: non parte da qui."}
+                                : vfAttivo && f.stato === "emessa" && !f.annullata
+                                  ? "Emessa senza registro: si registra adesso (solo se non è già in Billin)."
+                                  : "Registrata a mano: non parte da qui."}
                           </div>
                           <div className="menu-sep" />
                           {f.cliente?.email ? (
